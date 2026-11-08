@@ -1,0 +1,27 @@
+# 패키지 (npm install로 다시 설치)
+node_modules/
+
+# 비밀값 (.env.example만 올린다)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# 빌드 결과물
+dist/
+build/
+
+# Supabase 로컬 임시 파일
+supabase/.temp/
+supabase/.branches/
+
+# 로그
+*.log
+npm-debug.log*
+
+# OS·에디터
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
