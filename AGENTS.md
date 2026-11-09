@@ -23,10 +23,13 @@
 
 | 담당 | 영역 |
 | --- | --- |
-| 1번 | `frontend/src/pages/RoadmapPage.jsx`, `frontend/src/features/roadmap/`, 프론트 라우팅·통합 |
-| 2번 | `HomePage.jsx`, `DiaryPage.jsx`, `MemoriesPage.jsx`, `features/pet/`, `features/diary/`, `styles/` |
-| 3번 | `supabase/migrations/` (테이블·RLS·DB 함수), `docs/API.md` (기술 관리), `backend/` (MVP 미사용, 유지만) |
-| 4번 | `LoginPage.jsx`, `OnboardingPage.jsx`, `ExplorePage.jsx`, `features/onboarding/`, `frontend/src/data/` |
+| 1번 (프론트 총괄) | 디자인 시스템: `styles/`·공통 컴포넌트 / 가로형 로드맵: `RoadmapPage.jsx`, `features/roadmap/` / 프론트 라우팅·전체 UI 통합 |
+| 2번 (프론트 보조) | `HomePage.jsx`, `DiaryPage.jsx`, `MemoriesPage.jsx`, `features/pet/`, `features/diary/`, 일기·펫 Mock Data / (여유 시) `LoginPage.jsx` UI 지원 |
+| 3번 (백엔드 총괄) | `supabase/migrations/` (테이블·RLS·DB 함수), 인증 연동(`LoginPage.jsx` 인증 책임), 온보딩 저장·보상 RPC, `frontend/src/services/` 공통 서비스 함수, `docs/API.md` (기술 관리), `backend/` (MVP 미사용, 유지만) |
+| 4번 (교과과정·온보딩) | `frontend/src/data/` 교과과정·직무 관련도 데이터, `features/onboarding/` (과목 선정 함수·온보딩 UI), `OnboardingPage.jsx`, (여유 시) `ExplorePage.jsx` |
+
+- 온보딩 UI는 1번의 공통 디자인(`tokens.css`, 공통 컴포넌트)을 사용한다.
+- 작업별 담당·우선순위·선행 작업은 `TASKS.md`를 따른다.
 
 ### 공용 파일 (수정 전 반드시 협의)
 
@@ -46,7 +49,7 @@ AGENTS.md
 
 - 제거된 기능을 되살리지 않는다: **주간 계획표, 독립 아티클 페이지**
 - 홈 화면은 펫 중심이다.
-- 보상은 DB 함수(RPC)에서 중복 판정한다. (`docs/API.md` 3장) 펫 에너지·보상 이력을 프론트에서 직접 수정하는 코드를 만들지 않는다.
+- 보상(출석·일기 등)은 서버 RPC에서 인증과 날짜별(KST) 중복 여부를 검증하고 원자적으로 지급한다. (`docs/API.md` 3장) 펫 에너지·보상 이력을 프론트에서 직접 수정하는 코드를 만들지 않는다.
 - MVP에서는 Node 서버를 사용하지 않는다. `backend/` 폴더는 삭제하지 않는다.
 - 학기 삭제 시 노드·문서는 지우지 않고 보관함으로 이동한다.
 - 일반 활동(동아리·해커톤·군 복무 등)은 자동 배치하지 않는다.
