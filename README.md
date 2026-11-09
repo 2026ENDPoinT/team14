@@ -29,7 +29,7 @@ ENDPoinT 해커톤 2026 Team 14
 - 펫 성장은 실력을 증명하는 점수가 아니라, 꾸준히 기록하도록 돕는 장치다.
 
 ### 핵심 흐름
-관심 분야 선택 → 기본 로드맵 생성 → 대학생활 계획·수정 → 일기·활동 기록 → 성장 에너지 획득 → 펫 성장 → 추억 축적
+학년·수강 과목·희망 직무 선택 → 교과과정 연계도 기반 로드맵 생성 → 대학생활 계획·수정 → 일기·활동 기록 → 성장 에너지 획득 → 펫 성장 → 추억 축적
 
 ---
 
@@ -41,7 +41,7 @@ ENDPoinT 해커톤 2026 Team 14
 | 🐣 **펫 육성** | 일기·활동 기록으로 성장 에너지를 얻어 펫이 성장. 보상은 중복 지급되지 않음 (단계 수·에너지 수치는 미확정) | `/` (홈) |
 | 📔 **일기** | 날짜별 일기 1개, 기분 선택, 수정·삭제 | `/diary` |
 | 🗂️ **추억 보관소** | 캘린더·학기별로 과거 일기 열람 | `/memories` |
-| 🧭 **온보딩** | 프로필·경험·수강 과목·관심 분야 선택(모두 건너뛰기 가능). 관심 분야 학습 로드맵을 자동 배치하거나 보관함에만 추가 | `/onboarding` |
+| 🧭 **온보딩** | 학년(필수)·경험·수강 과목·희망 직무 선택. 2026 컴퓨터공학과 교과과정 연계도를 기준으로, 1~4학년 전체 과목 중 직접 고른 수강 과목은 권장 학기에 이수 완료로 배치하고, 현재 학년 이후의 미래 과목은 희망 직무 관련도에 맞춰(미선택 시 전공필수만) 선정해 권장 학기에 바로 배치(auto)하거나 보관함에 추가(inbox). 별도 추천 화면 없이 기본 로드맵으로 바로 제공 | `/onboarding` |
 | 📢 **공고 탐색** | 공모전·해커톤·인턴십 공고 카드 목록 (MVP는 샘플 데이터) | `/explore` |
 | 🔐 **로그인** | 이메일·비밀번호, Google 로그인. 내 데이터만 보임 | `/login` |
 
@@ -80,7 +80,7 @@ campus-roadmap/
 │   ├── pages/           페이지 화면 (HomePage.jsx 등, 현재 빈 파일)
 │   ├── features/        기능별 컴포넌트 (roadmap/, pet/, diary/, onboarding/ 예정)
 │   ├── services/        Supabase 연결·데이터 처리 (공통 서비스 계층)
-│   ├── data/            Mock Data, 과목·추천·공고 샘플 데이터
+│   ├── data/            Mock Data, 교과과정·직무별 과목·공고 데이터
 │   └── styles/          공통 스타일 (tokens.css 예정)
 └── backend/src/         Node 서버 (MVP 미사용, 구조만 유지)
 ```
@@ -97,7 +97,7 @@ campus-roadmap/
 | 1번 | `feature/roadmap` | 로드맵, 학기 영역, 노드·연결선, 프론트 라우팅·통합 | `RoadmapPage.jsx`, `features/roadmap/` |
 | 2번 | `feature/pet-diary` | 홈, 펫, 일기, 추억 보관소, UI 디자인 | `HomePage.jsx`, `DiaryPage.jsx`, `MemoriesPage.jsx`, `features/pet/`, `features/diary/`, `styles/` |
 | 3번 | `feature/backend` | Supabase, DB, 인증, RLS, RPC, API 문서 | `supabase/migrations/`, `docs/API.md`, `backend/` |
-| 4번 | `feature/onboarding` | 로그인, 온보딩, 분야별 추천 데이터, 공고 탐색 | `LoginPage.jsx`, `OnboardingPage.jsx`, `ExplorePage.jsx`, `features/onboarding/`, `data/` |
+| 4번 | `feature/onboarding` | 로그인, 온보딩, 직무별 교과목 데이터, 공고 탐색 | `LoginPage.jsx`, `OnboardingPage.jsx`, `ExplorePage.jsx`, `features/onboarding/`, `data/` |
 
 작업 목록은 [TASKS.md](TASKS.md)를 보세요.
 
