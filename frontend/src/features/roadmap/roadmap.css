@@ -32,12 +32,23 @@
 }
 
 /* ───────── 캔버스 ───────── */
-.rm-canvas-scroll {
+.rm-canvas {
   position: absolute;
   inset: 0;
-  overflow: auto;
 }
-.rm-canvas {
+.rm-canvas .react-flow__pane {
+  cursor: grab;
+}
+.rm-canvas .react-flow__pane.dragging {
+  cursor: grabbing;
+}
+.rm-canvas .react-flow__attribution {
+  background: transparent;
+  font-size: 10px;
+  opacity: 0.5;
+}
+/* 타임라인 배경 (React Flow 노드) */
+.rm-timeline-bg {
   position: relative;
 }
 .rm-timeline {
@@ -77,7 +88,7 @@
 
 /* ───────── 노드 카드 ───────── */
 .rm-card {
-  position: absolute;
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -148,7 +159,6 @@
 }
 /* 보관함 안의 작은 카드 */
 .rm-card--small {
-  position: relative;
   flex: none;
   width: 148px;
   height: 88px;
@@ -162,13 +172,22 @@
   font-size: 9px;
 }
 
+/* React Flow 연결점: 지금은 숨김 (연결 기능은 다음 단계) */
+.rm-handle.react-flow__handle {
+  width: 1px;
+  height: 1px;
+  min-width: 0;
+  min-height: 0;
+  border: none;
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* ───────── 연결선 ───────── */
-.rm-edges {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none; /* 선 이외 영역은 카드 클릭을 막지 않음 */
-  overflow: visible;
+/* 선택 기능을 꺼도 연결선 Hover는 받도록 (React Flow의 inactive 처리 덮어쓰기) */
+.rm-canvas .react-flow__edge.rm-edge {
+  pointer-events: visibleStroke;
 }
 .rm-edge__line {
   fill: none;
@@ -284,6 +303,45 @@ span.rm-nav__link {
   color: var(--rm-text);
   transform: scale(1.18);
   transition-delay: 0s;
+}
+
+/* ───────── 확대·축소 컨트롤 (왼쪽 아래) ───────── */
+.rm-controls.react-flow__controls {
+  margin: 0 0 56px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: none;
+}
+.rm-controls .react-flow__controls-button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #f7f7f7;
+  box-shadow: var(--rm-shadow);
+  color: var(--rm-text);
+  cursor: pointer;
+  transition: transform 0.2s var(--rm-ease), background 0.2s;
+}
+.rm-controls .react-flow__controls-button:hover {
+  transform: scale(1.08);
+  background: #fff;
+}
+.rm-controls .react-flow__controls-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+  transform: none;
+}
+.rm-controls .react-flow__controls-button svg {
+  width: 14px;
+  height: 14px;
+  max-width: 14px;
+  max-height: 14px;
+  fill: currentColor;
 }
 
 /* ───────── + 버튼 메뉴 / INBOX ───────── */
