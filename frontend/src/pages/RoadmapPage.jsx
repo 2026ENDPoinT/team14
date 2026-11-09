@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { ReactFlowProvider } from '@xyflow/react'
 import { mockDocuments, mockEdges, mockNodes, mockPeriods } from '../data/roadmapMock.js'
 import RoadmapNav from '../features/roadmap/RoadmapNav.jsx'
 import RoadmapCanvas from '../features/roadmap/RoadmapCanvas.jsx'
@@ -23,6 +24,7 @@ export default function RoadmapPage() {
   const [addOpen, setAddOpen] = useState(false) // 노드 생성 창
   const [detailId, setDetailId] = useState(null) // 상세 창에 열린 노드 id
   const [toast, setToast] = useState('')
+  const [dropPeriodId, setDropPeriodId] = useState(null) // 노드를 끄는 동안 강조할 학기
 
   const getBody = (nodeId) => documents[nodeId]?.content.body ?? ''
   // 캔버스가 불필요하게 다시 그려지지 않도록 useCallback으로 고정
@@ -59,9 +61,12 @@ export default function RoadmapPage() {
     setDetailId(nodeId)
   }, [])
 
-  // 노드 드래그 후: 학기(periodId)와 학기 기준 상대 좌표만 바꾼다. (제목·종류·이수 상태·문서는 그대로)
+  // 노드 드래그 후(캔버스 이동 또는 보관함 → 학기 배치):
+  // 학기(periodId), 학기 기준 상대 좌표, 배치 상태만 바꾼다. (제목·종류·이수 상태·문서는 그대로)
   const handleNodeMove = useCallback((nodeId, { periodId, position }) => {
-    setNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, periodId, position } : n)))
+    setNodes((prev) =>
+      prev.map((n) => (n.id === nodeId ? { ...n, periodId, position, status: 'placed' } : n)),
+    )
   }, [])
 
   const handleEdgeDelete = useCallback((edgeId) => {
@@ -134,54 +139,63 @@ export default function RoadmapPage() {
     .filter(Boolean)
 
   return (
-    <div className="roadmap-page">
-      <RoadmapCanvas
-        periods={periods}
-        nodes={nodes}
-        edges={edges}
-        getSubtitle={getSubtitle}
-        onNodeClick={openDetail}
-        onNodeMove={handleNodeMove}
-        onEdgeDelete={handleEdgeDelete}
-      />
+    // ReactFlowProvider: 보관함 드래그에서도 캔버스 좌표 변환(screenToFlowPosition)을 쓰기 위해 감싼다
+    <ReactFlowProvider>
+      <div className="roadmap-page">
+        <RoadmapCanvas
+          periods={periods}
+          nodes={nodes}
+          edges={edges}
+          getSubtitle={getSubtitle}
+          onNodeClick={openDetail}
+          onNodeMove={handleNodeMove}
+          onEdgeDelete={handleEdgeDelete}
+          dropPeriodId={dropPeriodId}
+          onDropTargetChange={setDropPeriodId}
+        />
 
-      <RoadmapNav />
+        <RoadmapNav />
 
-      <InboxPanel
-        open={inboxOpen}
-        nodes={nodes.filter((n) => n.status === 'stored')}
-        getSubtitle={getSubtitle}
-        onNodeClick={openDetail}
-        onAdd={openAdd}
-      />
+        <InboxPanel
+          open={inboxOpen}
+          nodes={nodes.filter((n) => n.status === 'stored')}
+          allNodes={nodes}
+          periods={periods}
+          getSubtitle={getSubtitle}
+          onNodeClick={openDetail}
+          onAdd={openAdd}
+          onPlace={handleNodeMove}
+          onTargetChange={setDropPeriodId}
+        />
 
-      <FabMenu
-        open={fabOpen}
-        onToggle={() => setFabOpen((v) => !v)}
-        onClose={closeFab}
-        onSelect={handleFabSelect}
-        inboxOpen={inboxOpen}
-        onInboxClick={() => setInboxOpen((v) => !v)}
-      />
+        <FabMenu
+          open={fabOpen}
+          onToggle={() => setFabOpen((v) => !v)}
+          onClose={closeFab}
+          onSelect={handleFabSelect}
+          inboxOpen={inboxOpen}
+          onInboxClick={() => setInboxOpen((v) => !v)}
+        />
 
-      <AddNodeModal
-        open={addOpen}
-        periods={periods}
-        onClose={() => setAddOpen(false)}
-        onCreate={handleCreate}
-      />
+        <AddNodeModal
+          open={addOpen}
+          periods={periods}
+          onClose={() => setAddOpen(false)}
+          onCreate={handleCreate}
+        />
 
-      <NodeDetailModal
-        node={detailNode}
-        body={getBody(detailId)}
-        connections={connections}
-        onClose={() => setDetailId(null)}
-        onSave={handleSave}
-        onDelete={handleDeleteNode}
-        onOpenNode={openDetail}
-      />
+        <NodeDetailModal
+          node={detailNode}
+          body={getBody(detailId)}
+          connections={connections}
+          onClose={() => setDetailId(null)}
+          onSave={handleSave}
+          onDelete={handleDeleteNode}
+          onOpenNode={openDetail}
+        />
 
-      <div className={`rm-toast ${toast ? 'is-visible' : ''}`} role="status">{toast}</div>
-    </div>
+        <div className={`rm-toast ${toast ? 'is-visible' : ''}`} role="status">{toast}</div>
+      </div>
+    </ReactFlowProvider>
   )
 }

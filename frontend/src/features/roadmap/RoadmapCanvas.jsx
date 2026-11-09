@@ -5,7 +5,7 @@ import TimelineNode from './TimelineNode.jsx'
 import CardNode from './CardNode.jsx'
 import RoadmapEdge from './RoadmapEdge.jsx'
 import { DropTargetContext } from './dropTarget.js'
-import { CANVAS_HEIGHT, cardSize, columnX, findPeriodAt, nodeBox, resolveOverlap } from './layout.js'
+import { CANVAS_HEIGHT, cardSize, columnX, findPeriodAt, nodeBox, placeNode } from './layout.js'
 
 // React Flow에 등록할 노드·연결선 종류 (컴포넌트 밖에 두어야 매번 새로 만들지 않는다)
 const nodeTypes = { timeline: TimelineNode, card: CardNode }
@@ -23,11 +23,11 @@ function centerOf(position, node) {
 // - 빈 공간 드래그: 이동 / 휠·핀치: 확대·축소 / 노드 드래그: 위치 이동·학기 재배정
 export default function RoadmapCanvas({
   periods, nodes, edges, getSubtitle, onNodeClick, onNodeMove, onEdgeDelete,
+  dropPeriodId, onDropTargetChange, // 드래그 중 강조할 학기 (보관함 드래그와 함께 쓰려고 페이지에서 관리)
 }) {
   const sorted = useMemo(() => [...periods].sort((a, b) => a.order - b.order), [periods])
   const width = columnX(sorted.length) + 200
 
-  const [dropPeriodId, setDropPeriodId] = useState(null) // 드래그 중 강조할 학기
   const [resetKey, setResetKey] = useState(0) // 영역 밖에 놓았을 때 원래 위치로 되돌리기용
   const draggedRef = useRef(false) // 드래그 직후의 클릭은 무시하기 위한 표시
   const dragStartRef = useRef(null) // 드래그를 시작한 마우스 위치 (화면 좌표)
@@ -101,37 +101,23 @@ export default function RoadmapCanvas({
         draggedRef.current = true
       }
       const center = centerOf(flowNode.position, flowNode.data.node)
-      setDropPeriodId(findPeriodAt(center.x, center.y, periods)?.id ?? null)
+      onDropTargetChange(findPeriodAt(center.x, center.y, periods)?.id ?? null)
     },
-    [periods],
+    [periods, onDropTargetChange],
   )
 
-  // 드롭: 학기 판정 → 겹침 보정 → periodId와 상대 좌표 저장
+  // 드롭: 학기 판정 → 겹침 보정 → periodId와 상대 좌표 저장 (layout.js placeNode)
   const onNodeDragStop = useCallback(
     (_, flowNode) => {
-      setDropPeriodId(null)
-      const node = flowNode.data.node
-      const center = centerOf(flowNode.position, node)
-      const period = findPeriodAt(center.x, center.y, periods)
-
-      if (!period) {
-        setResetKey((k) => k + 1) // 학기 영역 밖 → 원래 자리로
+      onDropTargetChange(null)
+      const placement = placeNode(flowNode.data.node, flowNode.position, nodes, periods)
+      if (!placement) {
+        setResetKey((k) => k + 1) // 학기 영역 밖이거나 빈 자리가 없음 → 원래 자리로
         return
       }
-
-      const others = nodes
-        .filter((n) => n.status === 'placed' && n.id !== node.id)
-        .map((n) => nodeBox(n, periods))
-        .filter(Boolean)
-      const { w, h } = cardSize(node)
-      const box = resolveOverlap({ x: flowNode.position.x, y: flowNode.position.y, w, h }, others, period)
-
-      onNodeMove(node.id, {
-        periodId: period.id,
-        position: { x: Math.round(box.x - columnX(period.order)), y: Math.round(box.y) },
-      })
+      onNodeMove(flowNode.data.node.id, placement)
     },
-    [nodes, periods, onNodeMove],
+    [nodes, periods, onNodeMove, onDropTargetChange],
   )
 
   const flowEdges = useMemo(

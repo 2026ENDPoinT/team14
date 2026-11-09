@@ -545,6 +545,37 @@ span.rm-nav__link {
   transform: scale(1.1) rotate(90deg);
 }
 
+/* 보관함 카드 드래그 */
+.rm-inbox__card {
+  cursor: grab;
+  touch-action: none; /* 터치로 끌 때 화면 스크롤 방지 */
+  user-select: none;
+  transition: opacity 0.2s, transform 0.25s var(--rm-ease), box-shadow 0.25s var(--rm-ease);
+}
+.rm-inbox__card:focus:not(:focus-visible) {
+  outline: none; /* 마우스로 잡을 때는 포커스 테두리 숨김 (키보드 이동 때만 표시) */
+}
+.rm-inbox__card.is-drag-source {
+  opacity: 0.35; /* 끌고 있는 카드의 원래 자리 */
+}
+.rm-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 60;
+  pointer-events: none; /* 놓을 위치 판정을 가리지 않게 */
+  transform-origin: 0 0;
+  transition-property: transform, opacity;
+  transition-timing-function: var(--rm-ease);
+}
+.rm-ghost .rm-card {
+  cursor: grabbing;
+  box-shadow: 14px 24px 40px rgba(0, 0, 0, 0.16), -6px -6px 16px rgba(255, 255, 255, 0.9);
+}
+.rm-ghost.is-returning {
+  opacity: 0.6;
+}
+
 /* ───────── 팝업 (노드 생성·상세) ───────── */
 .rm-modal {
   position: absolute;
