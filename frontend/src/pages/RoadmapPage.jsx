@@ -25,7 +25,11 @@ export default function RoadmapPage() {
   const [toast, setToast] = useState('')
 
   const getBody = (nodeId) => documents[nodeId]?.content.body ?? ''
-  const getSubtitle = (nodeId) => getBody(nodeId).split('\n')[0]
+  // 캔버스가 불필요하게 다시 그려지지 않도록 useCallback으로 고정
+  const getSubtitle = useCallback(
+    (nodeId) => (documents[nodeId]?.content.body ?? '').split('\n')[0],
+    [documents],
+  )
 
   const closeFab = useCallback(() => setFabOpen(false), [])
 
@@ -49,11 +53,20 @@ export default function RoadmapPage() {
     return () => clearTimeout(timer)
   }, [toast])
 
-  const openDetail = (nodeId) => {
+  const openDetail = useCallback((nodeId) => {
     setAddOpen(false)
     setFabOpen(false)
     setDetailId(nodeId)
-  }
+  }, [])
+
+  // 노드 드래그 후: 학기(periodId)와 학기 기준 상대 좌표만 바꾼다. (제목·종류·이수 상태·문서는 그대로)
+  const handleNodeMove = useCallback((nodeId, { periodId, position }) => {
+    setNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, periodId, position } : n)))
+  }, [])
+
+  const handleEdgeDelete = useCallback((edgeId) => {
+    setEdges((prev) => prev.filter((e) => e.id !== edgeId))
+  }, [])
 
   const openAdd = () => {
     setDetailId(null)
@@ -128,7 +141,8 @@ export default function RoadmapPage() {
         edges={edges}
         getSubtitle={getSubtitle}
         onNodeClick={openDetail}
-        onEdgeDelete={(edgeId) => setEdges((prev) => prev.filter((e) => e.id !== edgeId))}
+        onNodeMove={handleNodeMove}
+        onEdgeDelete={handleEdgeDelete}
       />
 
       <RoadmapNav />

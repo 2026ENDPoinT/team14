@@ -63,6 +63,23 @@
   top: 0;
   bottom: 0;
 }
+/* 드래그 중 노드가 놓일 학기: 은은하게 강조 */
+.rm-column::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 20px 0;
+  border-radius: 28px;
+  background: rgba(248, 230, 173, 0.22);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.rm-column.is-drop-target::before {
+  opacity: 1;
+}
+.rm-column.is-drop-target .rm-column__badge {
+  transform: translate(-50%, -50%) scale(1.12);
+  transition: transform 0.25s var(--rm-ease);
+}
 .rm-column__line {
   position: absolute;
   left: 0;
@@ -170,6 +187,25 @@
 .rm-card--small .rm-card__kind,
 .rm-card--small .rm-card__sub {
   font-size: 9px;
+}
+
+/* 노드 드래그 */
+.rm-canvas .react-flow__node-card {
+  cursor: grab;
+}
+.rm-canvas .react-flow__node-card:not(.dragging) {
+  transition: transform 0.25s var(--rm-ease); /* 겹침 보정·되돌리기 때 부드럽게 이동 */
+}
+.rm-canvas .react-flow__node-card.dragging {
+  z-index: 1000 !important; /* 끌고 있는 노드를 맨 위로 */
+  cursor: grabbing;
+}
+.rm-canvas .react-flow__node-card.dragging .rm-card {
+  transform: scale(1.03);
+  box-shadow: 14px 24px 40px rgba(0, 0, 0, 0.16), -6px -6px 16px rgba(255, 255, 255, 0.9);
+}
+.rm-canvas .rm-card {
+  cursor: inherit;
 }
 
 /* React Flow 연결점: 지금은 숨김 (연결 기능은 다음 단계) */
