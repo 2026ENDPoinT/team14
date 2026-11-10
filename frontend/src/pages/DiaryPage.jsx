@@ -1,9 +1,11 @@
-// 임시 화면: 담당자가 실제 화면으로 교체 예정
+import DiaryEditor from '../features/diary/DiaryEditor.jsx'
+
+// 일기 작성 페이지 (/diary)
 export default function DiaryPage() {
   return (
     <main>
       <h1>일기 작성</h1>
-      <p>개발 예정 페이지입니다.</p>
+      <DiaryEditor />
     </main>
   )
 }

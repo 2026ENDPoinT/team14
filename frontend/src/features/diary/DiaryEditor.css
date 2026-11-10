@@ -1,0 +1,33 @@
+/* 레이아웃만 잡은 임시 스타일.
+   tokens.css(0-9)가 준비되면 색상·폰트·간격을 토큰 값으로 바꾼다. (2-19) */
+.diary-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 640px;
+  padding: 0 16px;
+}
+
+.diary-editor__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.diary-editor__field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  font: inherit;
+}
+
+.diary-editor__count,
+.diary-editor__hint,
+.diary-editor__message {
+  margin: 0;
+}
+
+.diary-editor__actions {
+  display: flex;
+  gap: 8px;
+}
