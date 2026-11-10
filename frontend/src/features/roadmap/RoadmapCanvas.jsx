@@ -8,6 +8,7 @@ import { DropTargetContext } from './dropTarget.js'
 import { LinkContext } from './linkContext.js'
 import { BranchContext, computeBranches } from './branchLines.js'
 import useLinkDrag from './useLinkDrag.js'
+import useWheelZoom from './useWheelZoom.js'
 import { linkProblem } from './edgeRules.js'
 import { routeBetween, routeEdges, routeToPoint } from './edgeRouting.js'
 import { CANVAS_HEIGHT, cardSize, findPeriodAt, initialViewport, nodeBox, placeNode } from './layout.js'
@@ -15,6 +16,8 @@ import { CANVAS_HEIGHT, cardSize, findPeriodAt, initialViewport, nodeBox, placeN
 // React Flow에 등록할 노드·연결선 종류 (컴포넌트 밖에 두어야 매번 새로 만들지 않는다)
 const nodeTypes = { timeline: TimelineNode, card: CardNode }
 const edgeTypes = { roadmap: RoadmapEdge }
+const MIN_ZOOM = 0.25
+const MAX_ZOOM = 1.6
 const CLICK_DISTANCE = 4 // 이 거리(px) 이하로 움직이면 클릭으로 판정
 const DROP_INSET = 8 // 노드를 다른 노드에 놓아 연결: 끄는 노드의 중심이 대상 카드 안쪽(가장자리 8px 제외)에 있어야 함
 
@@ -26,7 +29,7 @@ function boxAt(position, node) {
 
 // 가로형 로드맵 캔버스 (React Flow)
 // - 데이터는 학기(periodId) 기준 상대 좌표, 화면에는 캔버스 좌표로 바꿔서 그린다. (layout.js nodeBox)
-// - 빈 공간 드래그: 이동 / 휠·핀치: 확대·축소 / 노드 드래그: 위치 이동·학기 재배정
+// - 빈 공간 드래그·휠·두 손가락 스크롤: 이동 / 핀치·Ctrl(⌘)+휠: 확대·축소 / 노드 드래그: 위치 이동·학기 재배정
 // - 노드를 다른 노드 위에 충분히 겹쳐 놓으면: 이동 대신 관계선 연결 (노드는 원래 자리로)
 // - layout: 학기별 x·너비 (layout.js computeLayout). 데이터가 바뀔 때만 다시 계산되므로
 //   드래그하는 동안에는 학기 경계가 고정되고, 놓은 뒤에 필요한 만큼만 학기가 넓어진다.
@@ -39,6 +42,9 @@ export default function RoadmapCanvas({
 
   const [startViewport] = useState(() => initialViewport(window.innerWidth, window.innerHeight, layout, nodes)) // 첫 진입 화면 위치
   const [resetKey, setResetKey] = useState(0) // 원래 위치로 되돌리기용
+  const wrapRef = useRef(null)
+  const extent = useMemo(() => [[-600, -400], [width + 600, CANVAS_HEIGHT + 400]], [width]) // 화면 이동 가능 범위
+  useWheelZoom(wrapRef, { minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM, extent })
   const [draggingId, setDraggingId] = useState(null) // 끌고 있는 노드 (연결선 애니메이션 끔, 가지선 잠시 숨김)
   const [dropLink, setDropLink] = useState(null) // 노드를 다른 노드 위에 올렸을 때 연결 후보 { id, valid, problem }
   const draggedRef = useRef(false) // 드래그 직후의 클릭은 무시하기 위한 표시
@@ -257,6 +263,7 @@ export default function RoadmapCanvas({
     <BranchContext.Provider value={branches}>
       {/* 새로 누를 때마다 "드래그 직후" 표시를 지운다 */}
       <div
+        ref={wrapRef}
         className={canvasClass}
         onPointerDownCapture={(e) => {
           draggedRef.current = false
@@ -278,12 +285,15 @@ export default function RoadmapCanvas({
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           defaultViewport={startViewport}
-          minZoom={0.25}
-          maxZoom={1.6}
-          translateExtent={[[-600, -400], [width + 600, CANVAS_HEIGHT + 400]]}
+          minZoom={MIN_ZOOM}
+          maxZoom={MAX_ZOOM}
+          translateExtent={extent}
           panOnDrag // 빈 공간 드래그 → 이동
-          zoomOnScroll // 마우스 휠 → 확대·축소
-          zoomOnPinch // 트랙패드 핀치 → 확대·축소
+          panOnScroll // 휠·트랙패드 두 손가락 스크롤 → 상하·좌우 이동
+          panOnScrollSpeed={1} // 손가락 움직인 만큼 그대로 이동 (기본 0.5는 느림)
+          zoomOnScroll={false} // 휠은 이동에 쓴다. 확대·축소는 Ctrl/⌘+휠·핀치 (useWheelZoom)
+          zoomOnPinch // 터치스크린 두 손가락 핀치 → 확대·축소
+          zoomActivationKeyCode={null} // ⌘를 누른 휠도 useWheelZoom이 처리
           zoomOnDoubleClick={false}
           nodesDraggable // CONNECT 모드에서는 카드에 nodrag를 붙여 이동을 막는다 (CardNode). 이 값을 껐다 켜면 드래그가 다시 붙지 않는 문제가 있어 항상 켜 둔다
           nodeDragThreshold={0} // 0이어야 노드가 마우스를 정확히 따라온다 (값이 있으면 그만큼 뒤처짐)
