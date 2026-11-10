@@ -7,6 +7,8 @@ import FabMenu from '../features/roadmap/FabMenu.jsx'
 import InboxPanel from '../features/roadmap/InboxPanel.jsx'
 import AddNodeModal from '../features/roadmap/AddNodeModal.jsx'
 import NodeDetailModal from '../features/roadmap/NodeDetailModal.jsx'
+import RoadmapTutorial from '../features/roadmap/tutorial/RoadmapTutorial.jsx'
+import { hasSeenRoadmapTutorial, markRoadmapTutorialSeen } from '../features/roadmap/tutorial/tutorialStorage.js'
 import { BASE_WIDTH, computeLayout, nextPosition, placeNode } from '../features/roadmap/layout.js'
 import '../features/roadmap/roadmap.css'
 
@@ -25,6 +27,20 @@ export default function RoadmapPage() {
   const [detailId, setDetailId] = useState(null) // 상세 창에 열린 노드 id
   const [toast, setToast] = useState('')
   const [dropPeriodId, setDropPeriodId] = useState(null) // 노드를 끄는 동안 강조할 학기
+  const [tutorialOpen, setTutorialOpen] = useState(false) // 첫 접속 튜토리얼
+
+  // 처음 접속했을 때만 튜토리얼 자동 표시 (캔버스가 자리 잡을 시간을 조금 준다)
+  useEffect(() => {
+    if (hasSeenRoadmapTutorial()) return undefined
+    const timer = setTimeout(() => setTutorialOpen(true), 500)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // 건너뛰거나 완료하면 기록해서 다시 자동으로 나타나지 않게 한다
+  const closeTutorial = useCallback(() => {
+    markRoadmapTutorialSeen()
+    setTutorialOpen(false)
+  }, [])
 
   // 학기 컬럼 배치 (자동 확장): 노드 배치로부터 학기별 x·너비 계산
   // keptWidths: 이번 세션에서 커졌던 너비. 노드를 빼내도 학기가 바로 줄지 않게 해서
@@ -224,6 +240,8 @@ export default function RoadmapPage() {
           onDelete={handleDeleteNode}
           onOpenNode={openDetail}
         />
+
+        <RoadmapTutorial open={tutorialOpen} nodes={nodes} layout={layout} onClose={closeTutorial} />
 
         <div className={`rm-toast ${toast ? 'is-visible' : ''}`} role="status">{toast}</div>
       </div>
