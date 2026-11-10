@@ -1,0 +1,134 @@
+/* 온보딩 화면 스타일
+   tokens.css(1번)가 생기면 변수 값이 그쪽으로 바뀐다. 지금은 SPEC 10장 색상 후보를 기본값으로 쓴다. */
+
+.onboarding {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--space-6, 24px) var(--space-4, 16px);
+  color: var(--color-text, #292929);
+}
+
+.onboarding-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px);
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  color: #8a8a8a;
+}
+
+.onboarding-steps .is-current {
+  font-weight: 700;
+  color: var(--color-text, #292929);
+}
+
+.onboarding-card {
+  margin-top: var(--space-4, 16px);
+  padding: var(--space-6, 24px);
+  background: var(--color-card, #ffffff);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.onboarding-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+  margin: var(--space-4, 16px) 0;
+  padding: 0;
+  border: none;
+}
+
+.onboarding-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px) var(--space-4, 16px);
+}
+
+.onboarding-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.onboarding-help {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #666666;
+}
+
+.onboarding-empty {
+  color: #8a8a8a;
+}
+
+.onboarding-course-list,
+.onboarding-preview-list {
+  padding: 0;
+  list-style: none;
+}
+
+.onboarding-course-list li,
+.onboarding-preview-list li {
+  padding: 6px 0;
+}
+
+.onboarding-badge {
+  margin-right: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--color-sage, #a9b89b);
+  color: #ffffff;
+}
+
+.onboarding-summary {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px var(--space-4, 16px);
+}
+
+.onboarding-summary dd {
+  margin: 0;
+}
+
+.onboarding-error {
+  margin-top: var(--space-4, 16px);
+  padding: 12px;
+  border-radius: 8px;
+  background: #fdecee;
+  color: #b3261e;
+}
+
+.onboarding-dev-note {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--color-butter, #f6d878);
+  font-size: 14px;
+}
+
+.onboarding-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2, 8px);
+  margin-top: var(--space-4, 16px);
+}
+
+.onboarding-actions button {
+  padding: 10px 18px;
+  border: 1px solid #dddddd;
+  border-radius: 10px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.onboarding-actions button.is-primary {
+  border-color: var(--color-text, #292929);
+  background: var(--color-text, #292929);
+  color: #ffffff;
+}
+
+.onboarding-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
