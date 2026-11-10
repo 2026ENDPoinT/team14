@@ -9,17 +9,8 @@ import {
   signOut,
   signUpWithEmail,
 } from '../services/api.js'
-import {
-  BuddyMascot,
-  EyeIcon,
-  GoogleIcon,
-  LockIcon,
-  MailIcon,
-  SproutIcon,
-} from '../features/auth/AuthIcons.jsx'
-import '../features/auth/auth.css'
 
-// 로그인 화면
+// 로그인 화면 (기능만, 디자인은 담당자가 적용 예정)
 // - 이메일 로그인 / 회원가입 / 비밀번호 찾기 / Google 로그인
 // - 로그인되어 있으면 온보딩 완료 여부에 따라 이동: 미완료 → /onboarding, 완료 → /roadmap
 
@@ -144,127 +135,82 @@ export default function LoginPage() {
   const text = MODE_TEXT[mode]
 
   return (
-    <main className="login-page">
-      <section className="login-intro">
-        <h1>
-          나의 대학생활을
-          <br />
-          한눈에, <span className="login-highlight">차근차근</span>
-        </h1>
-        <p>
-          로드맵으로 계획하고,
-          <br />
-          기록하고, 성장하는
-          <br />
-          나만의 대학생활 동반자
-        </p>
-        <BuddyMascot />
-      </section>
+    <main>
+      <h1>로그인</h1>
 
-      <section className="login-card" aria-label="로그인">
-        <h2 className="login-logo">
-          <SproutIcon />
-          CampusBuddy
-        </h2>
-        <p className="login-tagline">나만의 대학생활 로드맵, 캠퍼스버디</p>
-
-        {checking ? (
-          <p className="login-notice">로그인 상태 확인 중…</p>
-        ) : loggedIn ? (
-          <button type="button" className="login-google" onClick={handleSignOut}>
-            로그아웃하고 다른 계정으로 로그인
-          </button>
-        ) : (
-          <>
-            <form className="login-form" onSubmit={handleSubmit} noValidate>
-              {mode === 'reset' && (
-                <p className="login-help">
-                  가입한 이메일을 입력하면 비밀번호 재설정 링크를 보내드려요.
-                </p>
-              )}
-
-              <label className="login-input">
-                <MailIcon />
-                <input
-                  type="email"
-                  placeholder="이메일"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                />
-              </label>
-
-              {mode !== 'reset' && (
-                <label className="login-input">
-                  <LockIcon />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="비밀번호"
-                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className="login-icon-button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
-                  >
-                    <EyeIcon off={showPassword} />
-                  </button>
-                </label>
-              )}
-
-              {mode === 'login' && (
-                <button
-                  type="button"
-                  className="login-link login-forgot"
-                  onClick={() => changeMode('reset')}
-                >
-                  비밀번호 찾기
-                </button>
-              )}
-
-              <button type="submit" className="login-primary" disabled={busy}>
-                {busy ? '처리 중…' : text.button}
-              </button>
-            </form>
-
-            {mode !== 'reset' && (
-              <>
-                <div className="login-divider">또는</div>
-                <button
-                  type="button"
-                  className="login-google"
-                  onClick={handleGoogleLogin}
-                  disabled={busy}
-                >
-                  <GoogleIcon />
-                  Google로 계속하기
-                </button>
-              </>
+      {checking ? (
+        <p>로그인 상태 확인 중…</p>
+      ) : loggedIn ? (
+        <button type="button" onClick={handleSignOut}>
+          로그아웃하고 다른 계정으로 로그인
+        </button>
+      ) : (
+        <>
+          <form onSubmit={handleSubmit} noValidate>
+            {mode === 'reset' && (
+              <p>가입한 이메일을 입력하면 비밀번호 재설정 링크를 보내드려요.</p>
             )}
 
-            <p className="login-footer">
-              {text.footer}
-              <button type="button" className="login-link" onClick={() => changeMode(text.switchTo)}>
-                {text.switchLabel}
-              </button>
-            </p>
-          </>
-        )}
+            <div>
+              <input
+                type="email"
+                placeholder="이메일"
+                aria-label="이메일"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </div>
 
-        {notice && (
-          <p className="login-notice" role="status">
-            {notice}
+            {mode !== 'reset' && (
+              <div>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="비밀번호"
+                  aria-label="비밀번호"
+                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)}>
+                  {showPassword ? '숨기기' : '보기'}
+                </button>
+              </div>
+            )}
+
+            {mode === 'login' && (
+              <button type="button" onClick={() => changeMode('reset')}>
+                비밀번호 찾기
+              </button>
+            )}
+
+            <div>
+              <button type="submit" disabled={busy}>
+                {busy ? '처리 중…' : text.button}
+              </button>
+            </div>
+          </form>
+
+          {mode !== 'reset' && (
+            <>
+              <p>또는</p>
+              <button type="button" onClick={handleGoogleLogin} disabled={busy}>
+                Google로 계속하기
+              </button>
+            </>
+          )}
+
+          <p>
+            {text.footer}{' '}
+            <button type="button" onClick={() => changeMode(text.switchTo)}>
+              {text.switchLabel}
+            </button>
           </p>
-        )}
-        {error && (
-          <p className="login-error" role="alert">
-            {error}
-          </p>
-        )}
-      </section>
+        </>
+      )}
+
+      {notice && <p role="status">{notice}</p>}
+      {error && <p role="alert">{error}</p>}
     </main>
   )
 }

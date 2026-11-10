@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { endCurrentSession, hasRecoverySession, updatePassword } from '../services/api.js'
-import { EyeIcon, LockIcon, SproutIcon } from '../features/auth/AuthIcons.jsx'
-import '../features/auth/auth.css'
 
-// 비밀번호 재설정 화면: 메일의 재설정 링크를 누르면 이 화면으로 돌아온다.
+// 비밀번호 재설정 화면 (기능만, 디자인은 담당자가 적용 예정)
+// 메일의 재설정 링크를 누르면 이 화면으로 돌아온다.
 // 링크를 열면 Supabase가 임시 로그인 세션을 만들어 주고, 그 상태에서 새 비밀번호를 저장한다.
 
 function readErrorFromUrl() {
@@ -62,87 +61,67 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="login-page is-single">
-      <section className="login-card" aria-label="비밀번호 재설정">
-        <h2 className="login-logo">
-          <SproutIcon />
-          CampusBuddy
-        </h2>
-        <p className="login-tagline">새 비밀번호 설정</p>
+    <main>
+      <h1>새 비밀번호 설정</h1>
 
-        {checking && <p className="login-notice">확인 중…</p>}
+      {checking && <p>확인 중…</p>}
 
-        {!checking && sessionEndFailed && (
-          <>
-            <p className="login-notice" role="status">
-              비밀번호는 변경되었지만, 이 브라우저의 로그인 상태를 정리하지 못했어요. 아래 버튼으로
-              다시 시도해 주세요.
-            </p>
-            <button
-              type="button"
-              className="login-primary"
-              onClick={finishAndGoToLogin}
-              disabled={busy}
-            >
-              {busy ? '처리 중…' : '로그인 상태 정리 다시 시도'}
-            </button>
-          </>
-        )}
-
-        {!checking && !sessionEndFailed && canReset && (
-          <form className="login-form" onSubmit={handleSubmit} noValidate>
-            <label className="login-input">
-              <LockIcon />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="새 비밀번호 (6자 이상)"
-                autoComplete="new-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-              <button
-                type="button"
-                className="login-icon-button"
-                onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
-              >
-                <EyeIcon off={showPassword} />
-              </button>
-            </label>
-            <label className="login-input">
-              <LockIcon />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="새 비밀번호 확인"
-                autoComplete="new-password"
-                value={confirm}
-                onChange={(event) => setConfirm(event.target.value)}
-              />
-            </label>
-            <button type="submit" className="login-primary" disabled={busy}>
-              {busy ? '저장 중…' : '비밀번호 저장'}
-            </button>
-          </form>
-        )}
-
-        {!checking && !sessionEndFailed && !canReset && (
-          <>
-            <p className="login-help">
-              재설정 링크가 만료되었거나 올바르지 않아요. 로그인 화면의 ‘비밀번호 찾기’에서
-              링크를 다시 받아 주세요.
-            </p>
-            <button type="button" className="login-primary" onClick={() => navigate('/login')}>
-              로그인 화면으로
-            </button>
-          </>
-        )}
-
-        {error && (
-          <p className="login-error" role="alert">
-            {error}
+      {!checking && sessionEndFailed && (
+        <>
+          <p role="status">
+            비밀번호는 변경되었지만, 이 브라우저의 로그인 상태를 정리하지 못했어요. 아래 버튼으로
+            다시 시도해 주세요.
           </p>
-        )}
-      </section>
+          <button type="button" onClick={finishAndGoToLogin} disabled={busy}>
+            {busy ? '처리 중…' : '로그인 상태 정리 다시 시도'}
+          </button>
+        </>
+      )}
+
+      {!checking && !sessionEndFailed && canReset && (
+        <form onSubmit={handleSubmit} noValidate>
+          <div>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="새 비밀번호 (6자 이상)"
+              aria-label="새 비밀번호"
+              autoComplete="new-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+            <button type="button" onClick={() => setShowPassword(!showPassword)}>
+              {showPassword ? '숨기기' : '보기'}
+            </button>
+          </div>
+          <div>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="새 비밀번호 확인"
+              aria-label="새 비밀번호 확인"
+              autoComplete="new-password"
+              value={confirm}
+              onChange={(event) => setConfirm(event.target.value)}
+            />
+          </div>
+          <button type="submit" disabled={busy}>
+            {busy ? '저장 중…' : '비밀번호 저장'}
+          </button>
+        </form>
+      )}
+
+      {!checking && !sessionEndFailed && !canReset && (
+        <>
+          <p>
+            재설정 링크가 만료되었거나 올바르지 않아요. 로그인 화면의 ‘비밀번호 찾기’에서 링크를
+            다시 받아 주세요.
+          </p>
+          <button type="button" onClick={() => navigate('/login')}>
+            로그인 화면으로
+          </button>
+        </>
+      )}
+
+      {error && <p role="alert">{error}</p>}
     </main>
   )
 }
