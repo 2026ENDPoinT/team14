@@ -1,0 +1,461 @@
+/* 일기 페이지 (달력 + 팝업) 스타일
+   색·그림자·모서리는 로드맵 화면과 같게 한다. (변수는 DiaryEditor.css의 .diary-page) */
+
+/* ── 왼쪽 소개 + 오른쪽 달력 ── */
+.dp-main {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 640px);
+  justify-content: center;
+  gap: 64px;
+  padding: 130px 32px 64px;
+}
+
+.dp-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  padding-top: 8px;
+}
+.dp-title {
+  margin: 0;
+  font-size: 40px;
+  font-weight: 900;
+  line-height: 1.1;
+  color: var(--dy-ink);
+}
+.dp-lead {
+  margin: 14px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #888;
+}
+
+/* 범례: 일기 쓴 날 / 아직 쓰지 않은 날 */
+.dp-legend {
+  display: flex;
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+}
+.dp-legend li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.dp-legend__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--rm-dot);
+}
+.dp-legend__dot.is-done {
+  background: var(--rm-accent-dot);
+}
+
+/* 이번 달 기록 수: 로드맵 노드 카드 모양 */
+.dp-stat {
+  padding: 22px 24px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #f8f8f8, #ececec);
+  box-shadow: var(--rm-shadow);
+}
+.dp-stat__label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--rm-muted);
+}
+.dp-stat__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: -6px -8px 0 0; /* 새로고침 버튼 여백만큼 당김 */
+}
+.dp-stat__refresh:hover {
+  transform: rotate(-60deg); /* 돌아가는 느낌 */
+}
+.dp-stat__prompt {
+  margin: 6px 0 12px;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.4;
+  color: var(--rm-text);
+  word-break: keep-all; /* 한국어 단어 중간에서 줄이 바뀌지 않게 */
+}
+.dp-stat__hint {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #888;
+}
+.dp-foot {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #888;
+}
+
+/* ── 달력 카드 ── */
+.dp-cal-card {
+  padding: 36px 40px 40px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #f8f8f8, #ececec);
+  box-shadow: var(--rm-shadow);
+}
+.dp-cal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+/* 연·월 + ▾ (휠 선택기는 이 아래 왼쪽에 뜬다) */
+.dp-cal-head__label {
+  position: relative;
+  margin-left: -10px; /* 버튼 안쪽 여백만큼 당겨 달력 왼쪽과 맞춤 */
+}
+.dp-cal-head__label .mm-picker {
+  left: 0;
+  transform: none;
+  animation: dp-fade 0.2s;
+}
+.dp-cal-head__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--rm-text);
+}
+.dp-cal-head__nav {
+  display: flex;
+  gap: 4px;
+}
+.dp-cal-head__nav .rm-icon-btn:disabled {
+  opacity: 0.25;
+  transform: none;
+  background: transparent;
+}
+
+.dp-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 18px 10px;
+  justify-items: center;
+}
+.dp-weekday {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--rm-muted);
+}
+
+/* 날짜: 로드맵 노드처럼 볼록한 동그라미 */
+.dp-day {
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  /* 아직 쓰지 않은 날: 회색 + 로드맵 노드처럼 볼록한 입체감 (위 밝게, 아래 그림자) */
+  background: linear-gradient(145deg, #e8e8e8, #d2d2d2);
+  box-shadow:
+    5px 7px 14px rgba(0, 0, 0, 0.14),
+    -4px -4px 10px rgba(255, 255, 255, 0.95),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.7);
+  font-size: 15px;
+  font-weight: 700;
+  color: #333;
+  transition: transform 0.25s var(--rm-ease), box-shadow 0.25s var(--rm-ease);
+}
+.dp-day:hover:not(:disabled),
+.dp-day:focus-visible {
+  transform: translateY(-3px);
+  box-shadow:
+    8px 12px 20px rgba(0, 0, 0, 0.16),
+    -4px -4px 10px rgba(255, 255, 255, 0.95),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.7);
+  outline: none;
+}
+/* 일기 쓴 날: 로드맵 학기 배지(4-1)와 같은 노랑, 같은 입체감 */
+.dp-day.has-diary {
+  background: linear-gradient(145deg, #fbedc0, #f2d68f);
+  color: var(--dy-ink);
+}
+/* 오늘: 진한 회색 테두리 (입체 그림자는 유지) */
+.dp-day.is-today {
+  box-shadow:
+    5px 7px 14px rgba(0, 0, 0, 0.14),
+    -4px -4px 10px rgba(255, 255, 255, 0.95),
+    inset 0 0 0 1.5px var(--dy-ink);
+}
+.dp-day.is-today:hover:not(:disabled) {
+  box-shadow:
+    8px 12px 20px rgba(0, 0, 0, 0.16),
+    -4px -4px 10px rgba(255, 255, 255, 0.95),
+    inset 0 0 0 1.5px var(--dy-ink);
+}
+/* 미래 날짜: 납작하고 흐리게 */
+.diary-page .dp-day:disabled {
+  opacity: 1;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px #e4e4e4;
+  color: #cfcfcf;
+  cursor: default;
+}
+
+/* ── 팝업 ── */
+.dp-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.dp-modal--photo {
+  z-index: 45;
+}
+.dp-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(60, 60, 60, 0.18);
+  animation: dp-fade 0.2s;
+}
+@keyframes dp-fade {
+  from { opacity: 0; }
+}
+.dp-modal__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: min(640px, 100%);
+  max-height: calc(100vh - 48px);
+  box-sizing: border-box;
+  overflow-y: auto;
+  padding: 36px 44px 36px;
+  border-radius: 22px;
+  background: var(--rm-surface);
+  box-shadow: var(--rm-shadow-strong);
+  animation: dp-pop 0.3s var(--rm-ease);
+}
+@keyframes dp-pop {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+}
+.dp-modal__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.dp-modal__title {
+  margin: 6px 0 0;
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--rm-text);
+}
+.dp-modal__sub {
+  margin: 8px 0 0;
+}
+.dp-divider {
+  border-top-color: #dcdcdc;
+}
+.dp-text-btn {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  color: #888;
+  transition: background 0.2s, color 0.2s;
+}
+.dp-text-btn:hover {
+  background: #e8e8e8;
+  color: var(--rm-text);
+}
+
+/* 읽기 모드 본문 */
+.dp-story {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.8;
+  color: #333;
+  white-space: pre-wrap; /* 줄바꿈 그대로 */
+  word-break: break-all;
+}
+.dp-textarea {
+  min-height: 200px;
+}
+
+/* 사진 추가 (+ 동그라미) */
+.dp-photo-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  color: #666;
+}
+.dp-photo-add__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fbfbfb, #eaeaea);
+  box-shadow: 3px 5px 10px rgba(0, 0, 0, 0.08), -3px -3px 8px rgba(255, 255, 255, 0.9);
+  font-size: 20px;
+  font-weight: 400;
+  color: #555;
+  transition: transform 0.25s var(--rm-ease);
+}
+.dp-photo-add:hover .dp-photo-add__icon {
+  transform: translateY(-2px);
+}
+
+/* ── 버튼 ── */
+.dp-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+.dp-btn {
+  height: 42px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 21px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--dy-ink);
+  transition: transform 0.2s var(--rm-ease), box-shadow 0.2s var(--rm-ease), background 0.2s;
+}
+.dp-btn:hover {
+  transform: translateY(-2px);
+}
+.dp-btn:active {
+  transform: scale(0.97);
+}
+.dp-btn:focus-visible {
+  outline: 2px solid var(--dy-ink);
+  outline-offset: 3px;
+}
+/* 주요 버튼: 학기 배지와 같은 연노랑 */
+.dp-btn--accent {
+  background: var(--rm-accent);
+  box-shadow: 4px 6px 14px rgba(0, 0, 0, 0.1);
+}
+.dp-btn--accent:hover {
+  background: #f6df9a;
+}
+/* 보조 버튼: 노드 카드처럼 볼록한 회색 */
+.dp-btn--soft {
+  background: linear-gradient(135deg, #fbfbfb, #eaeaea);
+  box-shadow: 4px 6px 12px rgba(0, 0, 0, 0.08), -4px -4px 10px rgba(255, 255, 255, 0.9);
+}
+.dp-btn--wide {
+  width: 100%;
+}
+
+/* ── 사진 추가 팝업 ── */
+.dp-photo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(380px, 100%);
+  box-sizing: border-box;
+  padding: 30px 28px 26px;
+  border-radius: 22px;
+  background: var(--rm-surface);
+  box-shadow: var(--rm-shadow-strong);
+  animation: dp-pop 0.25s var(--rm-ease);
+}
+.dp-photo__title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 900;
+  color: var(--rm-text);
+}
+.dp-photo__sub {
+  margin: 8px 0 22px;
+}
+/* 사진 가져올 곳 목록: 노드 카드 모양 한 덩어리 안에 줄로 나눔 */
+.dp-photo__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f8f8f8, #ececec);
+  box-shadow: var(--rm-shadow);
+  overflow: hidden;
+}
+.dp-photo__list li + li {
+  border-top: 1px solid #e2e2e2;
+}
+.dp-photo__pick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 15px 18px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 700;
+  color: #444;
+  text-align: left;
+  transition: background 0.2s;
+}
+.dp-photo__pick:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+.diary-page .dp-photo__pick[aria-disabled='true'] {
+  cursor: default;
+}
+.dp-photo__note {
+  margin: 14px 0 24px;
+  font-size: 12px;
+}
+
+/* ── 좁은 화면: 위아래로 쌓기 ── */
+@media (max-width: 900px) {
+  .dp-main {
+    grid-template-columns: minmax(0, 640px);
+    gap: 32px;
+    padding: 100px 16px 40px;
+  }
+  .dp-intro {
+    gap: 20px;
+  }
+  .dp-foot {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  .dp-cal-card {
+    padding: 24px 16px 28px;
+  }
+  .dp-calendar {
+    gap: 12px 4px;
+  }
+  .dp-day {
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
+  }
+  .dp-modal__card {
+    padding: 28px 22px;
+  }
+  .dp-modal__title {
+    font-size: 24px;
+  }
+  .diary-page .rm-nav {
+    width: 100%;
+  }
+}
