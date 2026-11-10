@@ -193,3 +193,17 @@ export function placeNode(node, topLeft, nodes, layout) {
     position: { x: Math.round(box.x - col.x), y: Math.round(box.y) },
   }
 }
+
+// 첫 화면 위치: 학기 2.5개 정도가 보이는 배율, 타임라인은 화면 위에서 약 22% 지점
+// - 노드 데이터(position, periodId)는 건드리지 않고 화면(viewport)만 정한다
+// - 상단 반원 메뉴(높이 96px) 아래로 타임라인 위 교과목 카드(반 높이 42px)가 내려오게 한다
+// - 가로: 노드가 놓인 가장 앞 학기부터 보여 준다 (빈 학기만 보이는 첫 화면 방지)
+const VIEW_SEMESTERS = 2.5
+const NAV_CLEAR = 96 + 16
+export function initialViewport(screenW, screenH, layout, nodes) {
+  const zoom = Math.round(Math.min(1, Math.max(0.6, screenW / (VIEW_SEMESTERS * BASE_WIDTH + CANVAS_LEFT))) * 100) / 100
+  const lineY = Math.max(screenH * 0.22, NAV_CLEAR + 42 * zoom)
+  const placedXs = nodes.filter((n) => n.status === 'placed' && layout.cols[n.periodId]).map((n) => layout.cols[n.periodId].x)
+  const startX = placedXs.length ? Math.min(...placedXs) : CANVAS_LEFT
+  return { x: Math.round(-(startX - CANVAS_LEFT) * zoom), y: Math.round(lineY - TIMELINE_Y * zoom), zoom }
+}

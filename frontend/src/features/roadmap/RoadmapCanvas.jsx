@@ -10,7 +10,7 @@ import { BranchContext, computeBranches } from './branchLines.js'
 import useLinkDrag from './useLinkDrag.js'
 import { linkProblem } from './edgeRules.js'
 import { routeBetween, routeEdges, routeToPoint } from './edgeRouting.js'
-import { CANVAS_HEIGHT, cardSize, findPeriodAt, nodeBox, placeNode } from './layout.js'
+import { CANVAS_HEIGHT, cardSize, findPeriodAt, initialViewport, nodeBox, placeNode } from './layout.js'
 
 // React Flow에 등록할 노드·연결선 종류 (컴포넌트 밖에 두어야 매번 새로 만들지 않는다)
 const nodeTypes = { timeline: TimelineNode, card: CardNode }
@@ -37,6 +37,7 @@ export default function RoadmapCanvas({
 }) {
   const width = layout.width + 200
 
+  const [startViewport] = useState(() => initialViewport(window.innerWidth, window.innerHeight, layout, nodes)) // 첫 진입 화면 위치
   const [resetKey, setResetKey] = useState(0) // 원래 위치로 되돌리기용
   const [draggingId, setDraggingId] = useState(null) // 끌고 있는 노드 (연결선 애니메이션 끔, 가지선 잠시 숨김)
   const [dropLink, setDropLink] = useState(null) // 노드를 다른 노드 위에 올렸을 때 연결 후보 { id, valid, problem }
@@ -276,7 +277,7 @@ export default function RoadmapCanvas({
           onNodeDragStop={onNodeDragStop}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
-          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+          defaultViewport={startViewport}
           minZoom={0.25}
           maxZoom={1.6}
           translateExtent={[[-600, -400], [width + 600, CANVAS_HEIGHT + 400]]}
