@@ -363,7 +363,7 @@
 .rm-canvas.is-node-dragging .rm-branch {
   transition: none;
 }
-/* 노드를 다른 노드 위에 올렸을 때 '연결하기' 안내 */
+/* 타임라인 위 카드를 다른 카드 위에 올렸을 때 '자리 바꾸기' 안내 */
 .rm-link-label {
   position: absolute;
   left: 50%;
@@ -385,6 +385,10 @@
 }
 @keyframes rm-link-label-in {
   from { opacity: 0; transform: translate(-50%, calc(-100% + 6px)); }
+}
+/* CONNECT 모드: 카드를 끌면 관계선을 그린다 */
+.rm-canvas.is-connect-mode .rm-card {
+  cursor: crosshair;
 }
 /* CONNECT 모드: 카드 오른쪽 연결 핸들 (왼쪽 완료 표시등과 분리) */
 .rm-link-handle {
@@ -588,6 +592,59 @@ span.rm-nav__link {
   fill: currentColor;
 }
 
+/* ───────── 휴지통 (왼쪽 아래, 확대·축소 버튼 오른쪽) ───────── */
+.rm-trash {
+  position: absolute;
+  left: 104px; /* 확대·축소 버튼(왼쪽 48px + 40px) 오른쪽으로 16px */
+  bottom: 56px;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f7f7f7;
+  box-shadow: var(--rm-shadow);
+  color: var(--rm-muted);
+  transition: transform 0.2s var(--rm-ease), background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+/* 노드를 끄는 동안: 놓을 수 있는 곳임을 살짝 표시 */
+.rm-trash.is-armed {
+  color: var(--rm-text);
+  background: #fff;
+  box-shadow: 0 0 0 2px #e3e3e3, var(--rm-shadow);
+}
+/* 휴지통 위에 올렸을 때: 놓으면 삭제됨 */
+.rm-trash.is-active {
+  transform: scale(1.25);
+  background: #e5484d;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(229, 72, 77, 0.18), 0 8px 18px rgba(229, 72, 77, 0.3);
+}
+.rm-trash__label {
+  position: absolute;
+  left: calc(100% + 10px);
+  padding: 5px 10px;
+  border-radius: 12px;
+  background: #e5484d;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(-4px) scale(0.8); /* 휴지통이 커진 만큼 글씨는 원래 크기로 */
+  pointer-events: none;
+  transition: opacity 0.15s, transform 0.2s var(--rm-ease);
+}
+.rm-trash.is-active .rm-trash__label {
+  opacity: 1;
+  transform: translateX(0) scale(0.8);
+}
+/* 휴지통 위의 노드는 흐리게 */
+.rm-canvas.is-over-trash .react-flow__node.dragging {
+  opacity: 0.5;
+}
+
 /* ───────── + 버튼 메뉴 / INBOX ───────── */
 .rm-fab {
   position: absolute;
@@ -751,6 +808,38 @@ span.rm-nav__link {
 }
 .rm-inbox__add:hover {
   transform: scale(1.1) rotate(90deg);
+}
+
+/* 보관함 카드 + 오른쪽 위 삭제(X) 버튼 */
+.rm-inbox__item {
+  position: relative;
+  flex: none;
+}
+.rm-inbox__delete {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #e6e6e6;
+  color: #8a8a8a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform 0.2s var(--rm-ease);
+}
+.rm-inbox__delete:hover {
+  background: var(--rm-text);
+  color: #fff;
+  transform: scale(1.1);
+}
+.rm-inbox__delete:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* 보관함 카드 드래그 */
@@ -1031,6 +1120,29 @@ span.rm-nav__link {
 .rm-toast.is-visible {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+/* 실행 취소 버튼이 있는 안내 (노드 삭제) */
+.rm-toast.has-action {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 8px 8px 20px;
+  white-space: nowrap;
+}
+.rm-toast.has-action.is-visible {
+  pointer-events: auto;
+}
+.rm-toast__action {
+  flex: none;
+  height: 30px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 15px;
+  background: #fff;
+  color: var(--rm-text);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 /* 움직임 줄이기 설정을 켠 사용자에게는 애니메이션 최소화 */

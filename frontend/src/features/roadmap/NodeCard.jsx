@@ -1,13 +1,13 @@
-import { isCourse, themeLabel } from './layout.js'
+import { isPill, themeLabel } from './layout.js'
 
-// 노드 카드. 교과목은 작은 카드, 나머지는 종류·이름·부가 정보 카드
+// 노드 카드. 교과목·타임라인 위 노드는 작은 카드, 나머지는 종류·이름·부가 정보 카드
 // subtitle: 노드 문서의 첫 줄 (한 줄 부가 정보)
 // 왼쪽 점 = 완료 상태 표시등 (completed: true 노란색 / false 회색)
 // hideDot: 캔버스에서는 클릭 가능한 표시등(CompleteDot)을 따로 그리므로 숨긴다
 export default function NodeCard({
   node, subtitle, onClick, small = false, hideDot = false, style, className: extra = '', onPointerDown,
 }) {
-  const course = isCourse(node)
+  const course = isPill(node) // 교과목, 또는 타임라인 위의 전공·학업 노드
   const className = [
     'rm-card',
     course ? 'rm-card--course' : '',

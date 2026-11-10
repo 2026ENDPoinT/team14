@@ -1,5 +1,5 @@
 import { createContext } from 'react'
-import { TIMELINE_Y, isCourse } from './layout.js'
+import { TIMELINE_Y, isPill } from './layout.js'
 
 // 학기 가지선: 학기 타임라인에서 그 학기에 배치된 노드로 뻗는 회색 곡선
 // - 노드 관계선(edges)과 데이터·동작이 분리되어 있다. 노드의 periodId(소속 학기)로 그린다.
@@ -29,7 +29,7 @@ export function branchVisible(node, edges) {
 const TRUNK_GAP = 28 // 줄기와 노드 사이 거리
 const BADGE_CLEAR = 48 // 줄기는 학기 배지보다 오른쪽에서 시작
 const DOT_GAP = 12 // 노드 왼쪽 완료 표시등 앞에서 멈춘다 (표시등과 겹치지 않게)
-const PILL_GAP = 16 // 타임라인 위 교과목 카드와 줄기 사이 거리
+const PILL_GAP = 16 // 타임라인 위 작은 카드와 줄기 사이 거리
 
 // cards: [{ node, box }] 캔버스에 그려진 카드 (box는 지금 화면 위치. 드래그 중이면 드래그 위치)
 // 결과: [{ id, d }]
@@ -37,7 +37,7 @@ export function computeBranches(cards, edges, layout) {
   const byPeriod = new Map()
   for (const c of cards) {
     if (!branchVisible(c.node, edges)) continue
-    const onLine = isCourse(c.node) && Math.abs(c.box.y + c.box.h / 2 - TIMELINE_Y) < 1
+    const onLine = isPill(c.node) && Math.abs(c.box.y + c.box.h / 2 - TIMELINE_Y) < 1
     if (onLine) continue
     if (!byPeriod.has(c.node.periodId)) byPeriod.set(c.node.periodId, [])
     byPeriod.get(c.node.periodId).push(c)
@@ -49,9 +49,9 @@ export function computeBranches(cards, edges, layout) {
     if (!col) continue
     // 학기 안 가지선들이 함께 쓰는 세로 줄기 (피그마처럼 한 줄기에서 갈라짐)
     let trunk = Math.max(col.x + BADGE_CLEAR, Math.min(...list.map((c) => c.box.x)) - TRUNK_GAP)
-    // 타임라인 위 교과목 카드 밑에서 줄기가 나오면 카드에서 나온 선처럼 보이므로, 카드 왼쪽으로 비켜 준다
+    // 타임라인 위 작은 카드 밑에서 줄기가 나오면 카드에서 나온 선처럼 보이므로, 카드 왼쪽으로 비켜 준다
     const pills = cards
-      .filter((c) => c.node.periodId === periodId && isCourse(c.node) && Math.abs(c.box.y + c.box.h / 2 - TIMELINE_Y) < 1)
+      .filter((c) => c.node.periodId === periodId && isPill(c.node) && Math.abs(c.box.y + c.box.h / 2 - TIMELINE_Y) < 1)
       .sort((a, b) => b.box.x - a.box.x)
     for (const { box } of pills) {
       if (trunk > box.x - PILL_GAP && trunk < box.x + box.w + PILL_GAP) trunk = box.x - PILL_GAP

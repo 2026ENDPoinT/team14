@@ -9,14 +9,17 @@ import { linkProblem } from './edgeRules.js'
 //   mode 'create' → fixedId(출발 노드)에서 새 선 / 'source' 또는 'target' → edgeId 선의 그 끝을 옮김
 //   fixedId: 움직이지 않는 쪽 노드
 // onDone(info, nodeId): 연결 확정 / onReject(message): 안내 문구 표시
+// startLink: 누르자마자 선 그리기 시작 (연결 핸들·연결선 끝 핸들)
+// startLinkOnMove: START_DISTANCE보다 많이 움직였을 때 시작 (CONNECT 모드 카드 몸통. 그 전에 떼면 클릭)
 // ReactFlowProvider 안에서만 쓸 수 있다.
+const START_DISTANCE = 4 // RoadmapCanvas의 CLICK_DISTANCE와 같은 값 (클릭·드래그 구분 기준)
+
 export default function useLinkDrag({ edges, onDone, onReject }) {
   const { screenToFlowPosition } = useReactFlow()
   const [link, setLink] = useState(null) // 드래그 중 정보 + pointer(캔버스 좌표) + target
 
-  const startLink = useCallback(
+  const beginLink = useCallback(
     (event, info) => {
-      if (event.button !== 0) return
       event.preventDefault()
       event.stopPropagation() // 캔버스 이동·노드 드래그가 시작되지 않게
 
@@ -62,5 +65,34 @@ export default function useLinkDrag({ edges, onDone, onReject }) {
     [edges, onDone, onReject, screenToFlowPosition],
   )
 
-  return { link, startLink }
+  const startLink = useCallback(
+    (event, info) => {
+      if (event.button !== 0) return
+      beginLink(event, info)
+    },
+    [beginLink],
+  )
+
+  const startLinkOnMove = useCallback(
+    (event, info) => {
+      if (event.button !== 0) return
+      const start = { x: event.clientX, y: event.clientY }
+      const stop = () => {
+        window.removeEventListener('pointermove', handleMove)
+        window.removeEventListener('pointerup', stop)
+        window.removeEventListener('pointercancel', stop)
+      }
+      const handleMove = (e) => {
+        if (Math.hypot(e.clientX - start.x, e.clientY - start.y) <= START_DISTANCE) return
+        stop()
+        beginLink(e, info)
+      }
+      window.addEventListener('pointermove', handleMove)
+      window.addEventListener('pointerup', stop)
+      window.addEventListener('pointercancel', stop)
+    },
+    [beginLink],
+  )
+
+  return { link, startLink, startLinkOnMove }
 }
