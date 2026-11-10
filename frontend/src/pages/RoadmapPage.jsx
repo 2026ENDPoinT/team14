@@ -9,6 +9,7 @@ import AddNodeModal from '../features/roadmap/AddNodeModal.jsx'
 import NodeDetailModal from '../features/roadmap/NodeDetailModal.jsx'
 import RoadmapTutorial from '../features/roadmap/tutorial/RoadmapTutorial.jsx'
 import { hasSeenRoadmapTutorial, markRoadmapTutorialSeen } from '../features/roadmap/tutorial/tutorialStorage.js'
+import { linkProblem } from '../features/roadmap/edgeRules.js'
 import { BASE_WIDTH, computeLayout, nextPosition, placeNode } from '../features/roadmap/layout.js'
 import '../features/roadmap/roadmap.css'
 
@@ -28,6 +29,7 @@ export default function RoadmapPage() {
   const [toast, setToast] = useState('')
   const [dropPeriodId, setDropPeriodId] = useState(null) // 노드를 끄는 동안 강조할 학기
   const [tutorialOpen, setTutorialOpen] = useState(false) // 첫 접속 튜토리얼
+  const [connectMode, setConnectMode] = useState(false) // CONNECT: 노드 오른쪽 핸들로 관계선 만들기
 
   // 처음 접속했을 때만 튜토리얼 자동 표시 (캔버스가 자리 잡을 시간을 조금 준다)
   useEffect(() => {
@@ -73,11 +75,12 @@ export default function RoadmapPage() {
       if (detailId) setDetailId(null)
       else if (addOpen) setAddOpen(false)
       else if (fabOpen) setFabOpen(false)
+      else if (connectMode) setConnectMode(false)
       else if (inboxOpen) setInboxOpen(false)
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [detailId, addOpen, fabOpen, inboxOpen])
+  }, [detailId, addOpen, fabOpen, connectMode, inboxOpen])
 
   // 안내 메시지는 2초 뒤 사라짐
   useEffect(() => {
@@ -109,6 +112,29 @@ export default function RoadmapPage() {
     setEdges((prev) => prev.filter((e) => e.id !== edgeId))
   }, [])
 
+  // 관계선 만들기: 자기 자신·중복(방향 무관)은 막는다. 노드 자체는 바꾸지 않는다.
+  const handleEdgeCreate = useCallback((sourceId, targetId) => {
+    setEdges((prev) => {
+      if (linkProblem(prev, sourceId, targetId)) return prev
+      return [...prev, { id: `e_${Date.now()}`, sourceNodeId: sourceId, targetNodeId: targetId }]
+    })
+    setToast('관계선을 연결했어요.')
+  }, [])
+
+  // 관계선 끝점 옮기기: end('source' | 'target') 쪽 노드만 바꾼다
+  const handleEdgeReconnect = useCallback((edgeId, end, nodeId) => {
+    setEdges((prev) => {
+      const edge = prev.find((e) => e.id === edgeId)
+      if (!edge) return prev
+      const next = end === 'source' ? { ...edge, sourceNodeId: nodeId } : { ...edge, targetNodeId: nodeId }
+      if (linkProblem(prev, next.sourceNodeId, next.targetNodeId, edgeId)) return prev
+      return prev.map((e) => (e.id === edgeId ? next : e))
+    })
+    setToast('연결 대상을 바꿨어요.')
+  }, [])
+
+  const handleLinkReject = useCallback((message) => setToast(message), [])
+
   const openAdd = () => {
     setDetailId(null)
     setFabOpen(false)
@@ -118,8 +144,12 @@ export default function RoadmapPage() {
   const handleFabSelect = (id) => {
     if (id === 'node') return openAdd()
     setFabOpen(false)
-    // CONNECT·SEMESTER는 다음 작업(TASKS 1-9, 1-10)에서 구현
-    setToast(id === 'connect' ? '연결선 추가는 준비 중이에요.' : '학기 추가는 준비 중이에요.')
+    if (id === 'connect') {
+      setConnectMode(true)
+      return
+    }
+    // SEMESTER는 다음 작업(TASKS 1-10)에서 구현
+    setToast('학기 추가는 준비 중이에요.')
   }
 
   const handleCreate = ({ theme, title, periodId, memo }) => {
@@ -197,6 +227,10 @@ export default function RoadmapPage() {
           onNodeMove={handleNodeMove}
           onEdgeDelete={handleEdgeDelete}
           onToggleComplete={handleToggleComplete}
+          connectMode={connectMode}
+          onEdgeCreate={handleEdgeCreate}
+          onEdgeReconnect={handleEdgeReconnect}
+          onLinkReject={handleLinkReject}
           dropPeriodId={dropPeriodId}
           onDropTargetChange={setDropPeriodId}
         />
@@ -214,6 +248,13 @@ export default function RoadmapPage() {
           onPlace={handleNodeMove}
           onTargetChange={setDropPeriodId}
         />
+
+        {connectMode && (
+          <div className="rm-connect-banner" role="status">
+            <span>연결 모드 · 노드 오른쪽 ● 을 다른 노드로 끌어 놓으세요</span>
+            <button type="button" onClick={() => setConnectMode(false)}>완료</button>
+          </div>
+        )}
 
         <FabMenu
           open={fabOpen}
