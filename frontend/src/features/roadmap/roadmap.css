@@ -265,6 +265,7 @@
   pointer-events: visibleStroke;
 }
 .rm-edge__line {
+  pointer-events: none; /* 마우스 감지는 넓은 투명 선(.rm-edge__hit)이 담당 */
   fill: none;
   stroke: var(--rm-line);
   stroke-width: 1.4;
@@ -295,10 +296,176 @@
   pointer-events: all;
 }
 .rm-edge__handle {
-  pointer-events: none; /* 지금은 표시만 (끝점 재연결은 다음 단계). 완료 표시등 클릭을 가리지 않게 */
+  pointer-events: none; /* 보이는 원. 누르는 영역은 아래 .rm-edge__grip */
   fill: #fff;
   stroke: var(--rm-text);
   stroke-width: 2;
+  transition: fill 0.15s;
+}
+/* 끝점 핸들을 누르는 영역 (보이는 원보다 넓게) */
+.rm-edge__grip {
+  fill: transparent;
+  cursor: grab;
+}
+.rm-edge__end:hover .rm-edge__handle {
+  fill: var(--rm-text);
+}
+/* 한 연결선에 마우스를 올린 동안에는 다른 선이 마우스를 가로채지 않게 한다
+   (선들이 같은 노드로 모이는 곳에서도 올린 선의 끝 핸들을 잡을 수 있도록) */
+.rm-canvas .react-flow__edges:has(.rm-edge:hover) .rm-edge:not(:hover) .rm-edge__hit {
+  pointer-events: none;
+}
+/* 끝점을 옮기는 중인 선: 놓기 전까지는 흐리게 남겨 둔다 */
+.rm-canvas .react-flow__edge.rm-edge.is-reconnecting {
+  opacity: 0.25;
+}
+.rm-canvas .react-flow__edge.rm-edge.is-reconnecting .rm-edge__controls {
+  opacity: 0;
+}
+/* 관계선을 끄는 중: 연결선이 마우스를 가로채지 않게 (놓은 곳 아래의 노드를 찾을 수 있도록) */
+.rm-canvas.is-linking .rm-edge__hit,
+.rm-canvas.is-linking .rm-edge__controls {
+  pointer-events: none !important;
+}
+.rm-canvas.is-linking,
+.rm-canvas.is-linking * {
+  cursor: grabbing !important;
+}
+/* 드래그 중 미리보기 선 */
+.rm-link-preview {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  overflow: visible;
+  pointer-events: none;
+}
+.rm-link-preview path {
+  fill: none;
+  stroke: var(--rm-text);
+  stroke-width: 1.6;
+  stroke-dasharray: 5 5;
+}
+/* 학기 가지선 (타임라인 → 노드). 관계선과 같은 얇은 회색 곡선, 카드 아래에 그려짐 */
+.rm-branches {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.rm-branch {
+  fill: none;
+  stroke: var(--rm-line);
+  stroke-width: 1.4;
+  transition: d 0.25s var(--rm-ease);
+}
+.rm-canvas.is-node-dragging .rm-branch {
+  transition: none;
+}
+/* 타임라인 위 카드를 다른 카드 위에 올렸을 때 '자리 바꾸기' 안내 */
+.rm-link-label {
+  position: absolute;
+  left: 50%;
+  top: -14px;
+  z-index: 2;
+  padding: 5px 12px;
+  border-radius: 14px;
+  background: var(--rm-text);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  animation: rm-link-label-in 0.2s var(--rm-ease);
+}
+.rm-link-label.is-invalid {
+  background: #9a9a9a;
+}
+@keyframes rm-link-label-in {
+  from { opacity: 0; transform: translate(-50%, calc(-100% + 6px)); }
+}
+/* CONNECT 모드: 카드를 끌면 관계선을 그린다 */
+.rm-canvas.is-connect-mode .rm-card {
+  cursor: crosshair;
+}
+/* CONNECT 모드: 카드 오른쪽 연결 핸들 (왼쪽 완료 표시등과 분리) */
+.rm-link-handle {
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  width: 24px;
+  height: 24px;
+  margin-top: -12px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: crosshair;
+  animation: rm-link-handle-in 0.25s var(--rm-ease);
+}
+.rm-link-handle::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: var(--rm-text);
+  box-shadow: 0 0 0 3px #fff, 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s var(--rm-ease);
+}
+.rm-link-handle:hover::after {
+  transform: scale(1.3);
+}
+.rm-link-handle:focus-visible {
+  outline: 2px solid var(--rm-text);
+  outline-offset: 1px;
+}
+@keyframes rm-link-handle-in {
+  from { opacity: 0; transform: scale(0.4); }
+}
+/* 끄는 중 마우스 아래 카드: 연결 가능하면 진한 테두리, 불가(자기 자신·중복)면 점선 */
+.rm-card.is-link-target.is-valid {
+  box-shadow: 0 0 0 2px var(--rm-text), var(--rm-shadow);
+}
+.rm-card.is-link-target.is-invalid {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #c9c9c9, var(--rm-shadow);
+  opacity: 0.8;
+}
+/* CONNECT 모드 안내 띠 (상단 메뉴 아래) */
+.rm-connect-banner {
+  position: absolute;
+  top: 104px;
+  left: 50%;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  padding: 8px 8px 8px 20px;
+  border-radius: 24px;
+  background: var(--rm-text);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  transform: translateX(-50%);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  animation: rm-banner-in 0.3s var(--rm-ease);
+}
+.rm-connect-banner button {
+  flex: none;
+  height: 32px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 16px;
+  background: #fff;
+  color: var(--rm-text);
+  font-size: 13px;
+  font-weight: 800;
+}
+@keyframes rm-banner-in {
+  from { opacity: 0; transform: translate(-50%, -8px); }
 }
 .rm-edge__delete {
   cursor: pointer;
@@ -423,6 +590,59 @@ span.rm-nav__link {
   max-width: 14px;
   max-height: 14px;
   fill: currentColor;
+}
+
+/* ───────── 휴지통 (왼쪽 아래, 확대·축소 버튼 오른쪽) ───────── */
+.rm-trash {
+  position: absolute;
+  left: 104px; /* 확대·축소 버튼(왼쪽 48px + 40px) 오른쪽으로 16px */
+  bottom: 56px;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f7f7f7;
+  box-shadow: var(--rm-shadow);
+  color: var(--rm-muted);
+  transition: transform 0.2s var(--rm-ease), background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+/* 노드를 끄는 동안: 놓을 수 있는 곳임을 살짝 표시 */
+.rm-trash.is-armed {
+  color: var(--rm-text);
+  background: #fff;
+  box-shadow: 0 0 0 2px #e3e3e3, var(--rm-shadow);
+}
+/* 휴지통 위에 올렸을 때: 놓으면 삭제됨 */
+.rm-trash.is-active {
+  transform: scale(1.25);
+  background: #e5484d;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(229, 72, 77, 0.18), 0 8px 18px rgba(229, 72, 77, 0.3);
+}
+.rm-trash__label {
+  position: absolute;
+  left: calc(100% + 10px);
+  padding: 5px 10px;
+  border-radius: 12px;
+  background: #e5484d;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(-4px) scale(0.8); /* 휴지통이 커진 만큼 글씨는 원래 크기로 */
+  pointer-events: none;
+  transition: opacity 0.15s, transform 0.2s var(--rm-ease);
+}
+.rm-trash.is-active .rm-trash__label {
+  opacity: 1;
+  transform: translateX(0) scale(0.8);
+}
+/* 휴지통 위의 노드는 흐리게 */
+.rm-canvas.is-over-trash .react-flow__node.dragging {
+  opacity: 0.5;
 }
 
 /* ───────── + 버튼 메뉴 / INBOX ───────── */
@@ -588,6 +808,38 @@ span.rm-nav__link {
 }
 .rm-inbox__add:hover {
   transform: scale(1.1) rotate(90deg);
+}
+
+/* 보관함 카드 + 오른쪽 위 삭제(X) 버튼 */
+.rm-inbox__item {
+  position: relative;
+  flex: none;
+}
+.rm-inbox__delete {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #e6e6e6;
+  color: #8a8a8a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform 0.2s var(--rm-ease);
+}
+.rm-inbox__delete:hover {
+  background: var(--rm-text);
+  color: #fff;
+  transform: scale(1.1);
+}
+.rm-inbox__delete:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* 보관함 카드 드래그 */
@@ -820,6 +1072,29 @@ span.rm-nav__link {
   background: #dedcdd;
   transform: translateY(-2px);
 }
+.rm-segment {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  border-radius: 18px;
+  background: var(--rm-field);
+}
+.rm-segment button {
+  height: 30px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 15px;
+  background: transparent;
+  color: #777;
+  font-size: 13px;
+  font-weight: 800;
+  transition: background 0.2s, color 0.2s;
+}
+.rm-segment button.is-active {
+  background: #fff;
+  color: var(--rm-text);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
 .rm-muted {
   font-size: 13px;
   color: var(--rm-muted);
@@ -845,6 +1120,29 @@ span.rm-nav__link {
 .rm-toast.is-visible {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+/* 실행 취소 버튼이 있는 안내 (노드 삭제) */
+.rm-toast.has-action {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 8px 8px 20px;
+  white-space: nowrap;
+}
+.rm-toast.has-action.is-visible {
+  pointer-events: auto;
+}
+.rm-toast__action {
+  flex: none;
+  height: 30px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 15px;
+  background: #fff;
+  color: var(--rm-text);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 /* 움직임 줄이기 설정을 켠 사용자에게는 애니메이션 최소화 */

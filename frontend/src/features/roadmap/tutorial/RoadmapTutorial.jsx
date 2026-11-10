@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import usePresence from '../usePresence.js'
-import { isCourse, nodeBox } from '../layout.js'
+import { isPill, nodeBox } from '../layout.js'
 import { ROADMAP_TUTORIAL_STEPS } from './tutorialSteps.js'
 import './tutorial.css'
 
@@ -38,7 +38,7 @@ export default function RoadmapTutorial({ open, nodes, layout, onClose, steps = 
     const placed = nodes.filter((n) => n.status === 'placed' && nodeBox(n, layout))
     const order = (n) => [layout.cols[n.periodId].x + n.position.x, n.position.y]
     const sorted = [...placed].sort((a, b) => order(a)[0] - order(b)[0] || order(a)[1] - order(b)[1])
-    return sorted.find((n) => !isCourse(n)) ?? sorted[0] ?? null
+    return sorted.find((n) => !isPill(n)) ?? sorted[0] ?? null
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 열 때: 처음 단계로 + 현재 화면 위치 저장 / 닫을 때: 원래 화면 위치로

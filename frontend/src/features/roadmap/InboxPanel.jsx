@@ -2,14 +2,15 @@ import { createPortal } from 'react-dom'
 import NodeCard from './NodeCard.jsx'
 import usePresence from './usePresence.js'
 import useInboxDrag from './useInboxDrag.js'
-import { PlusIcon } from './icons.jsx'
+import { CloseIcon, PlusIcon } from './icons.jsx'
 import { cardSize } from './layout.js'
 
 // 노드 보관함 (MY NODE). INBOX를 눌렀을 때만 아래에서 올라온다.
 // 카드를 캔버스로 끌어다 놓으면 해당 학기에 배치된다.
 // allNodes·layout: 놓을 자리 계산(학기 판정·겹침 보정)에 필요
+// onDelete: 카드 오른쪽 위 X 버튼 → 그 노드만 삭제
 export default function InboxPanel({
-  open, nodes, allNodes, layout, getSubtitle, onNodeClick, onAdd, onPlace, onTargetChange,
+  open, nodes, allNodes, layout, getSubtitle, onNodeClick, onAdd, onPlace, onTargetChange, onDelete,
 }) {
   const { mounted, visible } = usePresence(open)
   const { ghost, startDrag, wasDragged, returnMs } = useInboxDrag({
@@ -28,15 +29,30 @@ export default function InboxPanel({
       <div className="rm-inbox__list">
         {nodes.length === 0 && <p className="rm-inbox__empty">보관함이 비어 있어요.</p>}
         {nodes.map((node) => (
-          <NodeCard
-            key={node.id}
-            node={node}
-            small
-            className={`rm-inbox__card ${ghost?.node.id === node.id ? 'is-drag-source' : ''}`}
-            subtitle={getSubtitle(node.id)}
-            onClick={handleClick}
-            onPointerDown={(e) => startDrag(e, node)}
-          />
+          <div key={node.id} className="rm-inbox__item">
+            <NodeCard
+              node={node}
+              small
+              className={`rm-inbox__card ${ghost?.node.id === node.id ? 'is-drag-source' : ''}`}
+              subtitle={getSubtitle(node.id)}
+              onClick={handleClick}
+              onPointerDown={(e) => startDrag(e, node)}
+            />
+            {/* 카드(button) 안에 버튼을 넣을 수 없어 옆에 두고 위치만 겹친다. 드래그·상세 창이 시작되지 않게 이벤트를 막는다 */}
+            <button
+              type="button"
+              className="rm-inbox__delete"
+              aria-label={`'${node.title}' 노드 삭제`}
+              title="삭제"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete(node.id)
+              }}
+            >
+              <CloseIcon width="10" height="10" strokeWidth="2.4" />
+            </button>
+          </div>
         ))}
         <button type="button" className="rm-inbox__add" aria-label="보관함에 노드 추가" onClick={onAdd}>
           <PlusIcon width="18" height="18" />
