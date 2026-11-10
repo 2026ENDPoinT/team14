@@ -1,33 +1,197 @@
-/* 레이아웃만 잡은 임시 스타일.
-   tokens.css(0-9)가 준비되면 색상·폰트·간격을 토큰 값으로 바꾼다. (2-19) */
-.diary-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 640px;
-  padding: 0 16px;
+/* 일기 페이지 스타일: 로드맵(roadmap.css)과 같은 디자인을 쓴다.
+   rm-* 클래스는 roadmap.css 것을 그대로 쓰고, 여기에는 일기에만 필요한 것만 둔다.
+   ※ tokens.css(TASKS 0-9)가 아직 없어 로드맵과 같은 값을 임시로 둔다.
+     tokens.css가 생기면 아래 변수를 토큰으로 바꾼다. (2-19) */
+.diary-page {
+  --rm-bg: #f5f5f5;
+  --rm-surface: #f4f4f4;
+  --rm-field: #ebe9ea;
+  --rm-text: #111;
+  --rm-muted: #b3b3b3;
+  --rm-line: #bdbdbd;
+  --rm-accent: #f8e6ad;
+  --rm-accent-dot: #f2d68f;
+  --rm-dot: #d9d9d9;
+  --rm-shadow: 8px 12px 24px rgba(0, 0, 0, 0.08), -6px -6px 16px rgba(255, 255, 255, 0.9);
+  --rm-shadow-strong: 0 24px 60px rgba(0, 0, 0, 0.12);
+  --dy-ink: #555; /* 로드맵 학기 배지(1-2 등) 글자색과 같은 진한 회색 */
+  --rm-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --rm-font: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+
+  /* 로드맵처럼 화면 전체를 쓴다 (임시 이동 메뉴 위를 덮는다) */
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow-x: hidden; /* 반원 메뉴가 좁은 화면 밖으로 나가도 가로 스크롤이 생기지 않게 */
+  overflow-y: auto;
+  background: var(--rm-bg);
+  color: var(--rm-text);
+  font-family: var(--rm-font);
 }
 
-.diary-editor__field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.diary-page button {
+  font-family: inherit;
+  cursor: pointer;
+}
+.diary-page button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
 }
 
-.diary-editor__field textarea {
+/* 상단 반원 메뉴 아래에 카드를 가운데 배치 */
+.dy-main {
+  display: flex;
+  justify-content: center;
+  padding: 120px 24px 64px;
+}
+
+/* 로드맵 팝업 카드와 같은 모양 */
+.dy-card {
+  width: min(704px, 100%);
+  box-sizing: border-box;
+  padding: 44px 62px 48px;
+  border-radius: 22px;
+  background: var(--rm-surface);
+  box-shadow: var(--rm-shadow-strong);
+  animation: rm-fade-in 0.3s var(--rm-ease);
+}
+
+/* 제목·제목 아래 선·저장 버튼: 검정 대신 진한 회색 (일기 화면에서만 적용) */
+.dy-card .rm-modal__title {
+  color: var(--dy-ink);
+}
+.dy-card .rm-divider {
+  border-top-color: var(--dy-ink);
+}
+.dy-card .rm-primary-btn {
+  background: var(--dy-ink);
+}
+
+/* ── 로드맵 노드 카드 모양 입력칸 (rm-card와 같은 배경·그림자, 모서리는 덜 둥글게) ── */
+.dy-node {
+  position: relative;
+}
+/* 왼쪽 표시 점 (rm-card__dot과 같은 모양) */
+.dy-node__dot {
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  border-radius: 50%;
+  background: var(--rm-dot);
+  transition: background 0.25s, transform 0.25s var(--rm-ease);
+}
+.dy-node--top .dy-node__dot {
+  top: 34px; /* 긴 입력칸은 첫 줄 높이에 맞춤 */
+}
+.dy-node__dot.is-done {
+  background: var(--rm-accent-dot);
+}
+.dy-input {
+  display: block;
   width: 100%;
   box-sizing: border-box;
-  resize: vertical;
+  padding: 20px 28px;
+  border: none;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #f8f8f8, #ececec);
+  box-shadow: var(--rm-shadow);
   font: inherit;
+  color: var(--rm-text);
+  outline: none;
+  transition: transform 0.25s var(--rm-ease), box-shadow 0.25s var(--rm-ease);
+}
+.dy-input::placeholder {
+  color: var(--rm-muted);
+}
+/* 마우스를 올리거나 입력 중이면 노드처럼 살짝 떠오름 */
+.dy-node:hover .dy-input,
+.dy-input:focus {
+  transform: translateY(-3px);
+  box-shadow: 10px 18px 32px rgba(0, 0, 0, 0.12), -6px -6px 16px rgba(255, 255, 255, 0.9);
+}
+.dy-node:hover .dy-node__dot,
+.dy-node:focus-within .dy-node__dot {
+  transform: translateY(-3px);
+}
+.dy-input--date {
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.dy-textarea {
+  min-height: 260px;
+  padding: 24px 30px;
+  resize: vertical;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.7;
 }
 
-.diary-editor__count,
-.diary-editor__hint,
-.diary-editor__message {
+/* 글자 수 표시 + 게이지 */
+.dy-count {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.dy-count__num {
+  font-size: 13px;
+  font-weight: 800;
+  color: #888;
+  transition: color 0.2s;
+}
+.dy-count__num.is-done {
+  color: var(--rm-text);
+}
+.dy-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--rm-field);
+  overflow: hidden;
+}
+.dy-bar__fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--rm-accent);
+  transition: width 0.3s var(--rm-ease), background 0.2s;
+}
+.dy-bar__fill.is-done {
+  background: var(--rm-accent-dot);
+}
+.dy-hint {
   margin: 0;
 }
 
-.diary-editor__actions {
-  display: flex;
-  gap: 8px;
+/* 페이지가 스크롤돼도 안내 메시지는 화면 아래에 고정 */
+.dy-toast {
+  position: fixed;
+}
+
+/* 모바일: 여백을 줄인다 (SPEC 10장, 모바일은 일기 우선) */
+@media (max-width: 600px) {
+  .dy-main {
+    padding: 96px 16px 40px;
+  }
+  .dy-card {
+    padding: 28px 22px 32px;
+  }
+  .dy-card .rm-modal__title {
+    font-size: 30px;
+  }
+  /* 반원 메뉴가 화면보다 넓지 않게 */
+  .diary-page .rm-nav {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .diary-page *,
+  .diary-page *::before,
+  .diary-page *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
