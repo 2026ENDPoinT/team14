@@ -22,7 +22,7 @@ function centerOf(position, node) {
 // - 데이터는 학기(periodId) 기준 상대 좌표, 화면에는 캔버스 좌표로 바꿔서 그린다. (layout.js nodeBox)
 // - 빈 공간 드래그: 이동 / 휠·핀치: 확대·축소 / 노드 드래그: 위치 이동·학기 재배정
 export default function RoadmapCanvas({
-  periods, nodes, edges, getSubtitle, onNodeClick, onNodeMove, onEdgeDelete,
+  periods, nodes, edges, getSubtitle, onNodeClick, onNodeMove, onEdgeDelete, onToggleComplete,
   dropPeriodId, onDropTargetChange, // 드래그 중 강조할 학기 (보관함 드래그와 함께 쓰려고 페이지에서 관리)
 }) {
   const sorted = useMemo(() => [...periods].sort((a, b) => a.order - b.order), [periods])
@@ -64,14 +64,14 @@ export default function RoadmapCanvas({
           id: n.id,
           type: 'card',
           position: { x: box.x, y: box.y }, // 학기 위치 + 상대 좌표 = 캔버스 좌표
-          data: { node: n, subtitle: getSubtitle(n.id), onClick: handleCardClick },
+          data: { node: n, subtitle: getSubtitle(n.id), onClick: handleCardClick, onToggleComplete },
           style: { pointerEvents: 'all' }, // 선택 기능을 꺼도 카드 클릭·Hover는 받도록
         }
       })
       .filter(Boolean)
 
     return [background, ...cards]
-  }, [nodes, periods, sorted, width, getSubtitle, handleCardClick])
+  }, [nodes, periods, sorted, width, getSubtitle, handleCardClick, onToggleComplete])
 
   // React Flow가 드래그 위치·크기 측정값을 기록할 수 있도록 노드를 상태로 관리한다.
   // 데이터가 바뀌면 다시 만들되, 이미 측정한 크기(measured)는 이어서 쓴다.

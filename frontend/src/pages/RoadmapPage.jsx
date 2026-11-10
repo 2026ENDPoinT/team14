@@ -69,6 +69,11 @@ export default function RoadmapPage() {
     )
   }, [])
 
+  // 완료 상태 표시등 클릭: completed만 뒤집는다 (기존 필드 사용)
+  const handleToggleComplete = useCallback((nodeId) => {
+    setNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, completed: !n.completed } : n)))
+  }, [])
+
   const handleEdgeDelete = useCallback((edgeId) => {
     setEdges((prev) => prev.filter((e) => e.id !== edgeId))
   }, [])
@@ -160,6 +165,7 @@ export default function RoadmapPage() {
           onNodeClick={openDetail}
           onNodeMove={handleNodeMove}
           onEdgeDelete={handleEdgeDelete}
+          onToggleComplete={handleToggleComplete}
           dropPeriodId={dropPeriodId}
           onDropTargetChange={setDropPeriodId}
         />

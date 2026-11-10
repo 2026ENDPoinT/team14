@@ -30,16 +30,18 @@ function node(id, title, theme, periodId, x, y, extra = {}) {
   }
 }
 
-function course(id, title, periodId, x, key) {
+// completed: true → 온보딩에서 "이미 수강한 과목"으로 고른 교과목 (source: completed_course)
+function course(id, title, periodId, x, key, completed = false) {
   return node(id, title, 'major', periodId, x, 158, {
-    source: 'recommended',
+    source: completed ? 'completed_course' : 'recommended',
     originKey: `course:${key}`,
+    completed,
   })
 }
 
 export const mockNodes = [
-  course('n_1', '자료구조', 'p_3', 120, 'cs2026-2-1-01'),
-  node('n_2', '알고리즘 스터디', 'project', 'p_3', 240, 320),
+  course('n_1', '자료구조', 'p_3', 120, 'cs2026-2-1-01', true), // 시연용: 이수 완료 과목
+  node('n_2', '알고리즘 스터디', 'project', 'p_3', 240, 320, { completed: true }), // 시연용: 끝난 활동
   course('n_3', '캡스톤디자인', 'p_7', 170, 'cs2026-4-1-01'),
   course('n_4', '데이터베이스', 'p_7', 370, 'cs2026-4-1-02'),
   node('n_5', '캡스톤 프로젝트', 'project', 'p_7', 300, 300),
