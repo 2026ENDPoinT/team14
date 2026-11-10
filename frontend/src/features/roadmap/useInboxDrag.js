@@ -10,7 +10,7 @@ const RETURN_MS = 260 // 보관함으로 돌아가는 애니메이션 시간
 // - 놓은 위치는 React Flow의 screenToFlowPosition으로 캔버스 좌표로 바꿔 계산한다. (확대·축소 반영)
 // - 학기 판정·겹침 보정은 캔버스 드래그와 같은 placeNode를 쓴다.
 // ReactFlowProvider 안에서만 쓸 수 있다.
-export default function useInboxDrag({ nodes, periods, onPlace, onTargetChange }) {
+export default function useInboxDrag({ nodes, layout, onPlace, onTargetChange }) {
   const { screenToFlowPosition, getZoom } = useReactFlow()
   const [ghost, setGhost] = useState(null) // { node, x, y, zoom, returning }
   const draggedRef = useRef(false)
@@ -50,7 +50,7 @@ export default function useInboxDrag({ nodes, periods, onPlace, onTargetChange }
         let periodId = null
         if (overCanvas(e)) {
           const p = flowTopLeft(e)
-          periodId = findPeriodAt(p.x + w / 2, p.y + h / 2, periods)?.id ?? null
+          periodId = findPeriodAt(p.x + w / 2, p.y + h / 2, layout)?.id ?? null
         }
         onTargetChange(periodId)
       }
@@ -63,7 +63,7 @@ export default function useInboxDrag({ nodes, periods, onPlace, onTargetChange }
         onTargetChange(null)
 
         const placement = e.type === 'pointerup' && overCanvas(e)
-          ? placeNode(node, flowTopLeft(e), nodes, periods)
+          ? placeNode(node, flowTopLeft(e), nodes, layout)
           : null
         if (placement) {
           onPlace(node.id, placement) // 같은 노드의 위치·상태만 바꾼다 (새로 만들지 않음)
@@ -79,7 +79,7 @@ export default function useInboxDrag({ nodes, periods, onPlace, onTargetChange }
       window.addEventListener('pointerup', handleUp)
       window.addEventListener('pointercancel', handleUp)
     },
-    [nodes, periods, onPlace, onTargetChange, screenToFlowPosition, getZoom],
+    [nodes, layout, onPlace, onTargetChange, screenToFlowPosition, getZoom],
   )
 
   // 드래그 직후의 클릭이면 true (상세 창을 열지 않기 위해)

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { mockDocuments, mockEdges, mockNodes, mockPeriods } from '../data/roadmapMock.js'
 import RoadmapNav from '../features/roadmap/RoadmapNav.jsx'
@@ -7,7 +7,7 @@ import FabMenu from '../features/roadmap/FabMenu.jsx'
 import InboxPanel from '../features/roadmap/InboxPanel.jsx'
 import AddNodeModal from '../features/roadmap/AddNodeModal.jsx'
 import NodeDetailModal from '../features/roadmap/NodeDetailModal.jsx'
-import { columnX, nextPosition, placeNode } from '../features/roadmap/layout.js'
+import { BASE_WIDTH, computeLayout, nextPosition, placeNode } from '../features/roadmap/layout.js'
 import '../features/roadmap/roadmap.css'
 
 // 로드맵 페이지: 하나의 화면에서 상태에 따라 메뉴·보관함·팝업이 나타나고 사라진다.
@@ -25,6 +25,21 @@ export default function RoadmapPage() {
   const [detailId, setDetailId] = useState(null) // 상세 창에 열린 노드 id
   const [toast, setToast] = useState('')
   const [dropPeriodId, setDropPeriodId] = useState(null) // 노드를 끄는 동안 강조할 학기
+
+  // 학기 컬럼 배치 (자동 확장): 노드 배치로부터 학기별 x·너비 계산
+  // keptWidths: 이번 세션에서 커졌던 너비. 노드를 빼내도 학기가 바로 줄지 않게 해서
+  //             뒤 학기·노드가 갑자기 왼쪽으로 튀지 않게 한다. (새로고침하면 다시 계산)
+  const [keptWidths, setKeptWidths] = useState({})
+  const layout = useMemo(() => computeLayout(periods, nodes, keptWidths), [periods, nodes, keptWidths])
+  useEffect(() => {
+    setKeptWidths((prev) => {
+      const grown = Object.entries(layout.cols).filter(
+        ([id, col]) => col.width > BASE_WIDTH && col.width > (prev[id] ?? 0),
+      )
+      if (grown.length === 0) return prev
+      return { ...prev, ...Object.fromEntries(grown.map(([id, col]) => [id, col.width])) }
+    })
+  }, [layout])
 
   const getBody = (nodeId) => documents[nodeId]?.content.body ?? ''
   // 캔버스가 불필요하게 다시 그려지지 않도록 useCallback으로 고정
@@ -107,10 +122,10 @@ export default function RoadmapPage() {
     }
     // 학기를 골랐으면: 기존 노드 아래쪽에서 시작해 드래그와 같은 겹침 보정 규칙으로 자리를 찾는다
     let placement = null
+    // (자리가 없으면 학기를 최대 너비까지 넓혀 보고, 그래도 없을 때만 보관함으로)
     if (periodId) {
-      const period = periods.find((p) => p.id === periodId)
       const start = nextPosition(nodes, periodId)
-      placement = placeNode(newNode, { x: columnX(period.order) + start.x, y: start.y }, nodes, periods)
+      placement = placeNode(newNode, { x: layout.cols[periodId].x + start.x, y: start.y }, nodes, layout)
     }
     const created = placement ? { ...newNode, ...placement, status: 'placed' } : newNode
     setNodes((prev) => [...prev, created])
@@ -158,7 +173,7 @@ export default function RoadmapPage() {
     <ReactFlowProvider>
       <div className="roadmap-page">
         <RoadmapCanvas
-          periods={periods}
+          layout={layout}
           nodes={nodes}
           edges={edges}
           getSubtitle={getSubtitle}
@@ -176,7 +191,7 @@ export default function RoadmapPage() {
           open={inboxOpen}
           nodes={nodes.filter((n) => n.status === 'stored')}
           allNodes={nodes}
-          periods={periods}
+          layout={layout}
           getSubtitle={getSubtitle}
           onNodeClick={openDetail}
           onAdd={openAdd}

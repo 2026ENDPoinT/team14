@@ -52,7 +52,8 @@ export default function RoadmapEdge({ id, source, target, data }) {
   return (
     <>
       <path className="rm-edge__hit" d={hit} />
-      <path className="rm-edge__line" d={d} />
+      {/* style.d: 학기가 넓어져 노드가 옆으로 미끄러질 때 선도 같이 움직이게 (CSS 애니메이션용) */}
+      <path className="rm-edge__line" d={d} style={{ d: `path("${d}")` }} />
       <g className="rm-edge__controls">
         <circle className="rm-edge__handle" cx={start[0]} cy={start[1]} r="6" />
         <circle className="rm-edge__handle" cx={end[0]} cy={end[1]} r="6" />

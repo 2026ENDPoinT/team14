@@ -5,7 +5,7 @@ import TimelineNode from './TimelineNode.jsx'
 import CardNode from './CardNode.jsx'
 import RoadmapEdge from './RoadmapEdge.jsx'
 import { DropTargetContext } from './dropTarget.js'
-import { CANVAS_HEIGHT, cardSize, columnX, findPeriodAt, nodeBox, placeNode } from './layout.js'
+import { CANVAS_HEIGHT, cardSize, findPeriodAt, nodeBox, placeNode } from './layout.js'
 
 // React Flow에 등록할 노드·연결선 종류 (컴포넌트 밖에 두어야 매번 새로 만들지 않는다)
 const nodeTypes = { timeline: TimelineNode, card: CardNode }
@@ -21,14 +21,16 @@ function centerOf(position, node) {
 // 가로형 로드맵 캔버스 (React Flow)
 // - 데이터는 학기(periodId) 기준 상대 좌표, 화면에는 캔버스 좌표로 바꿔서 그린다. (layout.js nodeBox)
 // - 빈 공간 드래그: 이동 / 휠·핀치: 확대·축소 / 노드 드래그: 위치 이동·학기 재배정
+// - layout: 학기별 x·너비 (layout.js computeLayout). 데이터가 바뀔 때만 다시 계산되므로
+//   드래그하는 동안에는 학기 경계가 고정되고, 놓은 뒤에 필요한 만큼만 학기가 넓어진다.
 export default function RoadmapCanvas({
-  periods, nodes, edges, getSubtitle, onNodeClick, onNodeMove, onEdgeDelete, onToggleComplete,
+  layout, nodes, edges, getSubtitle, onNodeClick, onNodeMove, onEdgeDelete, onToggleComplete,
   dropPeriodId, onDropTargetChange, // 드래그 중 강조할 학기 (보관함 드래그와 함께 쓰려고 페이지에서 관리)
 }) {
-  const sorted = useMemo(() => [...periods].sort((a, b) => a.order - b.order), [periods])
-  const width = columnX(sorted.length) + 200
+  const width = layout.width + 200
 
   const [resetKey, setResetKey] = useState(0) // 영역 밖에 놓았을 때 원래 위치로 되돌리기용
+  const [nodeDragging, setNodeDragging] = useState(false) // 드래그 중에는 연결선 애니메이션을 끈다
   const draggedRef = useRef(false) // 드래그 직후의 클릭은 무시하기 위한 표시
   const dragStartRef = useRef(null) // 드래그를 시작한 마우스 위치 (화면 좌표)
 
@@ -47,7 +49,7 @@ export default function RoadmapCanvas({
       id: 'timeline',
       type: 'timeline',
       position: { x: 0, y: 0 },
-      data: { periods: sorted, width },
+      data: { layout, width },
       draggable: false,
       selectable: false,
       focusable: false,
@@ -58,7 +60,7 @@ export default function RoadmapCanvas({
     const cards = nodes
       .filter((n) => n.status === 'placed')
       .map((n) => {
-        const box = nodeBox(n, periods)
+        const box = nodeBox(n, layout)
         if (!box) return null
         return {
           id: n.id,
@@ -71,7 +73,7 @@ export default function RoadmapCanvas({
       .filter(Boolean)
 
     return [background, ...cards]
-  }, [nodes, periods, sorted, width, getSubtitle, handleCardClick, onToggleComplete])
+  }, [nodes, layout, width, getSubtitle, handleCardClick, onToggleComplete])
 
   // React Flow가 드래그 위치·크기 측정값을 기록할 수 있도록 노드를 상태로 관리한다.
   // 데이터가 바뀌면 다시 만들되, 이미 측정한 크기(measured)는 이어서 쓴다.
@@ -90,6 +92,7 @@ export default function RoadmapCanvas({
 
   const onNodeDragStart = useCallback((event) => {
     dragStartRef.current = { x: event.clientX, y: event.clientY }
+    setNodeDragging(true)
   }, [])
 
   // 드래그 중: 노드 중심이 있는 학기를 강조
@@ -101,23 +104,24 @@ export default function RoadmapCanvas({
         draggedRef.current = true
       }
       const center = centerOf(flowNode.position, flowNode.data.node)
-      onDropTargetChange(findPeriodAt(center.x, center.y, periods)?.id ?? null)
+      onDropTargetChange(findPeriodAt(center.x, center.y, layout)?.id ?? null)
     },
-    [periods, onDropTargetChange],
+    [layout, onDropTargetChange],
   )
 
   // 드롭: 학기 판정 → 겹침 보정 → periodId와 상대 좌표 저장 (layout.js placeNode)
   const onNodeDragStop = useCallback(
     (_, flowNode) => {
       onDropTargetChange(null)
-      const placement = placeNode(flowNode.data.node, flowNode.position, nodes, periods)
+      setNodeDragging(false)
+      const placement = placeNode(flowNode.data.node, flowNode.position, nodes, layout)
       if (!placement) {
         setResetKey((k) => k + 1) // 학기 영역 밖이거나 빈 자리가 없음 → 원래 자리로
         return
       }
       onNodeMove(flowNode.data.node.id, placement)
     },
-    [nodes, periods, onNodeMove, onDropTargetChange],
+    [nodes, layout, onNodeMove, onDropTargetChange],
   )
 
   const flowEdges = useMemo(
@@ -137,7 +141,9 @@ export default function RoadmapCanvas({
   return (
     <DropTargetContext.Provider value={dropPeriodId}>
       {/* 새로 누를 때마다 "드래그 직후" 표시를 지운다 */}
-      <div className="rm-canvas" onPointerDownCapture={() => { draggedRef.current = false }}>
+      <div
+        className={`rm-canvas ${nodeDragging ? 'is-node-dragging' : ''}`}
+        onPointerDownCapture={() => { draggedRef.current = false }}>
         <ReactFlow
           nodes={flowNodes}
           edges={flowEdges}

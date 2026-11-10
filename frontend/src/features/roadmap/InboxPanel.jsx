@@ -7,13 +7,13 @@ import { cardSize } from './layout.js'
 
 // 노드 보관함 (MY NODE). INBOX를 눌렀을 때만 아래에서 올라온다.
 // 카드를 캔버스로 끌어다 놓으면 해당 학기에 배치된다.
-// allNodes·periods: 놓을 자리 계산(학기 판정·겹침 보정)에 필요
+// allNodes·layout: 놓을 자리 계산(학기 판정·겹침 보정)에 필요
 export default function InboxPanel({
-  open, nodes, allNodes, periods, getSubtitle, onNodeClick, onAdd, onPlace, onTargetChange,
+  open, nodes, allNodes, layout, getSubtitle, onNodeClick, onAdd, onPlace, onTargetChange,
 }) {
   const { mounted, visible } = usePresence(open)
   const { ghost, startDrag, wasDragged, returnMs } = useInboxDrag({
-    nodes: allNodes, periods, onPlace, onTargetChange,
+    nodes: allNodes, layout, onPlace, onTargetChange,
   })
   if (!mounted) return null
 
