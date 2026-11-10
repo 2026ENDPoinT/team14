@@ -48,7 +48,7 @@ export function nodeBox(node, periods) {
   return { x: columnX(period.order) + node.position.x, y: node.position.y, w, h }
 }
 
-// 새 노드를 학기 컬럼의 빈 아래쪽에 배치
+// 새 노드를 놓아 볼 첫 위치: 학기 컬럼의 기존 노드 아래쪽 (실제 위치는 placeNode로 겹침 보정)
 export function nextPosition(nodes, periodId) {
   const bottoms = nodes
     .filter((n) => n.periodId === periodId && !isCourse(n))
@@ -68,7 +68,8 @@ export function findPeriodAt(x, y, periods) {
 
 const GAP = 16 // 노드 사이(그리고 배지·타임라인과의) 최소 간격
 const BADGE_SIZE = 64 // 학기 원형 배지 지름
-const MIN_Y = TIMELINE_Y + GAP // 노드 윗변은 타임라인 선보다 이만큼 아래에 있어야 한다
+const MIN_Y = TIMELINE_Y + GAP // 일반 노드의 윗변은 타임라인 선보다 이만큼 아래에 있어야 한다
+const SNAP = 24 // 교과목 노드 중심이 선 위쪽이거나 선 아래 이 거리 안이면 선 위에 딱 맞춘다
 
 function overlaps(a, b) {
   return (
@@ -95,19 +96,22 @@ const OFFSETS = (() => {
   }
   return list.sort((a, b) => Math.hypot(...a) - Math.hypot(...b))
 })()
+// 타임라인 위 교과목 노드용: 선을 벗어나지 않고 좌우로만 (가까운 순서)
+const LINE_OFFSETS = OFFSETS.filter(([, dy]) => dy === 0)
 
 // 겹침 규칙에 맞게 위치를 보정한다. (이미 맞으면 그대로)
 // - 다른 노드·학기 배지와 16px 이상 간격
-// - 타임라인 선 아래에만 (윗변이 MIN_Y 이상), 캔버스 아래쪽 밖으로 나가지 않음
+// - 윗변이 minY 이상, 캔버스 아래쪽 밖으로 나가지 않음
 // - 보정 후에도 노드 중심이 같은 학기 안
 // box: 캔버스 좌표 { x, y, w, h } / obstacles: 피해야 할 box 목록
-export function resolveOverlap(box, obstacles, period) {
+// minY·offsets: 교과목을 타임라인 선 위에 놓을 때만 바꿔서 쓴다
+export function resolveOverlap(box, obstacles, period, { minY = MIN_Y, offsets = OFFSETS } = {}) {
   const isFree = (b) =>
-    b.y >= MIN_Y && b.y + b.h <= CANVAS_HEIGHT &&
+    b.y >= minY && b.y + b.h <= CANVAS_HEIGHT &&
     findPeriodAt(b.x + b.w / 2, b.y + b.h / 2, [period]) &&
     obstacles.every((o) => !overlaps(b, o))
 
-  for (const [dx, dy] of OFFSETS) {
+  for (const [dx, dy] of offsets) {
     const candidate = { ...box, x: box.x + dx, y: box.y + dy }
     if (isFree(candidate)) return candidate
   }
@@ -116,7 +120,9 @@ export function resolveOverlap(box, obstacles, period) {
 
 // 노드를 캔버스 좌표 topLeft에 놓았을 때 저장할 { periodId, position } 계산.
 // 노드 중심이 학기 영역 밖이거나 빈 자리가 없으면 null (원래 자리로 되돌린다)
-// 캔버스 드래그와 보관함 드래그가 함께 쓴다.
+// 캔버스 드래그, 보관함 드래그, 새 노드 생성이 함께 쓴다.
+// - 일반 노드: 타임라인 선 아래에만
+// - 교과목 노드: 타임라인 선 위에 놓거나(선 위쪽·선 근처에 놓으면 선에 딱 맞춤), 일반 노드처럼 선 아래에 놓는다.
 export function placeNode(node, topLeft, nodes, periods) {
   const { w, h } = cardSize(node)
   const period = findPeriodAt(topLeft.x + w / 2, topLeft.y + h / 2, periods)
@@ -129,7 +135,14 @@ export function placeNode(node, topLeft, nodes, periods) {
       .filter(Boolean),
     ...badgeBoxes(periods),
   ]
-  const box = resolveOverlap({ x: topLeft.x, y: topLeft.y, w, h }, obstacles, period)
+  let box = null
+  // 교과목을 선 위쪽·선 근처에 놓았으면: 선 위에 맞추고 선을 따라 좌우로만 빈자리를 찾는다
+  if (isCourse(node) && topLeft.y + h / 2 <= TIMELINE_Y + SNAP) {
+    const onLine = { x: topLeft.x, y: TIMELINE_Y - h / 2, w, h }
+    box = resolveOverlap(onLine, obstacles, period, { minY: 0, offsets: LINE_OFFSETS })
+  }
+  // 그 밖의 경우(또는 선 위에 자리가 없을 때): 타임라인 선 아래의 가까운 빈자리
+  if (!box) box = resolveOverlap({ x: topLeft.x, y: topLeft.y, w, h }, obstacles, period)
   if (!box) return null
 
   return {

@@ -7,7 +7,7 @@ import FabMenu from '../features/roadmap/FabMenu.jsx'
 import InboxPanel from '../features/roadmap/InboxPanel.jsx'
 import AddNodeModal from '../features/roadmap/AddNodeModal.jsx'
 import NodeDetailModal from '../features/roadmap/NodeDetailModal.jsx'
-import { nextPosition } from '../features/roadmap/layout.js'
+import { columnX, nextPosition, placeNode } from '../features/roadmap/layout.js'
 import '../features/roadmap/roadmap.css'
 
 // 로드맵 페이지: 하나의 화면에서 상태에 따라 메뉴·보관함·팝업이 나타나고 사라진다.
@@ -92,15 +92,23 @@ export default function RoadmapPage() {
       id,
       title,
       theme,
-      periodId,
-      position: periodId ? nextPosition(nodes, periodId) : null,
-      status: periodId ? 'placed' : 'stored',
+      periodId: null,
+      position: null,
+      status: 'stored',
       source: 'user',
       originKey: null,
       completed: false,
       createdAt: new Date().toISOString(),
     }
-    setNodes((prev) => [...prev, newNode])
+    // 학기를 골랐으면: 기존 노드 아래쪽에서 시작해 드래그와 같은 겹침 보정 규칙으로 자리를 찾는다
+    let placement = null
+    if (periodId) {
+      const period = periods.find((p) => p.id === periodId)
+      const start = nextPosition(nodes, periodId)
+      placement = placeNode(newNode, { x: columnX(period.order) + start.x, y: start.y }, nodes, periods)
+    }
+    const created = placement ? { ...newNode, ...placement, status: 'placed' } : newNode
+    setNodes((prev) => [...prev, created])
     // 짧은 메모는 노드 문서(NodeDocument)의 내용으로 저장
     if (memo) {
       setDocuments((prev) => ({
@@ -109,8 +117,10 @@ export default function RoadmapPage() {
       }))
     }
     setAddOpen(false)
-    if (!periodId) setInboxOpen(true) // 보관함에 넣었으면 보관함을 열어 보여 준다
-    setToast(periodId ? '노드를 학기에 추가했어요.' : '노드를 보관함에 추가했어요.')
+    if (!placement) setInboxOpen(true) // 보관함에 넣었으면 보관함을 열어 보여 준다
+    if (placement) setToast('노드를 학기에 추가했어요.')
+    else if (periodId) setToast('학기에 빈 자리가 없어 보관함에 넣었어요.')
+    else setToast('노드를 보관함에 추가했어요.')
   }
 
   const handleSave = (nodeId, { title, body }) => {
