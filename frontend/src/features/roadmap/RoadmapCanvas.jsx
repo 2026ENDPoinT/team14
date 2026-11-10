@@ -1,34 +1,33 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Controls, ReactFlow, ViewportPortal, applyNodeChanges, useReactFlow } from '@xyflow/react'
+import { Controls, ReactFlow, ViewportPortal, applyNodeChanges } from '@xyflow/react'
 import '@xyflow/react/dist/base.css' // React Flow 동작에 필요한 최소 스타일 (디자인은 roadmap.css)
 import TimelineNode from './TimelineNode.jsx'
 import CardNode from './CardNode.jsx'
 import RoadmapEdge from './RoadmapEdge.jsx'
 import { DropTargetContext } from './dropTarget.js'
 import { LinkContext } from './linkContext.js'
+import { BranchContext, computeBranches } from './branchLines.js'
 import useLinkDrag from './useLinkDrag.js'
+import { linkProblem } from './edgeRules.js'
+import { routeBetween, routeEdges, routeToPoint } from './edgeRouting.js'
 import { CANVAS_HEIGHT, cardSize, findPeriodAt, nodeBox, placeNode } from './layout.js'
 
 // React Flow에 등록할 노드·연결선 종류 (컴포넌트 밖에 두어야 매번 새로 만들지 않는다)
 const nodeTypes = { timeline: TimelineNode, card: CardNode }
 const edgeTypes = { roadmap: RoadmapEdge }
 const CLICK_DISTANCE = 4 // 이 거리(px) 이하로 움직이면 클릭으로 판정
+const DROP_INSET = 8 // 노드를 다른 노드에 놓아 연결: 끄는 노드의 중심이 대상 카드 안쪽(가장자리 8px 제외)에 있어야 함
 
-// 관계선 미리보기: 출발 노드 오른쪽 → 도착 노드 왼쪽 점 가장자리 (부드러운 곡선)
-function previewPath(s, t) {
-  const dx = Math.max(40, Math.abs(t.x - s.x) / 2)
-  return `M ${s.x} ${s.y} C ${s.x + dx} ${s.y}, ${t.x - dx} ${t.y}, ${t.x} ${t.y}`
-}
-
-// 노드 중심점 (캔버스 좌표)
-function centerOf(position, node) {
+// 카드의 캔버스 위치·크기
+function boxAt(position, node) {
   const { w, h } = cardSize(node)
-  return { x: position.x + w / 2, y: position.y + h / 2 }
+  return { x: position.x, y: position.y, w, h }
 }
 
 // 가로형 로드맵 캔버스 (React Flow)
 // - 데이터는 학기(periodId) 기준 상대 좌표, 화면에는 캔버스 좌표로 바꿔서 그린다. (layout.js nodeBox)
 // - 빈 공간 드래그: 이동 / 휠·핀치: 확대·축소 / 노드 드래그: 위치 이동·학기 재배정
+// - 노드를 다른 노드 위에 충분히 겹쳐 놓으면: 이동 대신 관계선 연결 (노드는 원래 자리로)
 // - layout: 학기별 x·너비 (layout.js computeLayout). 데이터가 바뀔 때만 다시 계산되므로
 //   드래그하는 동안에는 학기 경계가 고정되고, 놓은 뒤에 필요한 만큼만 학기가 넓어진다.
 export default function RoadmapCanvas({
@@ -38,8 +37,9 @@ export default function RoadmapCanvas({
 }) {
   const width = layout.width + 200
 
-  const [resetKey, setResetKey] = useState(0) // 영역 밖에 놓았을 때 원래 위치로 되돌리기용
-  const [nodeDragging, setNodeDragging] = useState(false) // 드래그 중에는 연결선 애니메이션을 끈다
+  const [resetKey, setResetKey] = useState(0) // 원래 위치로 되돌리기용
+  const [draggingId, setDraggingId] = useState(null) // 끌고 있는 노드 (연결선 애니메이션 끔, 가지선 잠시 숨김)
+  const [dropLink, setDropLink] = useState(null) // 노드를 다른 노드 위에 올렸을 때 연결 후보 { id, valid, problem }
   const draggedRef = useRef(false) // 드래그 직후의 클릭은 무시하기 위한 표시
   const dragStartRef = useRef(null) // 드래그를 시작한 마우스 위치 (화면 좌표)
 
@@ -99,12 +99,46 @@ export default function RoadmapCanvas({
     [],
   )
 
-  const onNodeDragStart = useCallback((event) => {
+  // 지금 화면에 그려진 카드 위치 (드래그 중이면 드래그 위치) → 연결선·가지선이 실시간으로 따라감
+  const liveCards = useMemo(
+    () => flowNodes.filter((n) => n.type === 'card').map((n) => ({ node: n.data.node, box: boxAt(n.position, n.data.node) })),
+    [flowNodes],
+  )
+  const liveBoxes = useMemo(() => new Map(liveCards.map((c) => [c.node.id, c.box])), [liveCards])
+
+  // 노드 관계선 경로 (위·아래·오른쪽 중 알맞은 접점, 카드 관통 피하기, 접점 나누기)
+  const routes = useMemo(() => routeEdges(edges, liveBoxes), [edges, liveBoxes])
+  // 학기 가지선 (끌고 있는 노드는 놓을 때까지 잠시 숨김)
+  const branches = useMemo(
+    () => computeBranches(liveCards.filter((c) => c.node.id !== draggingId), edges, layout),
+    [liveCards, edges, layout, draggingId],
+  )
+
+  // 끄는 노드 중심이 다른 카드 안쪽에 들어갔는지 (연결 후보)
+  const findDropLink = useCallback(
+    (flowNode) => {
+      const me = boxAt(flowNode.position, flowNode.data.node)
+      const cx = me.x + me.w / 2
+      const cy = me.y + me.h / 2
+      for (const [id, b] of liveBoxes) {
+        if (id === flowNode.id) continue
+        const inside = cx > b.x + DROP_INSET && cx < b.x + b.w - DROP_INSET && cy > b.y + DROP_INSET && cy < b.y + b.h - DROP_INSET
+        if (inside) {
+          const problem = linkProblem(edges, flowNode.id, id)
+          return { id, valid: !problem, problem }
+        }
+      }
+      return null
+    },
+    [liveBoxes, edges],
+  )
+
+  const onNodeDragStart = useCallback((event, flowNode) => {
     dragStartRef.current = { x: event.clientX, y: event.clientY }
-    setNodeDragging(true)
+    setDraggingId(flowNode.id)
   }, [])
 
-  // 드래그 중: 노드 중심이 있는 학기를 강조
+  // 드래그 중: 다른 노드 위면 연결 후보 강조, 아니면 노드 중심이 있는 학기를 강조
   const onNodeDrag = useCallback(
     (event, flowNode) => {
       // 마우스가 CLICK_DISTANCE보다 많이 움직였으면 "드래그"로 본다 (손떨림은 클릭으로 처리)
@@ -112,17 +146,34 @@ export default function RoadmapCanvas({
       if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > CLICK_DISTANCE) {
         draggedRef.current = true
       }
-      const center = centerOf(flowNode.position, flowNode.data.node)
-      onDropTargetChange(findPeriodAt(center.x, center.y, layout)?.id ?? null)
+      const candidate = findDropLink(flowNode)
+      setDropLink((prev) =>
+        prev?.id === candidate?.id && prev?.valid === candidate?.valid ? prev : candidate,
+      )
+      if (candidate) {
+        onDropTargetChange(null)
+        return
+      }
+      const { x, y, w, h } = boxAt(flowNode.position, flowNode.data.node)
+      onDropTargetChange(findPeriodAt(x + w / 2, y + h / 2, layout)?.id ?? null)
     },
-    [layout, onDropTargetChange],
+    [layout, onDropTargetChange, findDropLink],
   )
 
-  // 드롭: 학기 판정 → 겹침 보정 → periodId와 상대 좌표 저장 (layout.js placeNode)
+  // 드롭: ① 다른 노드 위면 관계선 연결 후 원래 자리로 (겹침 보정보다 먼저 판단)
+  //       ② 아니면 학기 판정 → 겹침 보정 → periodId와 상대 좌표 저장 (layout.js placeNode)
   const onNodeDragStop = useCallback(
     (_, flowNode) => {
       onDropTargetChange(null)
-      setNodeDragging(false)
+      setDraggingId(null)
+      setDropLink(null)
+      const candidate = draggedRef.current ? findDropLink(flowNode) : null
+      if (candidate) {
+        if (candidate.valid) onEdgeCreate(flowNode.id, candidate.id)
+        else onLinkReject(candidate.problem)
+        setResetKey((k) => k + 1) // 끌던 노드는 원래 자리로
+        return
+      }
       const placement = placeNode(flowNode.data.node, flowNode.position, nodes, layout)
       if (!placement) {
         setResetKey((k) => k + 1) // 학기 영역 밖이거나 빈 자리가 없음 → 원래 자리로
@@ -130,11 +181,10 @@ export default function RoadmapCanvas({
       }
       onNodeMove(flowNode.data.node.id, placement)
     },
-    [nodes, layout, onNodeMove, onDropTargetChange],
+    [nodes, layout, onNodeMove, onDropTargetChange, findDropLink, onEdgeCreate, onLinkReject],
   )
 
-  // ───── 관계선 만들기·끝점 옮기기 ─────
-  const { getInternalNode } = useReactFlow()
+  // ───── 관계선 만들기(CONNECT 핸들)·끝점 옮기기 ─────
   const onLinkDone = useCallback(
     (info, nodeId) => {
       if (info.mode === 'create') onEdgeCreate(info.fixedId, nodeId)
@@ -152,28 +202,25 @@ export default function RoadmapCanvas({
       startLink(event, { mode: end, edgeId: edge.id, fixedId: end === 'source' ? edge.targetNodeId : edge.sourceNodeId }),
     [startLink],
   )
+  // 카드 강조: 핸들로 끄는 중이면 그 대상, 노드를 끄는 중이면 연결 후보 (drop: '연결하기' 안내 표시)
+  const linkTarget = link?.target ?? (dropLink ? { id: dropLink.id, valid: dropLink.valid, drop: true } : null)
   const linkValue = useMemo(
-    () => ({ connectMode, startConnect, target: link?.target ?? null }),
-    [connectMode, startConnect, link?.target],
+    () => ({ connectMode, startConnect, target: linkTarget }),
+    [connectMode, startConnect, linkTarget?.id, linkTarget?.valid, linkTarget?.drop], // eslint-disable-line react-hooks/exhaustive-deps
   )
 
-  // 드래그 중 미리보기 선 (캔버스 좌표). 연결할 수 있는 노드 위에서는 그 노드의 연결 위치에 붙는다.
+  // 드래그 중 미리보기 선: 연결할 수 있는 노드 위에서는 실제로 그려질 경로 그대로
   let preview = null
   if (link) {
-    const boxOf = (id) => {
-      const n = getInternalNode(id)
-      if (!n?.measured?.width) return null
-      const { x, y } = n.internals.positionAbsolute
-      return { x, y, w: n.measured.width, h: n.measured.height }
-    }
-    const outOf = (b) => ({ x: b.x + b.w, y: b.y + b.h / 2 }) // 출발: 오른쪽 가운데
-    const inOf = (b) => ({ x: b.x - 7, y: b.y + b.h / 2 }) // 도착: 왼쪽 점 가장자리
-    const fixed = boxOf(link.fixedId)
-    const snap = link.target?.valid ? boxOf(link.target.id) : null
-    if (fixed) {
+    const fixed = liveBoxes.get(link.fixedId)
+    const snapId = link.target?.valid ? link.target.id : null
+    if (fixed && snapId) {
+      const others = [...liveBoxes].filter(([id]) => id !== link.fixedId && id !== snapId).map(([, b]) => b)
       preview = link.mode === 'source'
-        ? previewPath(snap ? outOf(snap) : link.pointer, inOf(fixed))
-        : previewPath(outOf(fixed), snap ? inOf(snap) : link.pointer)
+        ? routeBetween(liveBoxes.get(snapId), fixed, others)
+        : routeBetween(fixed, liveBoxes.get(snapId), others)
+    } else if (fixed) {
+      preview = routeToPoint(fixed, link.pointer)
     }
   }
 
@@ -188,20 +235,38 @@ export default function RoadmapCanvas({
         className: `rm-edge ${link?.edgeId === e.id ? 'is-reconnecting' : ''}`,
         zIndex: 1, // 카드 위에 그려서 끝 핸들이 가려지지 않게
         data: {
+          route: routes.get(e.id),
           onDelete: onEdgeDelete,
           onStartReconnect: (event, end) => startReconnect(event, e, end),
         },
       })),
-    [edges, onEdgeDelete, startReconnect, link?.edgeId],
+    [edges, routes, onEdgeDelete, startReconnect, link?.edgeId],
   )
+
+  const canvasClass = [
+    'rm-canvas',
+    draggingId ? 'is-node-dragging' : '',
+    connectMode ? 'is-connect-mode' : '',
+    link ? 'is-linking' : '',
+  ].join(' ')
 
   return (
     <DropTargetContext.Provider value={dropPeriodId}>
     <LinkContext.Provider value={linkValue}>
+    <BranchContext.Provider value={branches}>
       {/* 새로 누를 때마다 "드래그 직후" 표시를 지운다 */}
       <div
-        className={`rm-canvas ${nodeDragging ? 'is-node-dragging' : ''} ${connectMode ? 'is-connect-mode' : ''} ${link ? 'is-linking' : ''}`}
-        onPointerDownCapture={() => { draggedRef.current = false }}>
+        className={canvasClass}
+        onPointerDownCapture={(e) => {
+          draggedRef.current = false
+          dragStartRef.current = { x: e.clientX, y: e.clientY }
+        }}
+        // 눌렀다 뗄 때까지 4px 넘게 움직였으면 클릭이 아닌 드래그로 본다 (CONNECT 모드에서 카드를 끌어도 상세 창이 안 열리게)
+        onPointerUpCapture={(e) => {
+          const start = dragStartRef.current
+          if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > CLICK_DISTANCE) draggedRef.current = true
+        }}
+      >
         <ReactFlow
           nodes={flowNodes}
           edges={flowEdges}
@@ -219,7 +284,7 @@ export default function RoadmapCanvas({
           zoomOnScroll // 마우스 휠 → 확대·축소
           zoomOnPinch // 트랙패드 핀치 → 확대·축소
           zoomOnDoubleClick={false}
-          nodesDraggable // 노드 드래그 → 위치 이동
+          nodesDraggable // CONNECT 모드에서는 카드에 nodrag를 붙여 이동을 막는다 (CardNode). 이 값을 껐다 켜면 드래그가 다시 붙지 않는 문제가 있어 항상 켜 둔다
           nodeDragThreshold={0} // 0이어야 노드가 마우스를 정확히 따라온다 (값이 있으면 그만큼 뒤처짐)
           nodeClickDistance={CLICK_DISTANCE} // 살짝 흔들린 클릭도 클릭으로 인정
           nodesConnectable={false}
@@ -242,6 +307,7 @@ export default function RoadmapCanvas({
           )}
         </ReactFlow>
       </div>
+    </BranchContext.Provider>
     </LinkContext.Provider>
     </DropTargetContext.Provider>
   )

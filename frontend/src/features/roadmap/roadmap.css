@@ -346,6 +346,46 @@
   stroke-width: 1.6;
   stroke-dasharray: 5 5;
 }
+/* 학기 가지선 (타임라인 → 노드). 관계선과 같은 얇은 회색 곡선, 카드 아래에 그려짐 */
+.rm-branches {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.rm-branch {
+  fill: none;
+  stroke: var(--rm-line);
+  stroke-width: 1.4;
+  transition: d 0.25s var(--rm-ease);
+}
+.rm-canvas.is-node-dragging .rm-branch {
+  transition: none;
+}
+/* 노드를 다른 노드 위에 올렸을 때 '연결하기' 안내 */
+.rm-link-label {
+  position: absolute;
+  left: 50%;
+  top: -14px;
+  z-index: 2;
+  padding: 5px 12px;
+  border-radius: 14px;
+  background: var(--rm-text);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  animation: rm-link-label-in 0.2s var(--rm-ease);
+}
+.rm-link-label.is-invalid {
+  background: #9a9a9a;
+}
+@keyframes rm-link-label-in {
+  from { opacity: 0; transform: translate(-50%, calc(-100% + 6px)); }
+}
 /* CONNECT 모드: 카드 오른쪽 연결 핸들 (왼쪽 완료 표시등과 분리) */
 .rm-link-handle {
   position: absolute;
@@ -942,6 +982,29 @@ span.rm-nav__link {
 .rm-chip:hover {
   background: #dedcdd;
   transform: translateY(-2px);
+}
+.rm-segment {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  border-radius: 18px;
+  background: var(--rm-field);
+}
+.rm-segment button {
+  height: 30px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 15px;
+  background: transparent;
+  color: #777;
+  font-size: 13px;
+  font-weight: 800;
+  transition: background 0.2s, color 0.2s;
+}
+.rm-segment button.is-active {
+  background: #fff;
+  color: var(--rm-text);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 .rm-muted {
   font-size: 13px;

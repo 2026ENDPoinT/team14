@@ -25,6 +25,8 @@ function node(id, title, theme, periodId, x, y, extra = {}) {
     source: 'user',
     originKey: null,
     completed: false,
+    // 학기 가지선 표시: null(자동) | 'shown'(표시) | 'hidden'(숨김)  ※ API.md에 아직 없는 필드 (3번과 협의 필요)
+    branchVisibility: null,
     createdAt: '2026-11-09T12:00:00+09:00',
     ...extra,
   }

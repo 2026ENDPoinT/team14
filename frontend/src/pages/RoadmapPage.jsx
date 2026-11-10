@@ -10,6 +10,7 @@ import NodeDetailModal from '../features/roadmap/NodeDetailModal.jsx'
 import RoadmapTutorial from '../features/roadmap/tutorial/RoadmapTutorial.jsx'
 import { hasSeenRoadmapTutorial, markRoadmapTutorialSeen } from '../features/roadmap/tutorial/tutorialStorage.js'
 import { linkProblem } from '../features/roadmap/edgeRules.js'
+import { autoBranchVisible } from '../features/roadmap/branchLines.js'
 import { BASE_WIDTH, computeLayout, nextPosition, placeNode } from '../features/roadmap/layout.js'
 import '../features/roadmap/roadmap.css'
 
@@ -135,6 +136,11 @@ export default function RoadmapPage() {
 
   const handleLinkReject = useCallback((message) => setToast(message), [])
 
+  // 학기 가지선 표시 설정 (null 자동 / 'shown' / 'hidden')
+  const handleBranchChange = useCallback((nodeId, value) => {
+    setNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, branchVisibility: value } : n)))
+  }, [])
+
   const openAdd = () => {
     setDetailId(null)
     setFabOpen(false)
@@ -164,6 +170,7 @@ export default function RoadmapPage() {
       source: 'user',
       originKey: null,
       completed: false,
+      branchVisibility: null, // 학기 가지선: 자동
       createdAt: new Date().toISOString(),
     }
     // 학기를 골랐으면: 기존 노드 아래쪽에서 시작해 드래그와 같은 겹침 보정 규칙으로 자리를 찾는다
@@ -276,6 +283,8 @@ export default function RoadmapPage() {
           node={detailNode}
           body={getBody(detailId)}
           connections={connections}
+          branch={detailNode ? { value: detailNode.branchVisibility ?? null, autoVisible: autoBranchVisible(detailNode.id, edges) } : null}
+          onBranchChange={handleBranchChange}
           onClose={() => setDetailId(null)}
           onSave={handleSave}
           onDelete={handleDeleteNode}

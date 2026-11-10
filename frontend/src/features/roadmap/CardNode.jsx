@@ -11,12 +11,22 @@ export default function CardNode({ data }) {
   const { w, h } = cardSize(node)
   const { connectMode, startConnect, target } = useContext(LinkContext)
   // 관계선을 끄는 중 이 카드 위에 있으면 강조 (연결 가능 / 불가)
-  const linkClass = target?.id === node.id ? `is-link-target ${target.valid ? 'is-valid' : 'is-invalid'}` : ''
+  const isTarget = target?.id === node.id
+  const linkClass = [
+    isTarget ? `is-link-target ${target.valid ? 'is-valid' : 'is-invalid'}` : '',
+    connectMode ? 'nodrag' : '', // CONNECT 모드: 카드를 끌어도 이동하지 않음 (클릭은 그대로)
+  ].join(' ')
   return (
     <>
       <Handle type="target" position={Position.Left} className="rm-handle" isConnectable={false} />
       <NodeCard node={node} subtitle={subtitle} onClick={onClick} hideDot className={linkClass} style={{ width: w, height: h }} />
       <CompleteDot done={Boolean(node.completed)} title={node.title} onToggle={() => onToggleComplete(node.id)} />
+      {/* 노드를 끌어 이 카드 위에 올렸을 때: 놓으면 연결된다는 안내 */}
+      {isTarget && target.drop && (
+        <span className={`rm-link-label ${target.valid ? '' : 'is-invalid'}`} aria-hidden="true">
+          {target.valid ? '연결하기' : '이미 연결됨'}
+        </span>
+      )}
       {/* 관계선 연결 핸들: CONNECT 모드에서만, 카드 오른쪽 (왼쪽 완료 표시등과 분리) */}
       {connectMode && (
         <button

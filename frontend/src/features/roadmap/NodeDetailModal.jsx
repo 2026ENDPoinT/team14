@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import Modal from './Modal.jsx'
 import { ClipIcon, CloseIcon, SaveIcon, TrashIcon } from './icons.jsx'
+import { BRANCH_OPTIONS } from './branchLines.js'
 
 // 노드 상세 창. 노드를 클릭했을 때만 열린다.
 // node가 null이 되어도 닫힘 애니메이션 동안 마지막 노드를 보여 준다.
-export default function NodeDetailModal({ node, body, connections, onClose, onSave, onDelete, onOpenNode }) {
+// branch: 학기 가지선 설정 { value, autoVisible } / onBranchChange: 바로 반영 (저장 버튼과 무관)
+export default function NodeDetailModal({ node, body, connections, branch, onBranchChange, onClose, onSave, onDelete, onOpenNode }) {
   const [shown, setShown] = useState(node)
   const [title, setTitle] = useState('')
   const [record, setRecord] = useState('')
@@ -86,6 +88,28 @@ export default function NodeDetailModal({ node, body, connections, onClose, onSa
                 </button>
               ))}
             </div>
+          </div>
+          {/* 학기 가지선: 타임라인에서 이 노드로 이어지는 선 */}
+          <div className="rm-field">
+            <span className="rm-eyebrow">TIMELINE LINE</span>
+            <div className="rm-segment" role="group" aria-label="학기 가지선 표시">
+              {BRANCH_OPTIONS.map((o) => (
+                <button
+                  key={o.label}
+                  type="button"
+                  className={branch?.value === o.value ? 'is-active' : ''}
+                  aria-pressed={branch?.value === o.value}
+                  onClick={() => onBranchChange(shown.id, o.value)}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            <span className="rm-muted">
+              {branch?.value == null
+                ? `자동: 다른 노드에서 들어오는 관계선이 ${branch?.autoVisible ? '없어 가지선을 표시해요.' : '있어 가지선을 숨겨요.'}`
+                : '직접 정한 설정이 자동 규칙보다 우선해요.'}
+            </span>
           </div>
         </div>
       )}
