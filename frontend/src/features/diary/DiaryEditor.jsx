@@ -90,24 +90,32 @@ export default function DiaryEditor() {
       <label className="rm-field">
         <span className="rm-eyebrow">DATE</span>
         {/* max: 달력에서 오늘 이후 날짜를 고를 수 없게 한다 (저장 함수에서도 한 번 더 막음) */}
-        <input
-          type="date"
-          className="rm-input"
-          value={date}
-          max={today}
-          onChange={(e) => setDate(e.target.value)}
-        />
+        {/* 로드맵 노드 카드 모양 입력칸 (왼쪽 점 = 노드 표시등) */}
+        <div className="dy-node">
+          <span className="dy-node__dot" aria-hidden="true" />
+          <input
+            type="date"
+            className="dy-input dy-input--date"
+            value={date}
+            max={today}
+            onChange={(e) => setDate(e.target.value)}
+          />
+        </div>
       </label>
       {isFuture && <p className="rm-muted">미래 날짜에는 일기를 쓸 수 없어요.</p>}
 
       <label className="rm-field">
         <span className="rm-eyebrow">TODAY'S STORY</span>
-        <textarea
-          className="rm-input rm-textarea rm-textarea--tall dy-textarea"
-          value={content}
-          onChange={(e) => { setContent(e.target.value); setSaved(false) }}
-          placeholder="오늘 있었던 일을 자유롭게 적어 보세요."
-        />
+        <div className="dy-node dy-node--top">
+          {/* 30자(보상 조건)를 채우면 로드맵 완료 표시등처럼 노란색 */}
+          <span className={`dy-node__dot ${meetsLength ? 'is-done' : ''}`} aria-hidden="true" />
+          <textarea
+            className="dy-input dy-textarea"
+            value={content}
+            onChange={(e) => { setContent(e.target.value); setSaved(false) }}
+            placeholder="오늘 있었던 일을 자유롭게 적어 보세요."
+          />
+        </div>
       </label>
 
       {/* 공백 제외 글자 수 (보상 조건 표시용, 실제 판단은 서버) */}
@@ -130,7 +138,7 @@ export default function DiaryEditor() {
       </div>
 
       <button type="button" className="rm-primary-btn" onClick={handleSave} disabled={isFuture}>
-        {isExisting ? 'UPDATE DIARY' : 'SAVE DIARY'}
+        {isExisting ? '수정 저장' : '저장'}
       </button>
 
       <div className={`rm-toast dy-toast ${toast ? 'is-visible' : ''}`} role="status">{toast}</div>
