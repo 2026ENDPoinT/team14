@@ -1,0 +1,138 @@
+/* 로드맵 튜토리얼 (색·그림자는 roadmap.css의 --rm-* 값을 사용) */
+.rm-tour {
+  position: absolute;
+  inset: 0;
+  z-index: 100; /* 메뉴·팝업보다 위: 튜토리얼 중에는 아래 화면을 조작할 수 없다 */
+  opacity: 0;
+  transition: opacity 0.25s var(--rm-ease);
+  touch-action: none;
+  user-select: none; /* 어두운 화면 위를 드래그해도 글자가 선택되지 않게 */
+}
+.rm-tour.is-visible {
+  opacity: 1;
+}
+
+/* 강조 영역: 바깥으로 아주 큰 그림자를 퍼뜨려 나머지 화면을 어둡게 만든다 */
+.rm-tour__spot {
+  position: absolute;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.9),
+    0 0 0 9999px rgba(17, 17, 17, 0.45);
+  transition:
+    left 0.35s var(--rm-ease),
+    top 0.35s var(--rm-ease),
+    width 0.35s var(--rm-ease),
+    height 0.35s var(--rm-ease),
+    border-radius 0.35s var(--rm-ease);
+}
+/* 강조할 대상을 못 찾으면 화면 전체만 어둡게 */
+.rm-tour__spot.is-empty {
+  inset: 50% auto auto 50%;
+  width: 0;
+  height: 0;
+}
+
+.rm-tour__dialog {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  box-sizing: border-box;
+  width: min(340px, calc(100vw - 32px));
+  padding: 22px 24px 18px;
+  border-radius: 22px;
+  background: var(--rm-surface);
+  box-shadow: var(--rm-shadow-strong);
+  color: var(--rm-text);
+  transition: left 0.35s var(--rm-ease), top 0.35s var(--rm-ease);
+  animation: rm-tour-in 0.3s var(--rm-ease);
+  outline: none; /* 설명창 자체의 포커스 테두리는 숨김 (버튼은 Tab으로 이동하면 표시) */
+}
+@keyframes rm-tour-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+.rm-tour__eyebrow {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--rm-muted);
+}
+.rm-tour__title {
+  margin: 0 0 10px;
+  font-size: 22px;
+  font-weight: 900;
+}
+.rm-tour__desc p {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.55;
+  color: #555;
+  word-break: keep-all;
+}
+.rm-tour__dots {
+  display: flex;
+  gap: 6px;
+  margin: 16px 0 14px;
+}
+.rm-tour__dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: #d9d9d9;
+  transition: width 0.3s var(--rm-ease), background 0.3s;
+}
+.rm-tour__dots span.is-active {
+  width: 18px;
+  background: var(--rm-text);
+}
+.rm-tour__actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.rm-tour__nav {
+  display: flex;
+  gap: 8px;
+}
+.rm-tour__skip,
+.rm-tour__prev,
+.rm-tour__next {
+  height: 38px;
+  border: none;
+  border-radius: 19px;
+  font-size: 14px;
+  font-weight: 800;
+  transition: transform 0.2s var(--rm-ease), background 0.2s, color 0.2s;
+}
+.rm-tour__skip {
+  padding: 0 4px;
+  background: none;
+  color: var(--rm-muted);
+}
+.rm-tour__skip:hover {
+  color: var(--rm-text);
+}
+.rm-tour__prev {
+  padding: 0 16px;
+  background: var(--rm-field);
+  color: var(--rm-text);
+}
+.rm-tour__next {
+  min-width: 72px;
+  padding: 0 18px;
+  background: var(--rm-text);
+  color: #fff;
+}
+.rm-tour__prev:hover,
+.rm-tour__next:hover {
+  transform: translateY(-1px);
+}
+.rm-tour button:focus-visible {
+  outline: 2px solid var(--rm-text);
+  outline-offset: 2px;
+}
