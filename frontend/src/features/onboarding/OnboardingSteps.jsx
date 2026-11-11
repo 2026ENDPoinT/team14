@@ -135,7 +135,7 @@ export function ExperienceStep({ selectedIds, onToggle, hasUnsupported, onNext, 
             </div>
           </div>
         )}
-        <Hint>선택한 경험은 로드맵의 보관함(INBOX)에 저장돼요. 학기에는 자동으로 배치되지 않아요.</Hint>
+        <Hint>선택한 경험은 로드맵의 보관함에 저장돼요. 학기에는 자동으로 배치되지 않아요.</Hint>
         {hasUnsupported && (
           <Hint tone="warn">아직 저장을 지원하지 않는 경험이 포함되어 있어요. 완료 전에 다시 안내해 드릴게요.</Hint>
         )}

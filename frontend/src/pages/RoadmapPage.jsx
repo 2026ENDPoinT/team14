@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { useSearchParams } from 'react-router-dom'
 import { mockDocuments, mockEdges, mockNodes, mockPeriods } from '../data/roadmapMock.js'
-import RoadmapNav from '../features/roadmap/RoadmapNav.jsx'
 import RoadmapCanvas from '../features/roadmap/RoadmapCanvas.jsx'
 import FabMenu from '../features/roadmap/FabMenu.jsx'
 import InboxPanel from '../features/roadmap/InboxPanel.jsx'
@@ -150,12 +149,42 @@ export default function RoadmapPage() {
     (node) => filterIds.length === 0 || filterIds.includes(nodeCategoryId(node, categories)),
     [filterIds, categories],
   )
+  // 필터 목록에 보일 종류: 학기에 배치된 활동이 실제로 쓰는 종류만 (기본·직접 추가 종류 같은 규칙)
+  // - 필터 적용 전 전체 노드 기준이라, 필터로 숨긴 종류도 목록에 남는다
+  // - 보관함에만 있는 활동의 종류는 넣지 않는다
+  const usedCategories = useMemo(() => {
+    const used = new Set(nodes.filter((n) => n.status === 'placed').map((n) => nodeCategoryId(n, categories)))
+    return categories.filter((c) => used.has(c.id))
+  }, [nodes, categories])
+  const usedKey = usedCategories.map((c) => c.id).join('|')
+  // 쓰는 종류가 바뀌면 필터 선택을 바로 맞춘다 (그리는 중에 맞춰서 한 프레임도 어긋나지 않게)
+  // - 없어진 종류는 선택에서 빼고, 남은 선택이 없으면 전체 보기로
+  // - 새로 생긴(또는 다시 생긴) 종류는 걸러 보는 중이어도 보이게 선택에 넣는다
+  const [prevUsedKey, setPrevUsedKey] = useState(usedKey)
+  if (prevUsedKey !== usedKey) {
+    setPrevUsedKey(usedKey)
+    if (filterIds.length > 0) {
+      const prev = prevUsedKey.split('|')
+      const now = usedCategories.map((c) => c.id)
+      const kept = filterIds.filter((id) => now.includes(id))
+      const added = now.filter((id) => !prev.includes(id) && !kept.includes(id))
+      setFilterIds(kept.length > 0 ? [...kept, ...added] : [])
+    }
+  }
   const visibleIds = useMemo(
     () => (filterIds.length === 0 ? null : new Set(nodes.filter(isShown).map((n) => n.id))),
     [filterIds, nodes, isShown],
   )
+  // 배치 후에도 필터로 숨겨지는지 (처음 생기는 종류는 위에서 자동으로 보이게 하므로 숨겨지지 않음)
+  const staysHidden = useCallback(
+    (node) => {
+      const id = nodeCategoryId(node, categories)
+      return filterIds.length > 0 && !filterIds.includes(id) && usedCategories.some((c) => c.id === id)
+    },
+    [filterIds, categories, usedCategories],
+  )
   const closeFilter = useCallback(() => setFilterOpen(false), [])
-  const HIDDEN_NOTE = ' 지금 필터에서 숨긴 종류라 화면에는 보이지 않아요.'
+  const HIDDEN_NOTE = ' (지금 필터로 숨긴 종류라 화면에는 보이지 않아요)'
 
   // 처음 접속했을 때만 튜토리얼 자동 표시 (캔버스가 자리 잡을 시간을 조금 준다)
   useEffect(() => {
@@ -240,7 +269,7 @@ export default function RoadmapPage() {
       if (!result.error) return
       const ids = new Set(moves.map((m) => m.id))
       setNodes((prev) => prev.map((n) => (ids.has(n.id) ? before.find((b) => b.id === n.id) ?? n : n)))
-      setToast(`위치를 저장하지 못해 원래 자리로 되돌렸어요. ${result.error.message}`)
+      setToast(`위치를 저장하지 못해 되돌렸어요. ${result.error.message}`)
     })
   }, [isDb])
   const handleNodeMove = useCallback(
@@ -252,9 +281,9 @@ export default function RoadmapPage() {
     (nodeId, placement) => {
       handleNodeMove(nodeId, placement)
       const node = nodes.find((n) => n.id === nodeId)
-      if (node && !isShown(node)) setToast(`학기에 배치했어요.${HIDDEN_NOTE}`)
+      if (node && staysHidden(node)) setToast(`학기에 배치했어요.${HIDDEN_NOTE}`)
     },
-    [handleNodeMove, nodes, isShown],
+    [handleNodeMove, nodes, staysHidden],
   )
 
   // 완료 상태 표시등 클릭: completed만 뒤집는다 (기존 필드 사용). DB면 저장에 성공한 뒤에 바꾼다
@@ -373,7 +402,7 @@ export default function RoadmapPage() {
         detailKey: isCustom ? null : detailId,
         memo,
       })
-      if (result.error) return `노드를 저장하지 못했어요. ${result.error.message}`
+      if (result.error) return `활동을 저장하지 못했어요. ${result.error.message}`
       created = { ...result.data.node, categoryLabel: categoryLabelOf(result.data.node.categoryId, customCategories), courseKey }
       document = result.data.document
       memoFailed = Boolean(result.data.documentError)
@@ -384,10 +413,10 @@ export default function RoadmapPage() {
     if (document) setDocuments((prev) => ({ ...prev, [created.id]: document }))
     setAddOpen(false)
     if (!placement) setInboxOpen(true) // 보관함에 넣었으면 보관함을 열어 보여 준다
-    if (memoFailed) setToast('노드는 저장했지만 메모는 저장하지 못했어요.')
-    else if (placement) setToast(`노드를 학기에 추가했어요.${isShown(created) ? '' : HIDDEN_NOTE}`)
+    if (memoFailed) setToast('활동은 저장했지만 메모는 저장하지 못했어요.')
+    else if (placement) setToast(`활동을 학기에 추가했어요.${staysHidden(created) ? HIDDEN_NOTE : ''}`)
     else if (periodId) setToast('학기에 빈 자리가 없어 보관함에 넣었어요.')
-    else setToast('노드를 보관함에 추가했어요.')
+    else setToast('활동을 보관함에 추가했어요.')
     return null
   }
 
@@ -438,7 +467,7 @@ export default function RoadmapPage() {
     }
     removeNode(nodeId)
     setDetailId(null)
-    setToast('노드를 삭제했어요.')
+    setToast('활동을 삭제했어요.')
   }
 
   // 지운 노드(ID·제목·종류·학기·위치·완료 상태)와 관계선, 문서를 원래 순서대로 되돌린다
@@ -466,7 +495,7 @@ export default function RoadmapPage() {
       setToast(`삭제하지 못해 되돌렸어요. ${result.error.message}`)
       return
     }
-    setToast('노드가 삭제되었습니다.')
+    setToast('활동을 삭제했어요.')
   }, [restoreDeleted])
 
   // 화면을 떠나면 기다리던 삭제를 바로 보낸다 (실행 취소 시간 안에 다른 메뉴로 이동한 경우)
@@ -497,9 +526,9 @@ export default function RoadmapPage() {
       if (isDb) {
         const timer = setTimeout(() => commitDelete(undo), UNDO_MS)
         pendingDeletes.current.set(nodeId, { timer, undo })
-        setToast({ text: '노드를 삭제할게요.', undo })
+        setToast({ text: '활동을 삭제할게요.', undo })
       } else {
-        setToast({ text: '노드가 삭제되었습니다.', undo })
+        setToast({ text: '활동을 삭제했어요.', undo })
       }
     },
     [nodes, edges, documents, removeNode, isDb, commitDelete],
@@ -529,7 +558,6 @@ export default function RoadmapPage() {
   if (mode === 'loading' || mode === 'error') {
     return (
       <div className="roadmap-page">
-        <RoadmapNav />
         <div role={mode === 'error' ? 'alert' : 'status'} style={{ padding: '120px 32px' }}>
           {mode === 'loading' ? (
             <p className="rm-muted">내 로드맵을 불러오는 중…</p>
@@ -567,16 +595,32 @@ export default function RoadmapPage() {
           visibleIds={visibleIds}
         />
 
-        <RoadmapNav />
 
         <NodeFilter
           open={filterOpen}
           onToggle={() => setFilterOpen((v) => !v)}
           onClose={closeFilter}
-          categories={categories}
+          categories={usedCategories}
           selected={filterIds}
           onChange={setFilterIds}
         />
+
+        {/* 비어 있는 로드맵 안내 (누를 수 없는 안내 문구) */}
+        {(periods.length === 0 || nodes.length === 0) && (
+          <div className="rm-empty-hint" role="status">
+            {periods.length === 0 ? (
+              <>
+                <strong>아직 학기가 없어요</strong>
+                <span>온보딩을 마치면 1학년 1학기부터 4학년 2학기까지 학기가 만들어져요.</span>
+              </>
+            ) : (
+              <>
+                <strong>아직 활동이 없어요</strong>
+                <span>오른쪽 아래 + 버튼에서 ‘활동 추가’를 눌러 첫 활동을 만들어 보세요.</span>
+              </>
+            )}
+          </div>
+        )}
 
         <InboxPanel
           open={inboxOpen}
@@ -593,7 +637,7 @@ export default function RoadmapPage() {
 
         {connectMode && (
           <div className="rm-connect-banner" role="status">
-            <span>연결 모드 · 노드를 끌어 다른 노드에 놓으면 연결돼요</span>
+            <span>연결 모드 · 활동은 그대로 두고, 끌어서 다른 활동에 놓으면 관계선만 이어져요</span>
             <button type="button" onClick={() => setConnectMode(false)}>완료</button>
           </div>
         )}

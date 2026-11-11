@@ -1,4 +1,4 @@
-import { Routes, Route, Link } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import HomePage from './pages/HomePage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx'
@@ -7,6 +7,8 @@ import DiaryPage from './pages/DiaryPage.jsx'
 import MemoriesPage from './pages/MemoriesPage.jsx'
 import RoadmapPage from './pages/RoadmapPage.jsx'
 import ExplorePage from './pages/ExplorePage.jsx'
+import MyPage from './pages/MyPage.jsx'
+import GlobalNav from './components/GlobalNav.jsx'
 import { AuthProvider, useAuth } from './features/auth/AuthProvider.jsx'
 import { RequireOnboarded, RequireOnboardingPending } from './features/auth/RouteGuards.jsx'
 
@@ -16,7 +18,7 @@ import { RequireOnboarded, RequireOnboardingPending } from './features/auth/Rout
 export default function App() {
   return (
     <AuthProvider>
-      <DevNav />
+      <AppNav />
 
       <Routes>
         <Route path="/" element={<RequireOnboarded><HomePage /></RequireOnboarded>} />
@@ -27,27 +29,20 @@ export default function App() {
         <Route path="/memories" element={<RequireOnboarded><MemoriesPage /></RequireOnboarded>} />
         <Route path="/roadmap" element={<RequireOnboarded><RoadmapPage /></RequireOnboarded>} />
         <Route path="/explore" element={<RequireOnboarded><ExplorePage /></RequireOnboarded>} />
+        <Route path="/mypage" element={<RequireOnboarded><MyPage /></RequireOnboarded>} />
         <Route path="*" element={<p>페이지를 찾을 수 없습니다.</p>} />
       </Routes>
     </AuthProvider>
   )
 }
 
-// 임시 이동 메뉴 (개발 확인용, 공통 레이아웃 작업 때 교체)
-function DevNav() {
-  const { status, logout } = useAuth()
-  return (
-    <nav style={{ display: 'flex', gap: 12, padding: 12 }}>
-      <Link to="/">홈</Link>
-      <Link to="/login">로그인</Link>
-      <Link to="/onboarding">온보딩</Link>
-      <Link to="/diary">일기</Link>
-      <Link to="/memories">추억 보관소</Link>
-      <Link to="/roadmap">로드맵</Link>
-      <Link to="/explore">탐색</Link>
-      {(status === 'ready' || status === 'error') && (
-        <button type="button" onClick={logout}>로그아웃</button>
-      )}
-    </nav>
-  )
+// 공통 상단 메뉴: 로그인하고 온보딩을 마친 사용자에게만, 로그인·비밀번호 재설정·온보딩 화면에서는 숨긴다
+// (접근 규칙 자체는 라우트 가드가 정한다. 여기서는 메뉴를 보일지만 결정)
+const NAV_HIDDEN_PATHS = ['/login', '/reset-password', '/onboarding']
+function AppNav() {
+  const { status, profile, recovery } = useAuth()
+  const { pathname } = useLocation()
+  if (NAV_HIDDEN_PATHS.some((path) => pathname.startsWith(path))) return null
+  if (status !== 'ready' || !profile?.onboardingCompleted || recovery) return null
+  return <GlobalNav />
 }

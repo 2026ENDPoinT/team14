@@ -18,11 +18,10 @@
   --rm-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --rm-font: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
 
-  /* 로드맵처럼 화면 전체를 쓴다 (임시 이동 메뉴 위를 덮는다) */
+  /* 로드맵처럼 화면 전체를 쓴다. z-index를 두지 않아 안의 팝업이 공통 상단 메뉴(z 35) 위에 온다 */
   position: fixed;
   inset: 0;
-  z-index: 10;
-  overflow-x: hidden; /* 반원 메뉴가 좁은 화면 밖으로 나가도 가로 스크롤이 생기지 않게 */
+  overflow-x: hidden;
   overflow-y: auto;
   background: var(--rm-bg);
   color: var(--rm-text);
@@ -240,17 +239,13 @@
 /* 모바일: 여백을 줄인다 (SPEC 10장, 모바일은 일기 우선) */
 @media (max-width: 600px) {
   .dy-main {
-    padding: 96px 16px 40px;
+    padding: 140px 16px 40px; /* 공통 메뉴 + 일기 하위 탭 아래에서 시작 */
   }
   .dy-card {
     padding: 28px 22px 32px;
   }
   .dy-card .rm-modal__title {
     font-size: 30px;
-  }
-  /* 반원 메뉴가 화면보다 넓지 않게 */
-  .diary-page .rm-nav {
-    width: 100%;
   }
 }
 

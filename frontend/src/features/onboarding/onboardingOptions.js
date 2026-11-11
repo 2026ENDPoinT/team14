@@ -166,6 +166,6 @@ export const SETUP_MODES = [
   {
     key: 'manual',
     title: '직접 구성하기',
-    description: '추천 과목을 자동으로 추가하지 않고, 필요한 노드를 직접 선택하고 배치할 수 있어요.',
+    description: '추천 과목을 자동으로 추가하지 않고, 필요한 활동을 직접 선택하고 배치할 수 있어요.',
   },
 ]

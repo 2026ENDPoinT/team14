@@ -112,12 +112,12 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
   }
 
   return (
-    <Modal open={open} onClose={onClose} label="노드 추가">
+    <Modal open={open} onClose={onClose} label="활동 추가">
       <form className="rm-form" onSubmit={handleSubmit}>
         <header className="rm-modal__head">
           <div>
-            <p className="rm-eyebrow">CREATE NEW</p>
-            <h2 className="rm-modal__title">ADD NODE</h2>
+            <p className="rm-eyebrow">새로 만들기</p>
+            <h2 className="rm-modal__title">활동 추가</h2>
           </div>
           <button type="button" className="rm-icon-btn" aria-label="닫기" onClick={onClose}>
             <CloseIcon />
@@ -136,14 +136,14 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
           resetKey={open}
           courseKey={courseKey}
           onSelectCourse={selectCourse}
-          customNote="직접 추가한 종류는 내 계정에 저장돼요. 내부 분류는 ‘자유 노드’로 정해져요."
+          customNote="직접 추가한 종류는 내 계정에 저장돼요. 내부 분류는 ‘자유 활동’으로 정해져요."
         />
 
         <label className="rm-field">
-          <span className="rm-eyebrow">NODE NAME</span>
+          <span className="rm-eyebrow">이름</span>
           <input
             className="rm-input"
-            placeholder="노드 이름을 입력하세요"
+            placeholder="활동 이름을 입력하세요"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             autoFocus
@@ -151,13 +151,13 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
         </label>
 
         <label className="rm-field">
-          <span className="rm-eyebrow">DESTINATION</span>
+          <span className="rm-eyebrow">놓을 곳</span>
           <select
             className="rm-input rm-select"
             value={destination}
             onChange={(e) => setDestination(e.target.value)}
           >
-            <option value={INBOX}>INBOX (나중에 배치)</option>
+            <option value={INBOX}>보관함 (나중에 배치)</option>
             {periods.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
@@ -165,7 +165,7 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
         </label>
 
         <label className="rm-field">
-          <span className="rm-eyebrow">SHORT NOTE</span>
+          <span className="rm-eyebrow">짧은 메모</span>
           <textarea
             className="rm-input rm-textarea"
             placeholder="간단한 메모 (선택)"
@@ -177,7 +177,7 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
 
         {saveError && <p className="rm-field-note is-error" role="alert">{saveError}</p>}
         <button type="submit" className="rm-primary-btn" disabled={!title.trim() || saving}>
-          {saving ? 'SAVING…' : 'CREATE NODE'}
+          {saving ? 'SAVING…' : '추가하기'}
         </button>
       </form>
     </Modal>

@@ -34,9 +34,9 @@ export default function NodeDetailModal({
   const category = categories.find((c) => c.id === categoryId) ?? categories[0]
   const detail = category.details.find((d) => d.id === detailId) ?? null
   const course = category.id === 'major' && courseKey ? courseOptions().find((c) => c.key === courseKey) ?? null : null
-  // 실제 교과목이거나 교과목을 연결한(또는 지금 고른) 노드는 D-DAY를 다루지 않는다
-  // (온보딩 교과목은 originKey 기준, 직접 만든 노드는 지금 고른 과목 기준)
-  const noDueDate = shown ? isCourse(shown) || (category.id === 'major' && Boolean(courseKey)) : false
+  // 실제 교과목이거나 지금 고른 종류가 기본 '전공·학업'(키 major)이면 D-DAY를 다루지 않는다
+  // (사용자 정의 종류는 이름·기반 theme과 상관없이 마감일을 쓸 수 있다)
+  const noDueDate = shown ? isCourse(shown) || category.id === 'major' : false
 
   // 다른 노드를 열 때만 입력값을 새로 채운다 (저장 후에는 그대로 유지)
   useEffect(() => {
@@ -97,7 +97,7 @@ export default function NodeDetailModal({
           ...(isCourse(shown) ? {} : { courseKey: category.id === 'major' ? courseKey : null }),
         }
       : undefined
-    // 교과목(연결 포함)은 날짜를 다루지 않으므로 보내지 않는다 (기존 값은 그대로 둔다). dueDate는 세션 전용
+    // 전공·학업·교과목은 날짜를 다루지 않으므로 보내지 않는다 (기존 값은 지우지 않고 화면에서만 숨김). dueDate는 세션 전용
     const due = noDueDate ? undefined : dueDate || null
     setSaving(true)
     setSaveError('')
@@ -109,22 +109,22 @@ export default function NodeDetailModal({
   }
 
   const handleDelete = () => {
-    if (window.confirm(`'${title || shown.title}' 노드를 삭제할까요? 문서도 함께 삭제됩니다.`)) {
+    if (window.confirm(`'${title || shown.title}' 활동을 삭제할까요? 나의 기록도 함께 삭제돼요.`)) {
       onDelete(shown.id)
     }
   }
 
   return (
-    <Modal open={Boolean(node)} onClose={onClose} label="노드 상세">
+    <Modal open={Boolean(node)} onClose={onClose} label="활동 상세">
       {shown && (
         <div className="rm-form">
           <header className="rm-modal__head">
-            <p className="rm-eyebrow">NODE DETAILS</p>
+            <p className="rm-eyebrow">활동 상세</p>
             <div className="rm-modal__actions">
               {saving && <span className="rm-saved">저장 중…</span>}
               {saved && !saving && <span className="rm-saved">저장됨</span>}
               {saveError && <span className="rm-saved rm-save-error" role="alert">{saveError}</span>}
-              <button type="button" className="rm-save-btn" onClick={handleSave} disabled={saving}>
+              <button type="button" className="rm-save-btn" onClick={handleSave} disabled={saving} title="이름·종류·기록·마감일 변경 내용을 저장해요">
                 저장
               </button>
               <button type="button" className="rm-icon-btn" aria-label="삭제" onClick={handleDelete}>
@@ -139,14 +139,14 @@ export default function NodeDetailModal({
           <input
             className="rm-detail-title"
             value={title}
-            aria-label="노드 이름"
+            aria-label="활동 이름"
             onChange={(e) => { setTitle(e.target.value); setSaved(false) }}
           />
 
           {/* 탐색에서 추가한 공모전: 출처·마감일·원문 링크 (공고 정보는 수집 데이터에서 읽어 오며 여기서 고치지 않는다) */}
           {shown.contest && (
             <div className="rm-field">
-              <span className="rm-eyebrow">CONTEST</span>
+              <span className="rm-eyebrow">공모전 정보</span>
               <dl className="rm-contest-info">
                 <dt>출처</dt>
                 <dd>{sourceName(shown.contest.source)}</dd>
@@ -180,7 +180,7 @@ export default function NodeDetailModal({
                   return null
                 }}
                 resetKey={shown.id}
-                customNote="직접 추가한 종류는 내 계정에 저장돼요. (로드맵은 아직 예시 데이터라, 노드에 고른 종류는 새로고침하면 처음 값으로 돌아가요.)"
+                customNote="직접 추가한 종류는 내 계정에 저장돼요."
                 emptyDetailNote="세부 활동이 없는 종류예요."
                 courseKey={courseKey}
                 onSelectCourse={selectCourse}
@@ -192,11 +192,11 @@ export default function NodeDetailModal({
             </>
           ) : (
             <div className="rm-field">
-              <span className="rm-eyebrow">NODE TYPE</span>
+              <span className="rm-eyebrow">종류</span>
               <button
                 type="button"
                 className="rm-type-current"
-                aria-label="노드 종류 바꾸기"
+                aria-label="활동 종류 바꾸기"
                 aria-expanded="false"
                 onClick={() => setTypeOpen(true)}
               >
@@ -206,10 +206,10 @@ export default function NodeDetailModal({
             </div>
           )}
 
-          {/* 목표일·마감일 (선택). 저장 버튼을 눌러야 반영. 실제 교과목에는 표시하지 않음 */}
+          {/* 목표일·마감일 (선택). 저장 버튼을 눌러야 반영. 전공·학업 종류·실제 교과목에는 표시하지 않음 */}
           {!noDueDate && (
           <div className="rm-field">
-            <span className="rm-eyebrow" id="detail-node-due">DUE DATE (OPTIONAL)</span>
+            <span className="rm-eyebrow" id="detail-node-due">마감일 (선택)</span>
             <div className="rm-due">
               <input
                 type="date"
@@ -228,13 +228,13 @@ export default function NodeDetailModal({
               )}
             </div>
             <p className="rm-field-note">
-              한국 시간 기준으로 D-DAY를 표시해요. 날짜가 지나도 자동으로 완료되거나 삭제되지 않아요. 지금은 이 화면에서만 유지되고 아직 서버에 저장되지 않아요.
+              한국 시간 기준으로 D-DAY를 보여 줘요. 날짜가 지나도 자동으로 완료·삭제되지 않아요. (마감일은 아직 서버에 저장되지 않아 이 화면에서만 유지돼요)
             </p>
           </div>
           )}
 
           <label className="rm-field">
-            <span className="rm-eyebrow">MY RECORD</span>
+            <span className="rm-eyebrow">나의 기록</span>
             <textarea
               className="rm-input rm-textarea rm-textarea--tall"
               placeholder="활동하면서 배운 점, 링크, 회의 기록 등을 적어 보세요"
@@ -245,16 +245,16 @@ export default function NodeDetailModal({
 
           {/* 첨부 기능은 P1 (SPEC 6.5 [미확정]) — 화면만 표시 */}
           <div className="rm-field">
-            <span className="rm-eyebrow">ATTACHMENTS</span>
+            <span className="rm-eyebrow">첨부 (준비 중)</span>
             <div className="rm-input rm-attach" aria-disabled="true">
               <ClipIcon width="18" height="18" /> 파일 · 이미지 · 링크 추가 (준비 중)
             </div>
           </div>
 
           <div className="rm-field">
-            <span className="rm-eyebrow">CONNECTIONS</span>
+            <span className="rm-eyebrow">연결된 활동</span>
             <div className="rm-chips">
-              {connections.length === 0 && <span className="rm-muted">연결된 노드가 없어요.</span>}
+              {connections.length === 0 && <span className="rm-muted">연결된 활동이 없어요. 캔버스에서 이 활동을 다른 활동 위에 끌어 놓으면 이어져요.</span>}
               {connections.map((c) => (
                 <button key={c.id} type="button" className="rm-chip" onClick={() => onOpenNode(c.id)}>
                   {c.title}

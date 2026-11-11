@@ -4,7 +4,7 @@ import { TIMELINE_Y, isPill } from './layout.js'
 // 학기 가지선: 학기 타임라인에서 그 학기에 배치된 노드로 뻗는 회색 곡선
 // - 노드 관계선(edges)과 데이터·동작이 분리되어 있다. 노드의 periodId(소속 학기)로 그린다.
 // - 표시 여부 node.branchVisibility: null(자동) | 'shown'(표시) | 'hidden'(숨김)
-//   자동 = 다른 노드에서 들어오는 관계선이 없으면 표시
+//   자동 = 항상 표시 (관계선 유무와 무관)
 // - 타임라인 선 위에 놓인 교과목은 이미 선 위에 있으므로 가지선이 없다.
 // - 보관함(배치 안 됨) 노드는 그리지 않는다.
 
@@ -14,16 +14,17 @@ export const BRANCH_OPTIONS = [
   { value: 'hidden', label: '숨김' },
 ]
 
-// 자동 규칙: 들어오는 관계선이 없으면 가지선 표시
-export function autoBranchVisible(nodeId, edges) {
-  return !edges.some((e) => e.targetNodeId === nodeId)
+// 자동 규칙: 학기에 배치된 활동은 관계선 유무와 상관없이 항상 가지선 표시
+// (가지선과 관계선은 별개의 선이다. 관계선을 만들거나 지워도 가지선은 바뀌지 않는다)
+export function autoBranchVisible() {
+  return true
 }
 
 export function branchVisible(node, edges) {
   if (node.status !== 'placed') return false
   if (node.branchVisibility === 'shown') return true
   if (node.branchVisibility === 'hidden') return false
-  return autoBranchVisible(node.id, edges)
+  return autoBranchVisible()
 }
 
 const TRUNK_GAP = 28 // 줄기와 노드 사이 거리

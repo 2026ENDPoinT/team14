@@ -17,7 +17,7 @@ export const THEMES = [
   { id: 'career', label: '진로·취업' },
   { id: 'research', label: '연구·진학' },
   { id: 'event', label: '대학생활 이벤트' },
-  { id: 'free', label: '자유 노드' },
+  { id: 'free', label: '자유 활동' },
 ]
 
 export function themeLabel(themeId) {

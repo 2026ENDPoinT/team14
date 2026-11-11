@@ -294,7 +294,7 @@ function toNodeDocument(row) {
 // 노드 저장 오류: 다른 사람 학기·종류(외래키), 규칙 위반을 알아볼 수 있는 문구로
 function toNodeError(error) {
   if (error.code === '23503') return { code: 'VALIDATION_ERROR', message: '내 학기나 종류가 아니어서 저장할 수 없어요. 새로고침 후 다시 시도해 주세요.' }
-  if (error.code === '23514') return { code: 'VALIDATION_ERROR', message: '노드 정보가 저장 규칙에 맞지 않아요.' }
+  if (error.code === '23514') return { code: 'VALIDATION_ERROR', message: '활동 정보가 저장 규칙에 맞지 않아요.' }
   return toError(error)
 }
 
@@ -349,7 +349,7 @@ export async function moveNodes(moves) {
     ),
   )
   const failed = results.find((r) => r.error || r.data.length === 0)
-  if (failed) return failed.error ? { error: toNodeError(failed.error) } : notFound('노드')
+  if (failed) return failed.error ? { error: toNodeError(failed.error) } : notFound('활동')
   return { data: { moved: moves.length } }
 }
 
@@ -359,7 +359,7 @@ export async function setNodeCompleted(nodeId, completed) {
   if (sessionError) return { error: sessionError }
   const { data, error } = await supabase.from('nodes').update({ completed }).eq('id', nodeId).select('id')
   if (error) return { error: toNodeError(error) }
-  if (data.length === 0) return notFound('노드')
+  if (data.length === 0) return notFound('활동')
   return { data: { completed } }
 }
 
@@ -381,7 +381,7 @@ export async function saveNodeDetail(nodeId, { title, body, type }) {
   }
   const updated = await supabase.from('nodes').update(patch).eq('id', nodeId).select('id')
   if (updated.error) return { error: toNodeError(updated.error) }
-  if (updated.data.length === 0) return notFound('노드')
+  if (updated.data.length === 0) return notFound('활동')
 
   const { data, error } = await supabase
     .from('node_documents')
@@ -398,7 +398,7 @@ export async function deleteNode(nodeId) {
   if (sessionError) return { error: sessionError }
   const { data, error } = await supabase.from('nodes').delete().eq('id', nodeId).select('id')
   if (error) return { error: toError(error) }
-  if (data.length === 0) return notFound('노드')
+  if (data.length === 0) return notFound('활동')
   return { data: { deleted: true } }
 }
 

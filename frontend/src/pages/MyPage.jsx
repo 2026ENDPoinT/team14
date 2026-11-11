@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import RoadmapNav from '../features/roadmap/RoadmapNav.jsx'
 import { getPet } from '../features/pet/petMock.js'
 import { mockProfile, mockSettings } from '../features/mypage/myPageMock.js'
 import { Icon } from '../features/mypage/ui.jsx'
@@ -89,11 +88,10 @@ export default function MyPage() {
 
   return (
     <div className="diary-page">
-      <RoadmapNav />
       <main className="mp-layout">
         {/* ── 왼쪽 메뉴 ── */}
         <aside className="mp-side">
-          <h1 className="mp-side__title">MY PAGE</h1>
+          <h1 className="mp-side__title">마이페이지</h1>
           <label className="mp-search">
             <Icon name="search" size={18} />
             <input

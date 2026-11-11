@@ -19,6 +19,17 @@ const nodeTypes = { timeline: TimelineNode, card: CardNode }
 const edgeTypes = { roadmap: RoadmapEdge }
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 1.6
+// React Flow 기본 버튼·설명 문구 (마우스를 올리면 보이는 안내와 화면 읽기에 함께 쓰인다)
+const FLOW_LABELS = {
+  'controls.ariaLabel': '화면 조절',
+  'controls.zoomIn.ariaLabel': '확대',
+  'controls.zoomOut.ariaLabel': '축소',
+  'controls.fitView.ariaLabel': '로드맵 전체 보기',
+  'controls.interactive.ariaLabel': '잠금 전환',
+  'node.a11yDescription.default': 'Enter나 스페이스로 활동을 고를 수 있어요.',
+  'node.a11yDescription.keyboardDisabled': 'Enter나 스페이스로 활동을 고를 수 있어요.',
+  'edge.a11yDescription.default': 'Enter나 스페이스로 관계선을 고를 수 있어요.',
+}
 const CLICK_DISTANCE = 4 // 이 거리(px) 이하로 움직이면 클릭으로 판정
 const DROP_INSET = 8 // 일반 드래그 연결: 끄는 노드의 중심이 대상 카드 안쪽(가장자리 8px 제외)에 들어가야 연결 후보
 
@@ -361,6 +372,7 @@ export default function RoadmapCanvas({
           elementsSelectable={false}
           deleteKeyCode={null} // 키보드로 노드가 지워지지 않게
           attributionPosition="top-right"
+          ariaLabelConfig={FLOW_LABELS}
         >
           <Controls
             position="bottom-left"
@@ -381,8 +393,8 @@ export default function RoadmapCanvas({
           ref={trashRef}
           className={`rm-trash ${draggingId ? 'is-armed' : ''} ${overTrash ? 'is-active' : ''}`}
           role="img"
-          aria-label="휴지통: 노드를 끌어 여기에 놓으면 삭제돼요"
-          title="노드를 끌어 여기에 놓으면 삭제돼요"
+          aria-label="휴지통: 활동을 끌어 여기에 놓으면 삭제돼요"
+          title="활동을 끌어 여기에 놓으면 삭제돼요"
         >
           <TrashIcon width="17" height="17" />
           <span className="rm-trash__label">삭제하기</span>

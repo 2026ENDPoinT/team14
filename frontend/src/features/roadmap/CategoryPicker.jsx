@@ -19,7 +19,7 @@ const CATEGORY_NAME_MAX = 12
 export default function CategoryPicker({
   idPrefix, categories, categoryId, detailId, onSelectCategory, onSelectDetail, onAddCategory, customNote, resetKey,
   courseKey = null, onSelectCourse, courseLocked = false,
-  emptyDetailNote = '세부 활동이 없는 종류예요. 노드 이름을 직접 입력해 주세요.',
+  emptyDetailNote = '세부 활동이 없는 종류예요. 활동 이름을 직접 입력해 주세요.',
 }) {
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
@@ -56,7 +56,7 @@ export default function CategoryPicker({
   return (
     <div className="rm-pick">
       <div className="rm-field">
-        <span className="rm-eyebrow" id={`${idPrefix}-type`}>NODE TYPE</span>
+        <span className="rm-eyebrow" id={`${idPrefix}-type`}>종류</span>
         <div className="rm-chips" role="radiogroup" aria-labelledby={`${idPrefix}-type`}>
           {categories.map((c) => (
             <button
@@ -113,7 +113,7 @@ export default function CategoryPicker({
 
       {category.id === 'major' ? (
       <div className="rm-field">
-        <span className="rm-eyebrow" id={`${idPrefix}-course`}>COURSE (OPTIONAL)</span>
+        <span className="rm-eyebrow" id={`${idPrefix}-course`}>교과목 (선택)</span>
         {courses.length > 0 ? (
           <div className="rm-chips" role="radiogroup" aria-labelledby={`${idPrefix}-course`}>
             {courses.map((course) => (
@@ -131,15 +131,15 @@ export default function CategoryPicker({
             ))}
           </div>
         ) : (
-          <p className="rm-field-note">교과과정 데이터가 연결되면 여기에서 과목을 고를 수 있어요. 지금은 과목 없이 전공·학업 노드로 만들 수 있어요.</p>
+          <p className="rm-field-note">교과과정 데이터가 연결되면 여기에서 과목을 고를 수 있어요. 지금은 과목 없이 전공·학업 활동으로 만들 수 있어요.</p>
         )}
         {courseLocked && courses.length > 0 && (
-          <p className="rm-field-note">온보딩에서 만든 교과목 노드는 연결된 과목을 바꿀 수 없어요.</p>
+          <p className="rm-field-note">온보딩에서 만든 교과목 활동은 연결된 과목을 바꿀 수 없어요.</p>
         )}
       </div>
       ) : (
       <div className="rm-field">
-        <span className="rm-eyebrow" id={`${idPrefix}-detail`}>DETAIL TYPE (OPTIONAL)</span>
+        <span className="rm-eyebrow" id={`${idPrefix}-detail`}>세부 활동 (선택)</span>
         {category.details.length > 0 ? (
           <div className="rm-chips" role="radiogroup" aria-labelledby={`${idPrefix}-detail`}>
             {category.details.map((item) => (

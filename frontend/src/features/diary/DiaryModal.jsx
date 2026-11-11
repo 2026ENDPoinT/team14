@@ -2,10 +2,17 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { TrashIcon } from '../roadmap/icons.jsx'
 import { countChars, REWARD_MIN_CHARS } from './countChars.js'
 import { deleteDiary, getDiaryByDate, saveDiary } from './diaryMock.js'
+import { getTodayKST } from './dateUtils.js'
 import PhotoModal from './PhotoModal.jsx'
 import WarmthEffect from './WarmthEffect.jsx'
 
 const WEEKDAYS = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일']
+
+// 저장은 됐지만 온기를 받지 못한 이유별 안내 (일기 저장 성공과 보상 결과를 나눠서 알려 준다)
+const NO_REWARD_NOTE = {
+  NOT_TODAY: ' 지난 날짜 일기는 온기를 받지 않아요.',
+  ALREADY_REWARDED: ' 오늘 일기 온기는 이미 받았어요.',
+}
 
 // '2026-11-01' → '11월 1일 일요일'
 function formatDateLong(date) {
@@ -28,6 +35,7 @@ export default function DiaryModal({ date, onClose, onChanged }) {
   const endReward = useCallback(() => setReward(null), [])
 
   const readOnly = isExisting && !editing
+  const isToday = date === getTodayKST() // 온기는 오늘(KST) 날짜 일기에만
   const charCount = countChars(content)
   const meetsLength = charCount >= REWARD_MIN_CHARS
   const progress = Math.min(100, Math.round((charCount / REWARD_MIN_CHARS) * 100))
@@ -61,9 +69,11 @@ export default function DiaryModal({ date, onClose, onChanged }) {
       setToast(result.error.message)
       return
     }
-    // 온기를 받았으면 연기 연출, 아니면 안내 메시지만
+    // 온기를 받았으면 연기 연출, 아니면 저장 안내 + 받지 못한 이유
+    // (일기는 저장됐는데 보상 처리만 실패한 경우도 구분해서 알려 준다)
     if (result.reward?.rewarded) setReward(result.reward.amount)
-    else setToast(isExisting ? '일기를 수정했어요.' : '일기를 저장했어요.')
+    else if (result.reward?.error) setToast('일기는 저장했어요. 온기 지급은 실패했어요. 잠시 후 다시 확인해 주세요.')
+    else setToast(`${isExisting ? '일기를 수정했어요.' : '일기를 저장했어요.'}${NO_REWARD_NOTE[result.reward?.reason] ?? ''}`)
     setIsExisting(true)
     setEditing(false)
     onChanged()
@@ -136,7 +146,7 @@ export default function DiaryModal({ date, onClose, onChanged }) {
         {!isExisting && (
           <div className="rm-field">
             <div className="dy-count">
-              <span className="rm-eyebrow">LENGTH</span>
+              <span className="rm-eyebrow">글자 수</span>
               <span className={`dy-count__num ${meetsLength ? 'is-done' : ''}`}>
                 {charCount}자 / {REWARD_MIN_CHARS}자
               </span>
@@ -145,9 +155,11 @@ export default function DiaryModal({ date, onClose, onChanged }) {
               <div className={`dy-bar__fill ${meetsLength ? 'is-done' : ''}`} style={{ width: `${progress}%` }} />
             </div>
             <p className="rm-muted dy-hint">
-              {meetsLength
-                ? '저장하면 온기를 받을 수 있어요.'
-                : `${REWARD_MIN_CHARS - charCount}자 더 쓰면 온기를 받을 수 있어요.`}
+              {!isToday
+                ? '지난 날짜의 일기는 온기 없이 저장돼요. 온기는 오늘 일기에만 받을 수 있어요.'
+                : meetsLength
+                  ? '저장하면 온기를 받을 수 있어요.'
+                  : `${REWARD_MIN_CHARS - charCount}자 더 쓰면 온기를 받을 수 있어요.`}
             </p>
           </div>
         )}

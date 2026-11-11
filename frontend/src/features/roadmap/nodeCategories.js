@@ -111,7 +111,15 @@ export function nodeCourseKey(node) {
   return isCourse(node) ? node.originKey.slice('course:'.length) : null
 }
 
-// 실제 교과목과 연결된 노드인지 (D-DAY를 쓰지 않는다)
+// 실제 교과목과 연결된 노드인지
 export function isCourseLinked(node) {
   return isCourse(node) || Boolean(node.courseKey)
+}
+
+// 기본 종류 '전공·학업'(키 'major')인지 — 이 종류는 D-DAY를 쓰지 않는다
+// - 고른 종류(categoryId)가 있으면 그 키로만 판정한다. 사용자 정의 종류는 기반 theme이 major여도 해당 없음
+// - 고른 적이 없으면 온보딩 경험 키 → theme 순서 (실제 교과목은 theme major라 여기에 포함)
+export function isMajorCategory(node) {
+  if (node.categoryId) return node.categoryId === 'major'
+  return (experienceOf(node)?.categoryId ?? THEME_CATEGORY[node.theme]) === 'major'
 }

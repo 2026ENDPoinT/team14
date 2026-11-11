@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import RoadmapNav from '../features/roadmap/RoadmapNav.jsx'
 import MemoryCalendar from '../features/diary/MemoryCalendar.jsx'
 import MonthPicker from '../features/diary/MonthPicker.jsx'
 import { listDiaries } from '../features/diary/diaryMock.js'
@@ -70,13 +69,12 @@ export default function MemoriesPage() {
 
   return (
     <div className="diary-page">
-      <RoadmapNav />
       <main className="dy-main">
         <section className="dy-card rm-form" aria-label="추억 보관소">
           <header className="rm-modal__head">
             <div>
-              <p className="rm-eyebrow">MEMORIES</p>
-              <h1 className="rm-modal__title">MY MEMORIES</h1>
+              <p className="rm-eyebrow">지난 일기 모아 보기</p>
+              <h1 className="rm-modal__title">추억 보관소</h1>
             </div>
           </header>
           <hr className="rm-divider" />
