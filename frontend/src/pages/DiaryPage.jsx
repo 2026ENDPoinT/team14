@@ -46,6 +46,9 @@ export default function DiaryPage() {
   const [todayYear, todayMonth] = today.split('-').map(Number)
 
   const fromMemories = searchParams.get('from') === 'memories'
+  // 마이페이지(내 활동·기록 관리)에서 들어왔으면 왼쪽 위에 돌아가기 화살표
+  const fromMyPage = searchParams.get('from') === 'mypage'
+  const backTab = searchParams.get('tab') || 'activity'
   const dateParam = searchParams.get('date')
   // 형식이 틀리거나 미래 날짜면 무시한다
   const initialDate = isValidDateString(dateParam) && dateParam <= today ? dateParam : null
@@ -95,6 +98,19 @@ export default function DiaryPage() {
         {/* 왼쪽 소개 */}
         <aside className="dp-intro">
           <div>
+            {fromMyPage && (
+              <button
+                type="button"
+                className="rm-icon-btn dy-back"
+                aria-label="마이페이지로 돌아가기"
+                onClick={() => navigate(`/mypage?tab=${backTab}`)}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M19 12H5M11 6l-6 6 6 6" />
+                </svg>
+              </button>
+            )}
             <h1 className="dp-title">MY DIARY</h1>
             <p className="dp-lead">날짜를 눌러 오늘의 마음을 남겨보세요.</p>
           </div>
