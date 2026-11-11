@@ -1,18 +1,17 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import {
-  getMyProfile,
-  isSupabaseConfigured,
   sendPasswordResetEmail,
   signInWithEmail,
   signInWithGoogle,
-  signOut,
   signUpWithEmail,
 } from '../services/api.js'
+import { useAuth } from '../features/auth/AuthProvider.jsx'
 
 // 로그인 화면 (기능만, 디자인은 담당자가 적용 예정)
 // - 이메일 로그인 / 회원가입 / 비밀번호 찾기 / Google 로그인
-// - 로그인되어 있으면 온보딩 완료 여부에 따라 이동: 미완료 → /onboarding, 완료 → /roadmap
+// - 로그인되어 있으면 온보딩 완료 여부에 따라 이동: 미완료 → /onboarding, 완료 → HOME(/)
+// - 로그인 상태·프로필은 AuthProvider가 한 곳에서 확인한다 (Google·이메일 인증 링크 처리가 끝난 뒤)
 
 // Google 로그인·메일 링크가 실패하면 Supabase가 주소 뒤에 오류를 붙여 보낸다.
 function readErrorFromUrl() {
@@ -38,42 +37,44 @@ const PASSWORD_CHANGED_NOTICE = '비밀번호 수정이 완료되었습니다. �
 const RESET_SENT_NOTICE =
   '가입된 이메일 주소라면 비밀번호 재설정 링크를 보내드려요. 메일이 오지 않으면 입력한 주소와 스팸함을 확인해 주세요.'
 
+const NO_CONFIG_MESSAGE = 'Supabase 연결 설정(.env)이 없습니다.'
+
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const auth = useAuth()
   // 비밀번호 재설정 화면에서 넘어온 경우: 자동 이동 없이 로그인 폼과 완료 안내를 보여준다.
   const [passwordChanged] = useState(Boolean(location.state?.passwordChanged))
   const [mode, setMode] = useState('login') // 'login' | 'signup' | 'reset'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [checking, setChecking] = useState(!passwordChanged)
-  const [loggedIn, setLoggedIn] = useState(false)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState(passwordChanged ? PASSWORD_CHANGED_NOTICE : null)
-  const [error, setError] = useState(readErrorFromUrl())
+  const [error, setError] = useState(readErrorFromUrl() ?? (auth.status === 'unconfigured' ? NO_CONFIG_MESSAGE : null))
 
-  // 로그인 상태면 온보딩 완료 여부를 보고 이동한다.
-  const goNextIfLoggedIn = useCallback(async () => {
-    const result = await getMyProfile()
-    if (result.error) {
-      // 연결 설정이 없을 때는 로그인 폼을 그대로 두고, 로그인 후 실패면 로그아웃 버튼을 보여준다.
-      setLoggedIn(isSupabaseConfigured)
-      setError(result.error.message)
-      return
-    }
-    if (!result.data) return // 로그인 안 됨
-    navigate(result.data.onboardingCompleted ? '/roadmap' : '/onboarding', { replace: true })
-  }, [navigate])
+  const checking = auth.status === 'loading'
+  // 로그인은 됐는데 프로필을 읽지 못한 상태: 다시 시도·로그아웃을 보여준다 (온보딩으로 보내지 않음)
+  const loggedIn = auth.status === 'error'
 
   useEffect(() => {
     if (passwordChanged) {
       // 새로고침 때 안내가 다시 뜨지 않도록 주소의 상태 값만 지운다.
       navigate('/login', { replace: true, state: null })
-      return
     }
-    goNextIfLoggedIn().finally(() => setChecking(false))
-  }, [passwordChanged, goNextIfLoggedIn, navigate])
+  }, [passwordChanged, navigate])
+
+  // 로그인 상태 + 프로필 확인 완료 → 온보딩 여부에 따라 이동
+  if (auth.status === 'ready') {
+    if (auth.recovery) return <Navigate to="/reset-password" replace />
+    return <Navigate to={auth.profile.onboardingCompleted ? '/' : '/onboarding'} replace />
+  }
+
+  // 로그인·가입 직후: 프로필을 다시 확인한다. 성공하면 위의 이동이 일어난다.
+  async function goNextIfLoggedIn() {
+    const next = await auth.reload()
+    if (next?.status === 'error') setError(next.error.message)
+  }
 
   function changeMode(nextMode) {
     setMode(nextMode)
@@ -127,8 +128,7 @@ export default function LoginPage() {
   }
 
   async function handleSignOut() {
-    await signOut()
-    setLoggedIn(false)
+    await auth.logout()
     setError(null)
   }
 
@@ -141,9 +141,14 @@ export default function LoginPage() {
       {checking ? (
         <p>로그인 상태 확인 중…</p>
       ) : loggedIn ? (
-        <button type="button" onClick={handleSignOut}>
-          로그아웃하고 다른 계정으로 로그인
-        </button>
+        <div>
+          <button type="button" onClick={() => auth.reload()}>
+            다시 시도
+          </button>
+          <button type="button" onClick={handleSignOut}>
+            로그아웃하고 다른 계정으로 로그인
+          </button>
+        </div>
       ) : (
         <>
           <form onSubmit={handleSubmit} noValidate>
@@ -210,7 +215,9 @@ export default function LoginPage() {
       )}
 
       {notice && <p role="status">{notice}</p>}
-      {error && <p role="alert">{error}</p>}
+      {(error || (loggedIn && auth.error)) && (
+        <p role="alert">{error ?? `내 정보를 불러오지 못했어요. ${auth.error.message}`}</p>
+      )}
     </main>
   )
 }
