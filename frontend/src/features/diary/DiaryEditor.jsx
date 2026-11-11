@@ -83,7 +83,7 @@ export default function DiaryEditor({ initialDate, onBack }) {
             </button>
           )}
           <p className="rm-eyebrow">{!isExisting ? 'WRITE NEW' : editing ? 'EDIT DIARY' : 'VIEW DIARY'}</p>
-          <h1 className="rm-modal__title">MY DIARY</h1>
+          <h1 className="rm-modal__title">내 일기</h1>
         </div>
         <div className="rm-modal__actions">
           {saved && <span className="rm-saved">저장됨</span>}
@@ -110,7 +110,7 @@ export default function DiaryEditor({ initialDate, onBack }) {
       <hr className="rm-divider" />
 
       <label className="rm-field">
-        <span className="rm-eyebrow">DATE</span>
+        <span className="rm-eyebrow">날짜</span>
         {/* max: 달력에서 오늘 이후 날짜를 고를 수 없게 한다 (저장 함수에서도 한 번 더 막음) */}
         {/* 로드맵 노드 카드 모양 입력칸 (왼쪽 점 = 노드 표시등) */}
         <div className="dy-node">
@@ -127,7 +127,7 @@ export default function DiaryEditor({ initialDate, onBack }) {
       {isFuture && <p className="rm-muted">미래 날짜에는 일기를 쓸 수 없어요.</p>}
 
       <label className="rm-field">
-        <span className="rm-eyebrow">TODAY'S STORY</span>
+        <span className="rm-eyebrow">오늘의 이야기</span>
         <div className="dy-node dy-node--top">
           {/* 30자(보상 조건)를 채우면 로드맵 완료 표시등처럼 노란색 */}
           <span className={`dy-node__dot ${meetsLength ? 'is-done' : ''}`} aria-hidden="true" />
@@ -147,7 +147,7 @@ export default function DiaryEditor({ initialDate, onBack }) {
       {!readOnly && (
       <div className="rm-field">
         <div className="dy-count">
-          <span className="rm-eyebrow">LENGTH</span>
+          <span className="rm-eyebrow">글자 수</span>
           <span className={`dy-count__num ${meetsLength ? 'is-done' : ''}`}>
             공백 제외 {charCount}자 / {REWARD_MIN_CHARS}자
           </span>

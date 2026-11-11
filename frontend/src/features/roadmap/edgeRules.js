@@ -14,6 +14,6 @@ export function hasEdgeBetween(edges, a, b, ignoreEdgeId = null) {
 // 연결할 수 없으면 이유(안내 문구), 연결할 수 있으면 null
 export function linkProblem(edges, sourceId, targetId, ignoreEdgeId = null) {
   if (sourceId === targetId) return '자기 자신과는 연결할 수 없어요.'
-  if (hasEdgeBetween(edges, sourceId, targetId, ignoreEdgeId)) return '이미 연결된 노드예요.'
+  if (hasEdgeBetween(edges, sourceId, targetId, ignoreEdgeId)) return '이미 연결된 활동이에요.'
   return null
 }

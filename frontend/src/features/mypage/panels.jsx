@@ -7,6 +7,7 @@ import { getTodayKST } from '../diary/dateUtils.js'
 import { Group, LinkRow, PanelTitle, Row, Segment, Toggle } from './ui.jsx'
 import JobPicker from './JobPicker.jsx'
 import { jobTitle } from './jobGroups.js'
+import { useAuth } from '../auth/AuthProvider.jsx'
 
 // 마이페이지 오른쪽 화면들. 왼쪽 메뉴에서 고른 것 하나만 보인다.
 // 모두 Mock 데이터 기반이며, 실제 저장·인증은 3번(인증·서비스) 연동 때 연결한다.
@@ -37,6 +38,12 @@ function ProfileBar({ profile, pet, action }) {
 
 // ── 계정 센터 (하위 화면: 프로필 / 연결된 계정 / 내 정보) ──
 export function AccountPanel({ profile, pet, notReady }) {
+  // 로그아웃: 기존 AuthProvider의 logout. 성공하면 라우트 가드가 로그인 화면으로 보낸다
+  const { logout } = useAuth()
+  const handleLogout = async () => {
+    const result = await logout()
+    if (result?.error) window.alert('로그아웃하지 못했어요. 잠시 후 다시 시도해 주세요.')
+  }
   const [sub, setSub] = useState(null) // 열린 하위 화면
   const back = () => setSub(null)
 
@@ -94,7 +101,7 @@ export function AccountPanel({ profile, pet, notReady }) {
         <LinkRow icon="info" label="내 정보 및 권한" onClick={() => setSub('data')} />
       </Group>
       <Group>
-        <LinkRow icon="logout" label="로그아웃" onClick={notReady} />
+        <LinkRow icon="logout" label="로그아웃" onClick={handleLogout} />
         <LinkRow icon="leave" label="회원 탈퇴" onClick={notReady} danger />
       </Group>
     </>
@@ -346,7 +353,7 @@ export function RecordsPanel({ notReady }) {
       <PanelTitle title="기록 관리" />
       <Group>
         <LinkRow icon="activity" label="일기장 열기" to="/diary?from=mypage&tab=records" />
-        <LinkRow icon="archive" label="로드맵 보관함" hint="삭제한 학기의 노드·문서" onClick={notReady} />
+        <LinkRow icon="archive" label="로드맵 보관함" hint="삭제한 학기의 활동·문서" onClick={notReady} />
         <LinkRow icon="info" label="내 기록 내보내기" hint="일기·로드맵을 파일로 저장" onClick={notReady} />
       </Group>
     </>

@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import RoadmapNav from '../features/roadmap/RoadmapNav.jsx'
 import DiaryCalendar from '../features/diary/DiaryCalendar.jsx'
 import DiaryModal from '../features/diary/DiaryModal.jsx'
 import MonthPicker from '../features/diary/MonthPicker.jsx'
@@ -93,7 +92,6 @@ export default function DiaryPage() {
 
   return (
     <div className="diary-page">
-      <RoadmapNav />
       <main className="dp-main">
         {/* 왼쪽 소개 */}
         <aside className="dp-intro">
@@ -111,7 +109,7 @@ export default function DiaryPage() {
                 </svg>
               </button>
             )}
-            <h1 className="dp-title">MY DIARY</h1>
+            <h1 className="dp-title">내 일기</h1>
             <p className="dp-lead">날짜를 눌러 오늘의 마음을 남겨보세요.</p>
           </div>
 

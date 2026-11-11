@@ -24,10 +24,14 @@ export default function InboxPanel({
   }
 
   return (
-    <section className={`rm-inbox ${visible ? 'is-visible' : ''}`} aria-label="노드 보관함">
-      <h2 className="rm-inbox__title">MY NODE</h2>
+    <section className={`rm-inbox ${visible ? 'is-visible' : ''}`} aria-label="보관함">
+      <h2 className="rm-inbox__title">보관함</h2>
       <div className="rm-inbox__list">
-        {nodes.length === 0 && <p className="rm-inbox__empty">보관함이 비어 있어요.</p>}
+        {nodes.length === 0 && (
+          <p className="rm-inbox__empty">
+            보관함이 비어 있어요. 학기를 아직 정하지 않은 활동을 여기 모아 두고, 나중에 캔버스로 끌어 배치할 수 있어요.
+          </p>
+        )}
         {nodes.map((node) => (
           <div key={node.id} className="rm-inbox__item">
             <NodeCard
@@ -42,7 +46,7 @@ export default function InboxPanel({
             <button
               type="button"
               className="rm-inbox__delete"
-              aria-label={`'${node.title}' 노드 삭제`}
+              aria-label={`'${node.title}' 활동 삭제`}
               title="삭제"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {
@@ -54,7 +58,7 @@ export default function InboxPanel({
             </button>
           </div>
         ))}
-        <button type="button" className="rm-inbox__add" aria-label="보관함에 노드 추가" onClick={onAdd}>
+        <button type="button" className="rm-inbox__add" aria-label="보관함에 활동 추가" title="활동 추가" onClick={onAdd}>
           <PlusIcon width="18" height="18" />
         </button>
       </div>

@@ -428,7 +428,7 @@
   .dp-main {
     grid-template-columns: minmax(0, 640px);
     gap: 32px;
-    padding: 100px 16px 40px;
+    padding: 140px 16px 40px; /* 공통 메뉴 + 일기 하위 탭 아래에서 시작 */
   }
   .dp-intro {
     gap: 20px;
@@ -454,9 +454,6 @@
   }
   .dp-modal__title {
     font-size: 24px;
-  }
-  .diary-page .rm-nav {
-    width: 100%;
   }
 }
 

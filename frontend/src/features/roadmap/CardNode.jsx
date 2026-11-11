@@ -34,13 +34,19 @@ export default function CardNode({ data }) {
       {isTarget && target.swap && (
         <span className="rm-link-label" aria-hidden="true">자리 바꾸기</span>
       )}
+      {/* 일반 드래그로 이 카드 위에 올렸을 때: 놓으면 관계선으로 이어진다는 안내 (이미 연결이면 회색) */}
+      {isTarget && target.drop && (
+        <span className={`rm-link-label ${target.valid ? '' : 'is-invalid'}`} aria-hidden="true">
+          {target.valid ? '놓으면 연결' : '이미 연결됨'}
+        </span>
+      )}
       {/* 관계선 연결 핸들: CONNECT 모드에서만, 카드 오른쪽 (왼쪽 완료 표시등과 분리) */}
       {connectMode && (
         <button
           type="button"
           className="rm-link-handle nodrag nopan"
           aria-label={`${node.title}에서 관계선 연결하기`}
-          title="끌어서 다른 노드에 놓으면 연결돼요"
+          title="끌어서 다른 활동에 놓으면 연결돼요"
           onPointerDown={(e) => startConnect(e, node.id)}
         />
       )}
@@ -59,7 +65,7 @@ function CompleteDot({ done, title, onToggle }) {
       className={`rm-dot nodrag ${done ? 'is-done' : ''}`}
       aria-pressed={done}
       aria-label={`${title}: ${done ? '완료됨. 누르면 미완료로 변경' : '미완료. 누르면 완료로 변경'}`}
-      title={done ? '완료' : '미완료'}
+      title={done ? '완료됨 · 누르면 미완료로' : '완료로 표시'}
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => {
         e.stopPropagation()

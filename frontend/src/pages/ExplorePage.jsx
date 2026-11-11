@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import RoadmapNav from '../features/roadmap/RoadmapNav.jsx'
 import DeadlineBadge from '../features/explore/DeadlineBadge.jsx'
 import { canAddToRoadmap, sourceName } from '../features/explore/contestInfo.js'
 import {
@@ -59,11 +58,10 @@ export default function ExplorePage() {
 
   return (
     <div className="roadmap-page explore-page">
-      <RoadmapNav />
       <main className="ex-main">
         <header className="ex-head">
-          <p className="rm-eyebrow">EXPLORE</p>
-          <h1 className="ex-title">탐색</h1>
+          <p className="rm-eyebrow">대외활동 · 기술 소식</p>
+          <h1 className="ex-title">기회 탐색</h1>
           <p className="rm-muted">내 관심 분야와 맞는 글이 먼저 보여요.</p>
         </header>
 
