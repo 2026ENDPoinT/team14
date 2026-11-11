@@ -6,7 +6,7 @@ import { isCourse } from './layout.js'
 import CategoryPicker from './CategoryPicker.jsx'
 import { ddayInfo } from './dday.js'
 import DeadlineBadge from '../explore/DeadlineBadge.jsx'
-import { sourceName } from '../explore/contestInfo.js'
+import { contestKindLabel, sourceName } from '../explore/contestInfo.js'
 
 // 노드 상세 창. 노드를 클릭했을 때만 열린다.
 // node가 null이 되어도 닫힘 애니메이션 동안 마지막 노드를 보여 준다.
@@ -143,11 +143,13 @@ export default function NodeDetailModal({
             onChange={(e) => { setTitle(e.target.value); setSaved(false) }}
           />
 
-          {/* 탐색에서 추가한 공모전: 출처·마감일·원문 링크 (공고 정보는 수집 데이터에서 읽어 오며 여기서 고치지 않는다) */}
+          {/* 탐색에서 추가한 대외활동: 분류·출처·마감일·원문 링크 (공고 정보는 수집 데이터에서 읽어 오며 여기서 고치지 않는다) */}
           {shown.contest && (
             <div className="rm-field">
-              <span className="rm-eyebrow">공모전 정보</span>
+              <span className="rm-eyebrow">{contestKindLabel(shown.contest.sourceTag)} 정보</span>
               <dl className="rm-contest-info">
+                <dt>분류</dt>
+                <dd>{contestKindLabel(shown.contest.sourceTag)}</dd>
                 <dt>출처</dt>
                 <dd>{sourceName(shown.contest.source)}</dd>
                 <dt>마감일</dt>
@@ -158,6 +160,32 @@ export default function NodeDetailModal({
                 <dt>원문</dt>
                 <dd>
                   <a href={shown.contest.url} target="_blank" rel="noopener noreferrer">공고 원문 보기</a>
+                </dd>
+              </dl>
+            </div>
+          )}
+
+          {/* 탐색에서 추가한 채용 공고: 공고명·기업명·출처·마감일·원문 링크 (수집 데이터에서 읽어 오며 여기서 고치지 않는다) */}
+          {shown.job && (
+            <div className="rm-field">
+              <span className="rm-eyebrow">채용 정보</span>
+              <dl className="rm-contest-info" data-testid="job-info">
+                <dt>공고명</dt>
+                <dd>{shown.job.title}</dd>
+                <dt>기업명</dt>
+                <dd>{shown.job.company ?? '정보 없음'}</dd>
+                <dt>출처</dt>
+                <dd>{sourceName(shown.job.source)}</dd>
+                <dt>마감일</dt>
+                <dd>
+                  {shown.job.deadline ?? '정보 없음 (원문에서 확인해 주세요)'}
+                  <DeadlineBadge deadline={shown.job.deadline} />
+                </dd>
+                <dt>원문</dt>
+                <dd>
+                  {shown.job.url
+                    ? <a href={shown.job.url} target="_blank" rel="noopener noreferrer">공고 원문 보기</a>
+                    : '원문 링크가 없어요'}
                 </dd>
               </dl>
             </div>

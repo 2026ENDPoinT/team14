@@ -266,7 +266,9 @@ function toRoadmapNode(row) {
     categoryId: row.category_id ?? row.category_key ?? null,
     detailId: row.detail_key ?? null,
     contestId: row.contest_id ?? null,
-    contest: toNodeContest(row.contest), // 탐색에서 추가한 공모전 노드의 공고 정보 (없으면 null)
+    contest: toNodeContest(row.contest), // 탐색에서 추가한 대외활동 노드의 공고 정보 (없으면 null)
+    jobPostingId: row.job_posting_id ?? null,
+    job: toNodeJob(row.job), // 탐색에서 추가한 채용 노드의 공고 정보 (없으면 null)
     branchVisibility: null, // 학기 가지선 설정은 아직 DB에 없다 (화면에서만 유지)
   }
 }
@@ -284,8 +286,23 @@ function toNodeContest(row) {
   }
 }
 
-// 노드 조회·생성 결과에 공고 정보를 함께 붙인다 (nodes.contest_id → contests)
-const ROADMAP_NODE_SELECT = '*, contest:contests(id, source, source_tag, source_status, deadline, url)'
+// 채용 노드에 붙는 공고 정보 (job_postings 행)
+function toNodeJob(row) {
+  if (!row) return null
+  return {
+    id: row.id,
+    source: row.source,
+    title: row.title,
+    company: row.company,
+    deadline: row.deadline, // 'YYYY-MM-DD' (KST) 또는 null (원문에서 확인)
+    url: row.url,
+  }
+}
+
+// 노드 조회·생성 결과에 공고 정보를 함께 붙인다
+// (nodes.contest_id → contests, nodes.job_posting_id → job_postings. migration 01400 필요)
+const ROADMAP_NODE_SELECT =
+  '*, contest:contests(id, source, source_tag, source_status, deadline, url), job:job_postings(id, source, title, company, deadline, url)'
 
 function toNodeDocument(row) {
   return { nodeId: row.node_id, content: row.content, updatedAt: row.updated_at }
@@ -531,6 +548,59 @@ export async function listTechArticles(limit = 30) {
   }
 }
 
+// 기술 글 한 건 (뉴스 상세를 주소로 바로 열거나 새로고침했을 때)
+export async function getTechArticle(id) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+
+  const { data, error } = await supabase
+    .from('tech_articles')
+    .select('id, source, source_name, title, url, published_at, tags')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) return { error: toError(error) }
+  if (!data) return { error: { code: 'NOT_FOUND', message: '글을 찾을 수 없습니다.' } }
+  return {
+    data: {
+      id: data.id,
+      source: data.source,
+      sourceName: data.source_name,
+      title: data.title,
+      url: data.url,
+      publishedAt: data.published_at,
+      tags: data.tags,
+    },
+  }
+}
+
+// 채용 공고 (고용24 공채속보, migration 01200의 job_postings)
+// 마감일이 오늘(한국 날짜) 이후이거나 마감일 정보가 없는 공고. 마감 임박순, 마감일 없는 공고는 뒤로
+// 화면에서 컴공 관련 공고를 고른 뒤 자르므로, 접수 중인 공고를 넉넉히(기본 1000건) 받는다.
+export async function listOpenJobPostings(limit = 1000) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+
+  const todayKst = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const { data, error } = await supabase
+    .from('job_postings')
+    .select('id, source, title, company, deadline, url')
+    .or(`deadline.gte.${todayKst},deadline.is.null`)
+    .order('deadline', { ascending: true, nullsFirst: false })
+    .order('first_seen_at', { ascending: false })
+    .limit(limit)
+  if (error) return { error: toError(error) }
+  return {
+    data: data.map((row) => ({
+      id: row.id,
+      source: row.source,
+      title: row.title,
+      company: row.company,
+      deadline: row.deadline,
+      url: row.url,
+    })),
+  }
+}
+
 // 내가 이미 로드맵에 추가한 공고: { data: { [contestId]: nodeId } }
 export async function getMyContestNodeIds() {
   const sessionError = await requireSession()
@@ -541,13 +611,34 @@ export async function getMyContestNodeIds() {
   return { data: Object.fromEntries(data.map((row) => [row.contest_id, row.id])) }
 }
 
-// 공모전 공고를 내 보관함에 추가 (RPC add_contest_to_roadmap, migration 01000). 이미 추가했으면 기존 노드 (added: false)
+// 대외활동 공고를 내 보관함에 추가 (RPC add_contest_to_roadmap, migration 01000·01400). 이미 추가했으면 기존 노드 (added: false)
 // 성공: { data: { added, nodeId } }
 export async function addContestToRoadmap(contestId) {
   const sessionError = await requireSession()
   if (sessionError) return { error: sessionError }
 
   const { data, error } = await supabase.rpc('add_contest_to_roadmap', { p_contest_id: contestId })
+  if (error) return { error: toError(error) }
+  return { data: { added: data.added, nodeId: data.node.id } }
+}
+
+// 내가 이미 로드맵에 추가한 채용 공고: { data: { [jobPostingId]: nodeId } }
+export async function getMyJobPostingNodeIds() {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+
+  const { data, error } = await supabase.from('nodes').select('id, job_posting_id').not('job_posting_id', 'is', null)
+  if (error) return { error: toError(error) }
+  return { data: Object.fromEntries(data.map((row) => [row.job_posting_id, row.id])) }
+}
+
+// 채용 공고를 내 보관함에 추가 (RPC add_job_posting_to_roadmap, migration 01400). 이미 추가했으면 기존 노드 (added: false)
+// 성공: { data: { added, nodeId } }
+export async function addJobPostingToRoadmap(jobPostingId) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+
+  const { data, error } = await supabase.rpc('add_job_posting_to_roadmap', { p_job_posting_id: jobPostingId })
   if (error) return { error: toError(error) }
   return { data: { added: data.added, nodeId: data.node.id } }
 }
