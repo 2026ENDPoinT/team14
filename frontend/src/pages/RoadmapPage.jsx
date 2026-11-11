@@ -9,6 +9,8 @@ import AddNodeModal from '../features/roadmap/AddNodeModal.jsx'
 import NodeDetailModal from '../features/roadmap/NodeDetailModal.jsx'
 import RoadmapTutorial from '../features/roadmap/tutorial/RoadmapTutorial.jsx'
 import { hasSeenRoadmapTutorial, markRoadmapTutorialSeen } from '../features/roadmap/tutorial/tutorialStorage.js'
+import { linkProblem } from '../features/roadmap/edgeRules.js'
+import { autoBranchVisible } from '../features/roadmap/branchLines.js'
 import { BASE_WIDTH, computeLayout, nextPosition, placeNode } from '../features/roadmap/layout.js'
 import '../features/roadmap/roadmap.css'
 
@@ -25,9 +27,18 @@ export default function RoadmapPage() {
   const [inboxOpen, setInboxOpen] = useState(false) // 노드 보관함
   const [addOpen, setAddOpen] = useState(false) // 노드 생성 창
   const [detailId, setDetailId] = useState(null) // 상세 창에 열린 노드 id
-  const [toast, setToast] = useState('')
+  const [toast, setToast] = useState('') // 안내 문구, 또는 { text, undo } (실행 취소 버튼이 있는 삭제 안내)
   const [dropPeriodId, setDropPeriodId] = useState(null) // 노드를 끄는 동안 강조할 학기
   const [tutorialOpen, setTutorialOpen] = useState(false) // 첫 접속 튜토리얼
+  const [connectMode, setConnectMode] = useState(false)
+  // 직접 추가한 노드 종류 (ADD NODE·NODE DETAILS 공용). 저장할 DB 구조가 아직 없어 새로고침하면 사라진다.
+  const [customCategories, setCustomCategories] = useState([])
+  const addCustomCategory = useCallback((name) => {
+    const id = `custom_${Date.now()}`
+    // 저장 값(theme)은 자유 노드(free)
+    setCustomCategories((prev) => [...prev, { id, label: name, theme: 'free', details: [], custom: true }])
+    return id
+  }, []) // CONNECT: 노드 오른쪽 핸들로 관계선 만들기
 
   // 처음 접속했을 때만 튜토리얼 자동 표시 (캔버스가 자리 잡을 시간을 조금 준다)
   useEffect(() => {
@@ -73,16 +84,17 @@ export default function RoadmapPage() {
       if (detailId) setDetailId(null)
       else if (addOpen) setAddOpen(false)
       else if (fabOpen) setFabOpen(false)
+      else if (connectMode) setConnectMode(false)
       else if (inboxOpen) setInboxOpen(false)
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [detailId, addOpen, fabOpen, inboxOpen])
+  }, [detailId, addOpen, fabOpen, connectMode, inboxOpen])
 
-  // 안내 메시지는 2초 뒤 사라짐
+  // 안내 메시지는 2초 뒤 사라짐 (실행 취소가 있는 안내는 5초)
   useEffect(() => {
     if (!toast) return
-    const timer = setTimeout(() => setToast(''), 2000)
+    const timer = setTimeout(() => setToast(''), toast.undo ? 5000 : 2000)
     return () => clearTimeout(timer)
   }, [toast])
 
@@ -94,11 +106,20 @@ export default function RoadmapPage() {
 
   // 노드 드래그 후(캔버스 이동 또는 보관함 → 학기 배치):
   // 학기(periodId), 학기 기준 상대 좌표, 배치 상태만 바꾼다. (제목·종류·이수 상태·문서는 그대로)
-  const handleNodeMove = useCallback((nodeId, { periodId, position }) => {
+  // 노드 위치 저장: moves = [{ id, periodId, position }] (자리 교환은 두 노드를 한 번에)
+  // periodId·position·status만 바꾼다 (완료 상태·연결선·기록은 그대로)
+  const handleNodesMove = useCallback((moves) => {
     setNodes((prev) =>
-      prev.map((n) => (n.id === nodeId ? { ...n, periodId, position, status: 'placed' } : n)),
+      prev.map((n) => {
+        const move = moves.find((m) => m.id === n.id)
+        return move ? { ...n, periodId: move.periodId, position: move.position, status: 'placed' } : n
+      }),
     )
   }, [])
+  const handleNodeMove = useCallback(
+    (nodeId, placement) => handleNodesMove([{ id: nodeId, ...placement }]),
+    [handleNodesMove],
+  )
 
   // 완료 상태 표시등 클릭: completed만 뒤집는다 (기존 필드 사용)
   const handleToggleComplete = useCallback((nodeId) => {
@@ -107,6 +128,34 @@ export default function RoadmapPage() {
 
   const handleEdgeDelete = useCallback((edgeId) => {
     setEdges((prev) => prev.filter((e) => e.id !== edgeId))
+  }, [])
+
+  // 관계선 만들기: 자기 자신·중복(방향 무관)은 막는다. 노드 자체는 바꾸지 않는다.
+  const handleEdgeCreate = useCallback((sourceId, targetId) => {
+    setEdges((prev) => {
+      if (linkProblem(prev, sourceId, targetId)) return prev
+      return [...prev, { id: `e_${Date.now()}`, sourceNodeId: sourceId, targetNodeId: targetId }]
+    })
+    setToast('관계선을 연결했어요.')
+  }, [])
+
+  // 관계선 끝점 옮기기: end('source' | 'target') 쪽 노드만 바꾼다
+  const handleEdgeReconnect = useCallback((edgeId, end, nodeId) => {
+    setEdges((prev) => {
+      const edge = prev.find((e) => e.id === edgeId)
+      if (!edge) return prev
+      const next = end === 'source' ? { ...edge, sourceNodeId: nodeId } : { ...edge, targetNodeId: nodeId }
+      if (linkProblem(prev, next.sourceNodeId, next.targetNodeId, edgeId)) return prev
+      return prev.map((e) => (e.id === edgeId ? next : e))
+    })
+    setToast('연결 대상을 바꿨어요.')
+  }, [])
+
+  const handleLinkReject = useCallback((message) => setToast(message), [])
+
+  // 학기 가지선 표시 설정 (null 자동 / 'shown' / 'hidden')
+  const handleBranchChange = useCallback((nodeId, value) => {
+    setNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, branchVisibility: value } : n)))
   }, [])
 
   const openAdd = () => {
@@ -118,22 +167,31 @@ export default function RoadmapPage() {
   const handleFabSelect = (id) => {
     if (id === 'node') return openAdd()
     setFabOpen(false)
-    // CONNECT·SEMESTER는 다음 작업(TASKS 1-9, 1-10)에서 구현
-    setToast(id === 'connect' ? '연결선 추가는 준비 중이에요.' : '학기 추가는 준비 중이에요.')
+    if (id === 'connect') {
+      setConnectMode(true)
+      return
+    }
+    // SEMESTER는 다음 작업(TASKS 1-10)에서 구현
+    setToast('학기 추가는 준비 중이에요.')
   }
 
-  const handleCreate = ({ theme, title, periodId, memo }) => {
+  // categoryId·detailId·categoryLabel: ADD NODE에서 고른 카테고리·세부 활동 (세션 전용, 상세 창 종류 수정과 같은 값)
+  const handleCreate = ({ theme, title, periodId, memo, categoryId = null, detailId = null, categoryLabel = null }) => {
     const id = `n_${Date.now()}`
     const newNode = {
       id,
       title,
       theme,
+      categoryId,
+      detailId,
+      categoryLabel,
       periodId: null,
       position: null,
       status: 'stored',
       source: 'user',
       originKey: null,
       completed: false,
+      branchVisibility: null, // 학기 가지선: 자동
       createdAt: new Date().toISOString(),
     }
     // 학기를 골랐으면: 기존 노드 아래쪽에서 시작해 드래그와 같은 겹침 보정 규칙으로 자리를 찾는다
@@ -159,15 +217,19 @@ export default function RoadmapPage() {
     else setToast('노드를 보관함에 추가했어요.')
   }
 
-  const handleSave = (nodeId, { title, body }) => {
-    setNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, title } : n)))
+  // 상세 창 저장: 제목·기록, 그리고 종류를 바꿨으면 종류(type)
+  // type: { theme, categoryId, detailId, categoryLabel } — theme 외 값은 아직 DB에 없는 세션 전용 값
+  // 학기·좌표·완료 상태·연결선·originKey 등 다른 값은 그대로 둔다
+  const handleSave = (nodeId, { title, body, type }) => {
+    setNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, title, ...(type ?? {}) } : n)))
     setDocuments((prev) => ({
       ...prev,
       [nodeId]: { nodeId, content: { format: 'plain', body }, updatedAt: new Date().toISOString() },
     }))
   }
 
-  const handleDeleteNode = (nodeId) => {
+  // 노드 삭제: 노드와 연결된 관계선, 노드 문서를 함께 지운다 (다른 노드는 그대로)
+  const removeNode = useCallback((nodeId) => {
     setNodes((prev) => prev.filter((n) => n.id !== nodeId))
     setEdges((prev) => prev.filter((e) => e.sourceNodeId !== nodeId && e.targetNodeId !== nodeId))
     setDocuments((prev) => {
@@ -175,7 +237,51 @@ export default function RoadmapPage() {
       delete next[nodeId]
       return next
     })
+  }, [])
+
+  // 상세 창의 삭제 버튼 (확인 창은 상세 창에서 띄운다)
+  const handleDeleteNode = (nodeId) => {
+    removeNode(nodeId)
     setDetailId(null)
+  }
+
+  // 보관함 X 버튼·휴지통 드롭: 확인 없이 바로 삭제하고, 실행 취소할 수 있게 지우기 전 상태를 기억한다
+  const handleQuickDelete = useCallback(
+    (nodeId) => {
+      const index = nodes.findIndex((n) => n.id === nodeId)
+      if (index < 0) return
+      const undo = {
+        node: nodes[index],
+        index, // 목록 안의 원래 순서
+        edges: edges
+          .map((edge, i) => ({ edge, index: i }))
+          .filter(({ edge }) => edge.sourceNodeId === nodeId || edge.targetNodeId === nodeId),
+        document: documents[nodeId] ?? null,
+      }
+      removeNode(nodeId)
+      setDetailId((id) => (id === nodeId ? null : id))
+      setToast({ text: '노드가 삭제되었습니다.', undo })
+    },
+    [nodes, edges, documents, removeNode],
+  )
+
+  // 실행 취소: 지운 노드(ID·제목·종류·학기·위치·완료 상태)와 관계선, 문서를 원래 순서대로 되돌린다
+  const handleUndoDelete = () => {
+    const undo = toast?.undo
+    if (!undo) return
+    const insertAt = (list, index, item) => [...list.slice(0, index), item, ...list.slice(index)]
+    const nodeIds = new Set([...nodes.map((n) => n.id), undo.node.id])
+    setNodes((prev) => (prev.some((n) => n.id === undo.node.id) ? prev : insertAt(prev, undo.index, undo.node)))
+    setEdges((prev) =>
+      undo.edges.reduce((list, { edge, index }) => {
+        // 이미 있거나, 그사이 상대 노드가 지워진 선은 되돌리지 않는다
+        if (list.some((e) => e.id === edge.id)) return list
+        if (!nodeIds.has(edge.sourceNodeId) || !nodeIds.has(edge.targetNodeId)) return list
+        return insertAt(list, index, edge)
+      }, prev),
+    )
+    if (undo.document) setDocuments((prev) => ({ ...prev, [undo.node.id]: undo.document }))
+    setToast('삭제를 취소했어요.')
   }
 
   const detailNode = nodes.find((n) => n.id === detailId) ?? null
@@ -194,9 +300,14 @@ export default function RoadmapPage() {
           edges={edges}
           getSubtitle={getSubtitle}
           onNodeClick={openDetail}
-          onNodeMove={handleNodeMove}
+          onNodesMove={handleNodesMove}
+          onNodeDelete={handleQuickDelete}
           onEdgeDelete={handleEdgeDelete}
           onToggleComplete={handleToggleComplete}
+          connectMode={connectMode}
+          onEdgeCreate={handleEdgeCreate}
+          onEdgeReconnect={handleEdgeReconnect}
+          onLinkReject={handleLinkReject}
           dropPeriodId={dropPeriodId}
           onDropTargetChange={setDropPeriodId}
         />
@@ -212,8 +323,16 @@ export default function RoadmapPage() {
           onNodeClick={openDetail}
           onAdd={openAdd}
           onPlace={handleNodeMove}
+          onDelete={handleQuickDelete}
           onTargetChange={setDropPeriodId}
         />
+
+        {connectMode && (
+          <div className="rm-connect-banner" role="status">
+            <span>연결 모드 · 노드를 끌어 다른 노드에 놓으면 연결돼요</span>
+            <button type="button" onClick={() => setConnectMode(false)}>완료</button>
+          </div>
+        )}
 
         <FabMenu
           open={fabOpen}
@@ -229,21 +348,32 @@ export default function RoadmapPage() {
           periods={periods}
           onClose={() => setAddOpen(false)}
           onCreate={handleCreate}
+          customCategories={customCategories}
+          onAddCustomCategory={addCustomCategory}
         />
 
         <NodeDetailModal
           node={detailNode}
           body={getBody(detailId)}
           connections={connections}
+          branch={detailNode ? { value: detailNode.branchVisibility ?? null, autoVisible: autoBranchVisible(detailNode.id, edges) } : null}
+          onBranchChange={handleBranchChange}
           onClose={() => setDetailId(null)}
           onSave={handleSave}
           onDelete={handleDeleteNode}
           onOpenNode={openDetail}
+          customCategories={customCategories}
+          onAddCustomCategory={addCustomCategory}
         />
 
         <RoadmapTutorial open={tutorialOpen} nodes={nodes} layout={layout} onClose={closeTutorial} />
 
-        <div className={`rm-toast ${toast ? 'is-visible' : ''}`} role="status">{toast}</div>
+        <div className={`rm-toast ${toast ? 'is-visible' : ''} ${toast?.undo ? 'has-action' : ''}`} role="status">
+          {toast?.text ?? toast}
+          {toast?.undo && (
+            <button type="button" className="rm-toast__action" onClick={handleUndoDelete}>실행 취소</button>
+          )}
+        </div>
       </div>
     </ReactFlowProvider>
   )

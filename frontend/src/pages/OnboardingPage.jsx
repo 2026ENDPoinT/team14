@@ -1,9 +1,254 @@
-// 임시 화면: 담당자가 실제 화면으로 교체 예정
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { completeOnboarding } from '../services/api.js'
+import { CAREERS, EXPERIENCE_GROUPS, TERMS } from '../features/onboarding/onboardingOptions.js'
+import {
+  curriculum,
+  jobRelevance,
+  selectCourses,
+} from '../features/onboarding/courseRecommendationSlot.js'
+import { ProgressHeader } from '../features/onboarding/OnboardingParts.jsx'
+import {
+  CareerStep,
+  CourseStep,
+  ExperienceStep,
+  ProfileStep,
+  SetupStep,
+  WelcomeStep,
+} from '../features/onboarding/OnboardingSteps.jsx'
+import '../features/onboarding/onboarding.css'
+
+// 단계: 0 프로필 → 1 경험 → 2 수강 과목 → 3 희망 직무 → 4 로드맵 구성 → 저장 성공 시 완료 화면
+const STEP_COUNT = 5
+const STEP = { profile: 0, experience: 1, course: 2, career: 3, setup: 4 }
+
+// 개발용: 주소에 ?testCourse=1을 붙이면 저장 요청에만 테스트 과목 1개를 넣는다.
+// (추천 목록·미리보기에는 표시하지 않음, 배포 빌드에서는 동작하지 않음)
+const TEST_COURSE = {
+  courseKey: 'test-course-01',
+  title: '[테스트] 저장 확인용 과목',
+  year: 1,
+  semester: 1,
+  completed: true,
+}
+
+const EXPERIENCE_ITEMS = EXPERIENCE_GROUPS.flatMap((group) => group.items)
+
+// 배열에 값이 있으면 빼고, 없으면 넣는다.
+function toggle(list, value) {
+  return list.includes(value) ? list.filter((item) => item !== value) : [...list, value]
+}
+
 export default function OnboardingPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const includeTestCourse =
+    import.meta.env.DEV && new URLSearchParams(location.search).has('testCourse')
+
+  // 모든 선택값은 이 페이지에 모아 두므로, 이전·다음으로 이동해도 유지된다.
+  const [step, setStep] = useState(STEP.profile)
+  const [done, setDone] = useState(false) // 저장 성공 → 완료 화면
+  const [nickname, setNickname] = useState('')
+  const [nicknameDone, setNicknameDone] = useState(false)
+  const [termId, setTermId] = useState(null) // '2-1' 형식 (학년·학기)
+  const [experienceIds, setExperienceIds] = useState([]) // 화면 항목 id
+  const [completedCourseKeys, setCompletedCourseKeys] = useState([])
+  const [careerId, setCareerId] = useState(null)
+  const [setupMode, setSetupMode] = useState('auto') // 'auto' | 'manual'
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null) // { messages, fixes }
+
+  const term = TERMS.find((t) => t.id === termId) ?? null
+  const grade = term?.grade ?? null // 지금 DB에는 학년만 저장된다 (학기는 백엔드 변경 후)
+  const career = CAREERS.find((c) => c.id === careerId) ?? null
+  // 선정 함수에 넘길 직무 키 목록 (저장 가능한 키만, 대표 1개)
+  const jobs = career?.dbKey ? [career.dbKey] : []
+  const hasCurriculum = curriculum.courses.length > 0
+
+  const pickedExperiences = EXPERIENCE_ITEMS.filter((item) => experienceIds.includes(item.id))
+  const unsupportedExperiences = pickedExperiences.filter((item) => !item.dbKey)
+
+  // 과목 추천 초안: 학년·이수 과목·희망 직무만 사용 (경험은 사용하지 않음)
+  const coursePreview = useMemo(() => {
+    if (!grade) return { completed: [], recommended: [] }
+    const { courseNodes } = selectCourses({
+      grade,
+      completedCourseKeys,
+      jobs,
+      curriculum,
+      jobRelevance,
+    })
+    const completed = courseNodes.filter((node) => node.completed)
+    const completedKeys = new Set(completed.map((node) => node.courseKey))
+    // 이수 완료 과목은 추천에 중복으로 넣지 않는다.
+    const recommended = courseNodes.filter(
+      (node) => !node.completed && !completedKeys.has(node.courseKey),
+    )
+    return { completed, recommended }
+  }, [grade, completedCourseKeys, jobs.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function goTo(nextStep) {
+    setError(null)
+    setStep(nextStep)
+  }
+
+  // 건너뛰기 (경험·수강 과목 단계만): 이 단계의 선택을 비우고 다음 단계로
+  function skipStep() {
+    if (step === STEP.experience) setExperienceIds([])
+    if (step === STEP.course) setCompletedCourseKeys([])
+    goTo(step + 1)
+  }
+
+  // 단계가 바뀌면 콘텐츠 영역을 맨 위로 (상단 바는 스크롤 영역 밖이라 움직이지 않는다)
+  const scrollRef = useRef(null)
+  useEffect(() => {
+    scrollRef.current?.scrollTo(0, 0)
+  }, [step])
+
+  // 저장 전에 지금 저장 계약으로 보낼 수 없는 선택이 있는지 확인한다.
+  // (지원하지 않는 키를 보내거나, 조용히 빼고 저장하지 않는다)
+  function findBlocked() {
+    const messages = []
+    const fixes = []
+    if (unsupportedExperiences.length > 0) {
+      const names = unsupportedExperiences.map((item) => `‘${item.title}’`).join(', ')
+      messages.push(
+        `선택한 경험 중 ${names}은(는) 아직 서버에 저장 항목이 없어 저장할 수 없어요. 지금 시작하려면 해당 경험의 선택을 해제해 주세요.`,
+      )
+      fixes.push({ step: STEP.experience, label: '경험 다시 선택하기' })
+    }
+    if (career && !career.dbKey) {
+      messages.push(
+        `‘${career.title}’ 직무는 추천 데이터가 아직 연결되지 않아 저장할 수 없어요. 다른 직무나 ‘아직 정하지 않음’을 선택해 주세요.`,
+      )
+      fixes.push({ step: STEP.career, label: '직무 다시 선택하기' })
+    }
+    return messages.length > 0 ? { messages, fixes } : null
+  }
+
+  async function handleComplete() {
+    const blocked = findBlocked()
+    if (blocked) {
+      setError(blocked)
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+
+    // 직접 구성: 추천 과목을 보내지 않는다 → 학기·보관함 어디에도 추천 과목이 생기지 않는다.
+    const recommended = setupMode === 'auto' ? coursePreview.recommended : []
+    const courseNodes = [...coursePreview.completed, ...recommended]
+    const completedCourses = coursePreview.completed.map((node) => node.courseKey)
+    if (includeTestCourse) {
+      courseNodes.push(TEST_COURSE)
+      completedCourses.push(TEST_COURSE.courseKey)
+    }
+
+    const result = await completeOnboarding({
+      nickname: nickname.trim(),
+      grade,
+      experiences: [...new Set(pickedExperiences.map((item) => item.dbKey))], // 보관함 저장용 (같은 키는 1번만)
+      completedCourses,
+      interests: jobs,
+      // RPC는 auto/inbox만 받는다. 직접 구성은 추천 과목을 보내지 않으므로 inbox여도 추가되는 과목이 없다.
+      roadmapMode: setupMode === 'auto' ? 'auto' : 'inbox',
+      courseNodes,
+    })
+
+    setSaving(false)
+    if (result.error) {
+      setError({ messages: [result.error.message] }) // 입력값은 그대로 둔다
+      return
+    }
+    setDone(true) // 실제 저장에 성공했을 때만 완료 화면
+  }
+
+  if (done) {
+    return (
+      <main className="onboarding">
+        <WelcomeStep onStart={() => navigate('/')} />
+      </main>
+    )
+  }
+
+  const percent = Math.round(((step + 1) / STEP_COUNT) * 100)
+
   return (
-    <main>
-      <h1>온보딩</h1>
-      <p>개발 예정 페이지입니다.</p>
+    <main className="onboarding">
+      {/* 상단 바: 모든 단계에서 같은 자리. 스크롤 영역 밖에 두어 스크롤바·콘텐츠 양과 무관하게 고정 */}
+      <div className="ob-top">
+        <ProgressHeader percent={percent} onBack={step > 0 ? () => goTo(step - 1) : null} />
+      </div>
+
+      <div className="ob-scroll" ref={scrollRef}>
+      <div className="ob-screen">
+        {includeTestCourse && (
+          <p className="ob-dev-note">
+            개발용: 저장 요청에 테스트 과목 1개가 포함됩니다. (추천 목록에는 표시되지 않음)
+          </p>
+        )}
+
+        {/* key={step}: 단계가 바뀔 때만 새로 그려서 등장 애니메이션 재생 (칩 선택·탭 전환 때는 재생 안 함) */}
+        <div key={step} className="ob-stage">
+        {step === STEP.profile && (
+          <ProfileStep
+            nickname={nickname}
+            nicknameDone={nicknameDone}
+            term={termId}
+            onNicknameSubmit={(value) => {
+              setNickname(value)
+              setNicknameDone(true)
+            }}
+            onNicknameEdit={() => setNicknameDone(false)}
+            onTermSelect={setTermId}
+            onTermEdit={() => setTermId(null)}
+            onNext={() => goTo(STEP.experience)}
+          />
+        )}
+
+        {step === STEP.experience && (
+          <ExperienceStep
+            selectedIds={experienceIds}
+            onToggle={(id) => setExperienceIds((prev) => toggle(prev, id))}
+            hasUnsupported={unsupportedExperiences.length > 0}
+            onNext={() => goTo(STEP.course)}
+            onSkip={skipStep}
+          />
+        )}
+
+        {step === STEP.course && (
+          <CourseStep
+            courses={curriculum.courses}
+            selectedKeys={completedCourseKeys}
+            onToggle={(key) => setCompletedCourseKeys((prev) => toggle(prev, key))}
+            onNext={() => goTo(STEP.career)}
+            onSkip={skipStep}
+          />
+        )}
+
+        {step === STEP.career && (
+          <CareerStep
+            selectedId={careerId}
+            onSelect={setCareerId}
+            onNext={() => goTo(STEP.setup)}
+          />
+        )}
+
+        {step === STEP.setup && (
+          <SetupStep
+            mode={setupMode}
+            onSelect={setSetupMode}
+            hasCurriculum={hasCurriculum}
+            saving={saving}
+            error={error}
+            onFix={goTo}
+            onConfirm={handleComplete}
+          />
+        )}
+        </div>
+      </div>
+      </div>
     </main>
   )
 }

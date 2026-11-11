@@ -1,5 +1,7 @@
 import { Routes, Route, Link } from 'react-router-dom'
 import HomePage from './pages/HomePage.jsx'
+import LoginPage from './pages/LoginPage.jsx'
+import ResetPasswordPage from './pages/ResetPasswordPage.jsx'
 import OnboardingPage from './pages/OnboardingPage.jsx'
 import DiaryPage from './pages/DiaryPage.jsx'
 import MemoriesPage from './pages/MemoriesPage.jsx'
@@ -13,6 +15,7 @@ export default function App() {
       {/* 임시 이동 메뉴 (개발 확인용, 공통 레이아웃 작업 때 교체) */}
       <nav style={{ display: 'flex', gap: 12, padding: 12 }}>
         <Link to="/">홈</Link>
+        <Link to="/login">로그인</Link>
         <Link to="/onboarding">온보딩</Link>
         <Link to="/diary">일기</Link>
         <Link to="/memories">추억 보관소</Link>
@@ -22,6 +25,8 @@ export default function App() {
 
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/diary" element={<DiaryPage />} />
         <Route path="/memories" element={<MemoriesPage />} />
