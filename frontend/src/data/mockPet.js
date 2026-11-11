@@ -4,9 +4,9 @@
 const mockPet = {
   id: 'pet_1',
   type: null,
-  stage: 2, // 누적 70 → 2단계(아기, 50 이상)
-  energy: 70,
-  energyToNextStage: 150, // 다음 단계(성장기)의 누적 기준값
+  stage: 2, // 누적 온기 1,400 → 2단계(어린 펫, 1,200 이상)
+  energy: 1400, // 누적 온기
+  energyToNextStage: 2800, // 다음 단계(성장한 펫)의 누적 기준값
   updatedAt: '2026-11-09T21:00:00+09:00',
 }
 
