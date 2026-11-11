@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { TrashIcon } from '../roadmap/icons.jsx'
-import { countCharsWithoutSpaces, REWARD_MIN_CHARS } from './countChars.js'
+import { countChars, REWARD_MIN_CHARS } from './countChars.js'
 import { deleteDiary, getDiaryByDate, saveDiary } from './diaryMock.js'
 import PhotoModal from './PhotoModal.jsx'
+import WarmthEffect from './WarmthEffect.jsx'
 
 const WEEKDAYS = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일']
 
@@ -22,10 +23,12 @@ export default function DiaryModal({ date, onClose, onChanged }) {
   const [editing, setEditing] = useState(false) // 이미 쓴 일기를 고치는 중인지
   const [photoOpen, setPhotoOpen] = useState(false)
   const [toast, setToast] = useState('')
+  const [reward, setReward] = useState(null) // 받은 온기 양 (연출 중일 때만 값이 있음)
   const textareaRef = useRef(null)
+  const endReward = useCallback(() => setReward(null), [])
 
   const readOnly = isExisting && !editing
-  const charCount = countCharsWithoutSpaces(content)
+  const charCount = countChars(content)
   const meetsLength = charCount >= REWARD_MIN_CHARS
   const progress = Math.min(100, Math.round((charCount / REWARD_MIN_CHARS) * 100))
 
@@ -58,7 +61,9 @@ export default function DiaryModal({ date, onClose, onChanged }) {
       setToast(result.error.message)
       return
     }
-    setToast(isExisting ? '일기를 수정했어요.' : '일기를 저장했어요.')
+    // 온기를 받았으면 연기 연출, 아니면 안내 메시지만
+    if (result.reward?.rewarded) setReward(result.reward.amount)
+    else setToast(isExisting ? '일기를 수정했어요.' : '일기를 저장했어요.')
     setIsExisting(true)
     setEditing(false)
     onChanged()
@@ -127,17 +132,23 @@ export default function DiaryModal({ date, onClose, onChanged }) {
         </div>
 
         {/* 쓰거나 고칠 때만 글자 수 게이지를 보여 준다 (보상 판단은 서버가 다시 함) */}
-        {!readOnly && (
+        {/* 게이지는 처음 쓸 때만 (수정은 온기가 없으므로 숨김) */}
+        {!isExisting && (
           <div className="rm-field">
             <div className="dy-count">
               <span className="rm-eyebrow">LENGTH</span>
               <span className={`dy-count__num ${meetsLength ? 'is-done' : ''}`}>
-                공백 제외 {charCount}자 / {REWARD_MIN_CHARS}자
+                {charCount}자 / {REWARD_MIN_CHARS}자
               </span>
             </div>
             <div className="dy-bar" aria-hidden="true">
               <div className={`dy-bar__fill ${meetsLength ? 'is-done' : ''}`} style={{ width: `${progress}%` }} />
             </div>
+            <p className="rm-muted dy-hint">
+              {meetsLength
+                ? '저장하면 온기를 받을 수 있어요.'
+                : `${REWARD_MIN_CHARS - charCount}자 더 쓰면 온기를 받을 수 있어요.`}
+            </p>
           </div>
         )}
 
@@ -169,6 +180,9 @@ export default function DiaryModal({ date, onClose, onChanged }) {
             </>
           )}
         </div>
+
+        {/* 온기 획득 연출 (팝업 카드 위를 덮음) */}
+        {reward !== null && <WarmthEffect amount={reward} onDone={endReward} />}
       </section>
 
       {photoOpen && <PhotoModal onClose={() => setPhotoOpen(false)} />}
