@@ -995,13 +995,15 @@ span.rm-nav__link {
   border-color: #c9c9c9;
   background: #e6e4e5;
 }
-/* ADD NODE: NODE TYPE·DETAIL TYPE 선택 칩 (선택 시 검정) */
-.rm-chips {
-  display: flex;
-  flex-wrap: wrap;
+/* NODE TYPE·DETAIL TYPE 선택 칩 (ADD NODE·NODE DETAILS 공용, 선택 시 검정)
+   .rm-pick 안으로 범위를 좁혀 상세 창 CONNECTIONS 칩(.rm-chip 기본 스타일)에는 영향을 주지 않는다 */
+.rm-pick {
+  display: contents; /* 두 영역이 폼의 다른 영역과 같은 간격으로 놓이게 */
+}
+.rm-pick .rm-chips {
   gap: 8px;
 }
-.rm-chip {
+.rm-pick .rm-chip {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -1016,19 +1018,20 @@ span.rm-nav__link {
   white-space: nowrap;
   transition: background 0.2s, color 0.2s, transform 0.2s var(--rm-ease);
 }
-.rm-chip:hover {
+.rm-pick .rm-chip:hover {
   transform: translateY(-1px);
 }
-.rm-chip.is-selected {
+.rm-pick .rm-chip.is-selected {
   background: var(--rm-text);
   color: #fff;
 }
-.rm-chip--add {
+.rm-pick .rm-chip--add {
   background: transparent;
   box-shadow: inset 0 0 0 1px #c9c9c9;
   color: #6f6f6f;
 }
-.rm-chip--add:hover {
+.rm-pick .rm-chip--add:hover {
+  background: transparent;
   color: var(--rm-text);
   box-shadow: inset 0 0 0 1px var(--rm-text);
 }
@@ -1044,6 +1047,35 @@ span.rm-nav__link {
   padding: 0 14px;
   border-radius: 17px;
   font-size: 13px;
+}
+/* NODE DETAILS: 현재 종류 (누르면 칩 선택 펼침) */
+.rm-type-current {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--rm-field);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--rm-text);
+  text-align: left;
+  transition: background 0.2s;
+}
+.rm-type-current:hover {
+  background: #e6e4e5;
+}
+.rm-type-current__edit {
+  font-size: 12px;
+  font-weight: 800;
+  color: #8a8a8a;
+}
+.rm-type-note {
+  margin-top: -12px;
 }
 .rm-field-note {
   margin: 0;
