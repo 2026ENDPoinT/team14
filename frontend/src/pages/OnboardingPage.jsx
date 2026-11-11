@@ -1,21 +1,26 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { completeOnboarding } from '../services/api.js'
-import {
-  EXPERIENCES,
-  GRADES,
-  JOBS,
-  ROADMAP_MODES,
-  UNDECIDED_JOB,
-} from '../features/onboarding/onboardingOptions.js'
+import { CAREERS, EXPERIENCE_GROUPS, TERMS } from '../features/onboarding/onboardingOptions.js'
 import {
   curriculum,
   jobRelevance,
   selectCourses,
 } from '../features/onboarding/courseRecommendationSlot.js'
+import { ProgressHeader } from '../features/onboarding/OnboardingParts.jsx'
+import {
+  CareerStep,
+  CourseStep,
+  ExperienceStep,
+  ProfileStep,
+  SetupStep,
+  WelcomeStep,
+} from '../features/onboarding/OnboardingSteps.jsx'
 import '../features/onboarding/onboarding.css'
 
-const STEPS = ['프로필', '경험', '수강한 과목', '희망 직무', '확인']
+// 단계: 0 프로필 → 1 경험 → 2 수강 과목 → 3 희망 직무 → 4 로드맵 구성 → 저장 성공 시 완료 화면
+const STEP_COUNT = 5
+const STEP = { profile: 0, experience: 1, course: 2, career: 3, setup: 4 }
 
 // 개발용: 주소에 ?testCourse=1을 붙이면 저장 요청에만 테스트 과목 1개를 넣는다.
 // (추천 목록·미리보기에는 표시하지 않음, 배포 빌드에서는 동작하지 않음)
@@ -26,6 +31,8 @@ const TEST_COURSE = {
   semester: 1,
   completed: true,
 }
+
+const EXPERIENCE_ITEMS = EXPERIENCE_GROUPS.flatMap((group) => group.items)
 
 // 배열에 값이 있으면 빼고, 없으면 넣는다.
 function toggle(list, value) {
@@ -38,18 +45,28 @@ export default function OnboardingPage() {
   const includeTestCourse =
     import.meta.env.DEV && new URLSearchParams(location.search).has('testCourse')
 
-  const [step, setStep] = useState(0)
+  // 모든 선택값은 이 페이지에 모아 두므로, 이전·다음으로 이동해도 유지된다.
+  const [step, setStep] = useState(STEP.profile)
+  const [done, setDone] = useState(false) // 저장 성공 → 완료 화면
   const [nickname, setNickname] = useState('')
-  const [grade, setGrade] = useState(null)
-  const [experiences, setExperiences] = useState([])
+  const [nicknameDone, setNicknameDone] = useState(false)
+  const [termId, setTermId] = useState(null) // '2-1' 형식 (학년·학기)
+  const [experienceIds, setExperienceIds] = useState([]) // 화면 항목 id
   const [completedCourseKeys, setCompletedCourseKeys] = useState([])
-  const [courseSearch, setCourseSearch] = useState('')
-  const [jobs, setJobs] = useState([])
-  const [roadmapMode, setRoadmapMode] = useState('auto')
+  const [careerId, setCareerId] = useState(null)
+  const [setupMode, setSetupMode] = useState('auto') // 'auto' | 'manual'
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(null)
+  const [error, setError] = useState(null) // { messages, fixes }
 
+  const term = TERMS.find((t) => t.id === termId) ?? null
+  const grade = term?.grade ?? null // 지금 DB에는 학년만 저장된다 (학기는 백엔드 변경 후)
+  const career = CAREERS.find((c) => c.id === careerId) ?? null
+  // 선정 함수에 넘길 직무 키 목록 (저장 가능한 키만, 대표 1개)
+  const jobs = career?.dbKey ? [career.dbKey] : []
   const hasCurriculum = curriculum.courses.length > 0
+
+  const pickedExperiences = EXPERIENCE_ITEMS.filter((item) => experienceIds.includes(item.id))
+  const unsupportedExperiences = pickedExperiences.filter((item) => !item.dbKey)
 
   // 과목 추천 초안: 학년·이수 과목·희망 직무만 사용 (경험은 사용하지 않음)
   const coursePreview = useMemo(() => {
@@ -68,37 +85,60 @@ export default function OnboardingPage() {
       (node) => !node.completed && !completedKeys.has(node.courseKey),
     )
     return { completed, recommended }
-  }, [grade, completedCourseKeys, jobs])
+  }, [grade, completedCourseKeys, jobs.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filteredCourses = curriculum.courses.filter((course) =>
-    course.title.includes(courseSearch.trim()),
-  )
-
-  function selectJob(key) {
-    // "아직 정하지 않음"은 다른 직무와 함께 고를 수 없다.
-    if (key === UNDECIDED_JOB) {
-      setJobs(jobs.includes(key) ? [] : [key])
-    } else {
-      setJobs(toggle(jobs.filter((item) => item !== UNDECIDED_JOB), key))
-    }
+  function goTo(nextStep) {
+    setError(null)
+    setStep(nextStep)
   }
 
-  // 건너뛰기: 이 단계의 선택을 비우고 다음 단계로
+  // 건너뛰기 (경험·수강 과목 단계만): 이 단계의 선택을 비우고 다음 단계로
   function skipStep() {
-    if (step === 1) setExperiences([])
-    if (step === 2) setCompletedCourseKeys([])
-    if (step === 3) {
-      setJobs([])
-      setRoadmapMode('auto')
+    if (step === STEP.experience) setExperienceIds([])
+    if (step === STEP.course) setCompletedCourseKeys([])
+    goTo(step + 1)
+  }
+
+  // 단계가 바뀌면 콘텐츠 영역을 맨 위로 (상단 바는 스크롤 영역 밖이라 움직이지 않는다)
+  const scrollRef = useRef(null)
+  useEffect(() => {
+    scrollRef.current?.scrollTo(0, 0)
+  }, [step])
+
+  // 저장 전에 지금 저장 계약으로 보낼 수 없는 선택이 있는지 확인한다.
+  // (지원하지 않는 키를 보내거나, 조용히 빼고 저장하지 않는다)
+  function findBlocked() {
+    const messages = []
+    const fixes = []
+    if (unsupportedExperiences.length > 0) {
+      const names = unsupportedExperiences.map((item) => `‘${item.title}’`).join(', ')
+      messages.push(
+        `선택한 경험 중 ${names}은(는) 아직 서버에 저장 항목이 없어 저장할 수 없어요. 지금 시작하려면 해당 경험의 선택을 해제해 주세요.`,
+      )
+      fixes.push({ step: STEP.experience, label: '경험 다시 선택하기' })
     }
-    setStep(step + 1)
+    if (career && !career.dbKey) {
+      messages.push(
+        `‘${career.title}’ 직무는 추천 데이터가 아직 연결되지 않아 저장할 수 없어요. 다른 직무나 ‘아직 정하지 않음’을 선택해 주세요.`,
+      )
+      fixes.push({ step: STEP.career, label: '직무 다시 선택하기' })
+    }
+    return messages.length > 0 ? { messages, fixes } : null
   }
 
   async function handleComplete() {
+    const blocked = findBlocked()
+    if (blocked) {
+      setError(blocked)
+      return
+    }
+
     setSaving(true)
     setError(null)
 
-    const courseNodes = [...coursePreview.completed, ...coursePreview.recommended]
+    // 직접 구성: 추천 과목을 보내지 않는다 → 학기·보관함 어디에도 추천 과목이 생기지 않는다.
+    const recommended = setupMode === 'auto' ? coursePreview.recommended : []
+    const courseNodes = [...coursePreview.completed, ...recommended]
     const completedCourses = coursePreview.completed.map((node) => node.courseKey)
     if (includeTestCourse) {
       courseNodes.push(TEST_COURSE)
@@ -108,276 +148,106 @@ export default function OnboardingPage() {
     const result = await completeOnboarding({
       nickname: nickname.trim(),
       grade,
-      experiences, // 보관함 저장용 (추천 계산에는 쓰지 않음)
+      experiences: [...new Set(pickedExperiences.map((item) => item.dbKey))], // 보관함 저장용 (같은 키는 1번만)
       completedCourses,
       interests: jobs,
-      roadmapMode,
+      // RPC는 auto/inbox만 받는다. 직접 구성은 추천 과목을 보내지 않으므로 inbox여도 추가되는 과목이 없다.
+      roadmapMode: setupMode === 'auto' ? 'auto' : 'inbox',
       courseNodes,
     })
 
     setSaving(false)
     if (result.error) {
-      setError(result.error) // 입력값은 그대로 둔다
+      setError({ messages: [result.error.message] }) // 입력값은 그대로 둔다
       return
     }
-    navigate('/roadmap')
+    setDone(true) // 실제 저장에 성공했을 때만 완료 화면
   }
 
-  const experienceTitles = EXPERIENCES.filter((item) => experiences.includes(item.key)).map(
-    (item) => item.title,
-  )
-  const jobTitles = JOBS.filter((item) => jobs.includes(item.key)).map((item) => item.title)
-  const modeTitle = ROADMAP_MODES.find((mode) => mode.key === roadmapMode).title
+  if (done) {
+    return (
+      <main className="onboarding">
+        <WelcomeStep onStart={() => navigate('/')} />
+      </main>
+    )
+  }
+
+  const percent = Math.round(((step + 1) / STEP_COUNT) * 100)
 
   return (
     <main className="onboarding">
-      <h1>초기 설정</h1>
-      <ol className="onboarding-steps">
-        {STEPS.map((name, index) => (
-          <li key={name} className={index === step ? 'is-current' : ''}>
-            {index + 1}. {name}
-          </li>
-        ))}
-      </ol>
+      {/* 상단 바: 모든 단계에서 같은 자리. 스크롤 영역 밖에 두어 스크롤바·콘텐츠 양과 무관하게 고정 */}
+      <div className="ob-top">
+        <ProgressHeader percent={percent} onBack={step > 0 ? () => goTo(step - 1) : null} />
+      </div>
 
-      {includeTestCourse && (
-        <p className="onboarding-dev-note">
-          개발용: 저장 요청에 테스트 과목 1개가 포함됩니다. (추천 목록에는 표시되지 않음)
-        </p>
-      )}
-
-      {/* STEP 1. 프로필 */}
-      {step === 0 && (
-        <section className="onboarding-card">
-          <h2>프로필</h2>
-          <label className="onboarding-field">
-            닉네임 (선택)
-            <input
-              type="text"
-              value={nickname}
-              maxLength={20}
-              onChange={(event) => setNickname(event.target.value)}
-            />
-          </label>
-
-          <fieldset className="onboarding-field">
-            <legend>현재 학년 (필수)</legend>
-            <div className="onboarding-options">
-              {GRADES.map((value) => (
-                <label key={value} className="onboarding-option">
-                  <input
-                    type="radio"
-                    name="grade"
-                    checked={grade === value}
-                    onChange={() => setGrade(value)}
-                  />
-                  {value}학년
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          <p className="onboarding-help">
-            선택한 학년을 기준으로 교과과정 연계도에 따라 과목이 기본 배치되며, 학년과 과목
-            배치는 나중에도 수정할 수 있습니다.
+      <div className="ob-scroll" ref={scrollRef}>
+      <div className="ob-screen">
+        {includeTestCourse && (
+          <p className="ob-dev-note">
+            개발용: 저장 요청에 테스트 과목 1개가 포함됩니다. (추천 목록에는 표시되지 않음)
           </p>
-          <p className="onboarding-help">
-            휴학 중이라면 마지막으로 마친 학기의 학년을 선택해 주세요.
-            <br />
-            예: 2학년 1학기를 마치고 휴학했다면 → 2학년
-          </p>
-        </section>
-      )}
-
-      {/* STEP 2. 경험 (선택) */}
-      {step === 1 && (
-        <section className="onboarding-card">
-          <h2>해 본 경험 (선택)</h2>
-          <p className="onboarding-help">
-            고른 경험은 로드맵의 보관함에 저장됩니다. 학기에 자동으로 배치되지 않아요.
-          </p>
-          <div className="onboarding-options">
-            {EXPERIENCES.map((item) => (
-              <label key={item.key} className="onboarding-option">
-                <input
-                  type="checkbox"
-                  checked={experiences.includes(item.key)}
-                  onChange={() => setExperiences(toggle(experiences, item.key))}
-                />
-                {item.title}
-              </label>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* STEP 3. 수강한 과목 (선택) */}
-      {step === 2 && (
-        <section className="onboarding-card">
-          <h2>수강한 전공과목 (선택)</h2>
-          {!hasCurriculum ? (
-            <p className="onboarding-empty">교과과정 데이터 준비 중</p>
-          ) : (
-            <>
-              <p className="onboarding-help">
-                학년과 관계없이 실제로 수강한 과목만 골라 주세요. 고른 과목은 이수 완료로 권장
-                학기에 놓입니다. (실제 수강 학기가 아니에요)
-              </p>
-              <input
-                type="search"
-                placeholder="과목 이름 검색"
-                value={courseSearch}
-                onChange={(event) => setCourseSearch(event.target.value)}
-              />
-              <ul className="onboarding-course-list">
-                {filteredCourses.map((course) => (
-                  <li key={course.key}>
-                    <label className="onboarding-option">
-                      <input
-                        type="checkbox"
-                        checked={completedCourseKeys.includes(course.key)}
-                        onChange={() =>
-                          setCompletedCourseKeys(toggle(completedCourseKeys, course.key))
-                        }
-                      />
-                      {course.year}학년 {course.semester}학기 · {course.title}
-                      {course.category === '전공필수' && ' (전공필수)'}
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </section>
-      )}
-
-      {/* STEP 4. 희망 직무 (선택) */}
-      {step === 3 && (
-        <section className="onboarding-card">
-          <h2>희망 직무 (선택)</h2>
-          <div className="onboarding-options">
-            {JOBS.map((item) => (
-              <label key={item.key} className="onboarding-option">
-                <input
-                  type="checkbox"
-                  checked={jobs.includes(item.key)}
-                  onChange={() => selectJob(item.key)}
-                />
-                {item.title}
-              </label>
-            ))}
-          </div>
-
-          <fieldset className="onboarding-field">
-            <legend>추천 과목을 어떻게 넣을까요?</legend>
-            {ROADMAP_MODES.map((mode) => (
-              <label key={mode.key} className="onboarding-option">
-                <input
-                  type="radio"
-                  name="roadmapMode"
-                  checked={roadmapMode === mode.key}
-                  onChange={() => setRoadmapMode(mode.key)}
-                />
-                {mode.title} — {mode.description}
-              </label>
-            ))}
-          </fieldset>
-        </section>
-      )}
-
-      {/* 확인: 추천 미리보기 + 완료 */}
-      {step === 4 && (
-        <section className="onboarding-card">
-          <h2>확인</h2>
-          <dl className="onboarding-summary">
-            <dt>닉네임</dt>
-            <dd>{nickname.trim() || '나중에 설정'}</dd>
-            <dt>학년</dt>
-            <dd>{grade}학년</dd>
-            <dt>희망 직무</dt>
-            <dd>{jobTitles.length > 0 ? jobTitles.join(', ') : '선택 안 함'}</dd>
-          </dl>
-
-          <h3>이수 완료 과목</h3>
-          {coursePreview.completed.length > 0 ? (
-            <ul className="onboarding-preview-list">
-              {coursePreview.completed.map((node) => (
-                <li key={node.courseKey}>
-                  <span className="onboarding-badge">완료</span>
-                  {node.title} · 권장 {node.year}학년 {node.semester}학기
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="onboarding-empty">고른 과목 없음</p>
-          )}
-
-          <h3>추천 과목 ({modeTitle})</h3>
-          {!hasCurriculum ? (
-            <p className="onboarding-empty">교과과정 데이터 준비 중</p>
-          ) : coursePreview.recommended.length > 0 ? (
-            <ul className="onboarding-preview-list">
-              {coursePreview.recommended.map((node) => (
-                <li key={node.courseKey}>
-                  {node.title} ·{' '}
-                  {roadmapMode === 'auto'
-                    ? `${node.year}학년 ${node.semester}학기에 배치`
-                    : '보관함에 추가'}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="onboarding-empty">추천 과목 없음</p>
-          )}
-
-          <h3>공모전·대외활동 추천</h3>
-          <p className="onboarding-empty">준비 중</p>
-
-          <h3>보관함에 저장할 경험</h3>
-          {experienceTitles.length > 0 ? (
-            <p>{experienceTitles.join(', ')}</p>
-          ) : (
-            <p className="onboarding-empty">고른 경험 없음</p>
-          )}
-
-          {error && (
-            <p className="onboarding-error" role="alert">
-              저장하지 못했어요: {error.message}
-            </p>
-          )}
-        </section>
-      )}
-
-      <div className="onboarding-actions">
-        {step > 0 && (
-          <button type="button" onClick={() => setStep(step - 1)} disabled={saving}>
-            이전
-          </button>
         )}
-        {step >= 1 && step <= 3 && (
-          <button type="button" onClick={skipStep}>
-            건너뛰기
-          </button>
+
+        {/* key={step}: 단계가 바뀔 때만 새로 그려서 등장 애니메이션 재생 (칩 선택·탭 전환 때는 재생 안 함) */}
+        <div key={step} className="ob-stage">
+        {step === STEP.profile && (
+          <ProfileStep
+            nickname={nickname}
+            nicknameDone={nicknameDone}
+            term={termId}
+            onNicknameSubmit={(value) => {
+              setNickname(value)
+              setNicknameDone(true)
+            }}
+            onNicknameEdit={() => setNicknameDone(false)}
+            onTermSelect={setTermId}
+            onTermEdit={() => setTermId(null)}
+            onNext={() => goTo(STEP.experience)}
+          />
         )}
-        {step < 4 && (
-          <button
-            type="button"
-            className="is-primary"
-            onClick={() => setStep(step + 1)}
-            disabled={step === 0 && !grade}
-          >
-            다음
-          </button>
+
+        {step === STEP.experience && (
+          <ExperienceStep
+            selectedIds={experienceIds}
+            onToggle={(id) => setExperienceIds((prev) => toggle(prev, id))}
+            hasUnsupported={unsupportedExperiences.length > 0}
+            onNext={() => goTo(STEP.course)}
+            onSkip={skipStep}
+          />
         )}
-        {step === 4 && (
-          <button
-            type="button"
-            className="is-primary"
-            onClick={handleComplete}
-            disabled={saving}
-          >
-            {saving ? '저장 중…' : '완료'}
-          </button>
+
+        {step === STEP.course && (
+          <CourseStep
+            courses={curriculum.courses}
+            selectedKeys={completedCourseKeys}
+            onToggle={(key) => setCompletedCourseKeys((prev) => toggle(prev, key))}
+            onNext={() => goTo(STEP.career)}
+            onSkip={skipStep}
+          />
         )}
+
+        {step === STEP.career && (
+          <CareerStep
+            selectedId={careerId}
+            onSelect={setCareerId}
+            onNext={() => goTo(STEP.setup)}
+          />
+        )}
+
+        {step === STEP.setup && (
+          <SetupStep
+            mode={setupMode}
+            onSelect={setSetupMode}
+            hasCurriculum={hasCurriculum}
+            saving={saving}
+            error={error}
+            onFix={goTo}
+            onConfirm={handleComplete}
+          />
+        )}
+        </div>
+      </div>
       </div>
     </main>
   )
