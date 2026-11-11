@@ -8,12 +8,12 @@ import FabMenu from '../features/roadmap/FabMenu.jsx'
 import InboxPanel from '../features/roadmap/InboxPanel.jsx'
 import AddNodeModal from '../features/roadmap/AddNodeModal.jsx'
 import NodeDetailModal from '../features/roadmap/NodeDetailModal.jsx'
+import NodeFilter from '../features/roadmap/NodeFilter.jsx'
+import { BASE_CATEGORIES, nodeCategoryId } from '../features/roadmap/nodeCategories.js'
 import RoadmapTutorial from '../features/roadmap/tutorial/RoadmapTutorial.jsx'
 import { hasSeenRoadmapTutorial, markRoadmapTutorialSeen } from '../features/roadmap/tutorial/tutorialStorage.js'
 import { linkProblem } from '../features/roadmap/edgeRules.js'
-import { autoBranchVisible } from '../features/roadmap/branchLines.js'
 import { BASE_WIDTH, computeLayout, nextPosition, placeNode } from '../features/roadmap/layout.js'
-import { BASE_CATEGORIES } from '../features/roadmap/nodeCategories.js'
 import {
   createEdge,
   createNode,
@@ -141,6 +141,22 @@ export default function RoadmapPage() {
     return { id: category.id }
   }, [])
 
+  // 종류 필터: 보이게 할 카테고리 id 목록 (비어 있으면 전체). 화면 표시만 바꾸고 노드 데이터는 그대로
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [filterIds, setFilterIds] = useState([])
+  const categories = useMemo(() => [...BASE_CATEGORIES, ...customCategories], [customCategories])
+  // 노드의 카테고리: 고른 카테고리(categoryId)가 있으면 그것, 없으면 theme에 맞는 기본 카테고리
+  const isShown = useCallback(
+    (node) => filterIds.length === 0 || filterIds.includes(nodeCategoryId(node, categories)),
+    [filterIds, categories],
+  )
+  const visibleIds = useMemo(
+    () => (filterIds.length === 0 ? null : new Set(nodes.filter(isShown).map((n) => n.id))),
+    [filterIds, nodes, isShown],
+  )
+  const closeFilter = useCallback(() => setFilterOpen(false), [])
+  const HIDDEN_NOTE = ' 지금 필터에서 숨긴 종류라 화면에는 보이지 않아요.'
+
   // 처음 접속했을 때만 튜토리얼 자동 표시 (캔버스가 자리 잡을 시간을 조금 준다)
   useEffect(() => {
     if (hasSeenRoadmapTutorial()) return undefined
@@ -185,12 +201,13 @@ export default function RoadmapPage() {
       if (detailId) setDetailId(null)
       else if (addOpen) setAddOpen(false)
       else if (fabOpen) setFabOpen(false)
+      else if (filterOpen) setFilterOpen(false)
       else if (connectMode) setConnectMode(false)
       else if (inboxOpen) setInboxOpen(false)
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [detailId, addOpen, fabOpen, connectMode, inboxOpen])
+  }, [detailId, addOpen, fabOpen, filterOpen, connectMode, inboxOpen])
 
   // 안내 메시지는 2초 뒤 사라짐 (실행 취소가 있는 안내는 5초)
   useEffect(() => {
@@ -229,6 +246,15 @@ export default function RoadmapPage() {
   const handleNodeMove = useCallback(
     (nodeId, placement) => handleNodesMove([{ id: nodeId, ...placement }]),
     [handleNodesMove],
+  )
+  // 보관함 → 학기 배치. 필터로 숨긴 종류면 사라진 것처럼 보이지 않게 안내
+  const handleInboxPlace = useCallback(
+    (nodeId, placement) => {
+      handleNodeMove(nodeId, placement)
+      const node = nodes.find((n) => n.id === nodeId)
+      if (node && !isShown(node)) setToast(`학기에 배치했어요.${HIDDEN_NOTE}`)
+    },
+    [handleNodeMove, nodes, isShown],
   )
 
   // 완료 상태 표시등 클릭: completed만 뒤집는다 (기존 필드 사용). DB면 저장에 성공한 뒤에 바꾼다
@@ -280,10 +306,6 @@ export default function RoadmapPage() {
 
   const handleLinkReject = useCallback((message) => setToast(message), [])
 
-  // 학기 가지선 표시 설정 (null 자동 / 'shown' / 'hidden')
-  const handleBranchChange = useCallback((nodeId, value) => {
-    setNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, branchVisibility: value } : n)))
-  }, [])
 
   const openAdd = () => {
     setDetailId(null)
@@ -303,9 +325,10 @@ export default function RoadmapPage() {
   }
 
   // categoryId·detailId·categoryLabel: ADD NODE에서 고른 카테고리·세부 활동 (상세 창 종류 수정과 같은 값)
+  // courseKey: 전공·학업에서 연결한 교과목 키 — DB 컬럼이 아직 없어 세션 전용
   // 로그인 상태(DB)면 DB에 먼저 저장하고, 성공했을 때만 화면에 넣는다.
   // 반환: 성공 null / 실패 오류 문구 (ADD NODE 창이 입력값을 유지한 채 보여 준다)
-  const handleCreate = async ({ theme, title, periodId, memo, categoryId = null, detailId = null, categoryLabel = null }) => {
+  const handleCreate = async ({ theme, title, periodId, memo, categoryId = null, detailId = null, categoryLabel = null, courseKey = null }) => {
     const id = `n_${Date.now()}`
     const newNode = {
       id,
@@ -314,6 +337,7 @@ export default function RoadmapPage() {
       categoryId,
       detailId,
       categoryLabel,
+      courseKey, // 전공·학업에서 연결한 교과목 키 (세션 전용)
       periodId: null,
       position: null,
       status: 'stored',
@@ -350,7 +374,7 @@ export default function RoadmapPage() {
         memo,
       })
       if (result.error) return `노드를 저장하지 못했어요. ${result.error.message}`
-      created = { ...result.data.node, categoryLabel: categoryLabelOf(result.data.node.categoryId, customCategories) }
+      created = { ...result.data.node, categoryLabel: categoryLabelOf(result.data.node.categoryId, customCategories), courseKey }
       document = result.data.document
       memoFailed = Boolean(result.data.documentError)
     }
@@ -361,7 +385,7 @@ export default function RoadmapPage() {
     setAddOpen(false)
     if (!placement) setInboxOpen(true) // 보관함에 넣었으면 보관함을 열어 보여 준다
     if (memoFailed) setToast('노드는 저장했지만 메모는 저장하지 못했어요.')
-    else if (placement) setToast('노드를 학기에 추가했어요.')
+    else if (placement) setToast(`노드를 학기에 추가했어요.${isShown(created) ? '' : HIDDEN_NOTE}`)
     else if (periodId) setToast('학기에 빈 자리가 없어 보관함에 넣었어요.')
     else setToast('노드를 보관함에 추가했어요.')
     return null
@@ -371,7 +395,8 @@ export default function RoadmapPage() {
   // type: { theme, categoryId, detailId, categoryLabel }
   // 학기·좌표·완료 상태·연결선·originKey 등 다른 값은 그대로 둔다
   // 반환 { ok, message } — 상세 창은 ok일 때만 '저장됨'을 표시한다. DB면 저장에 성공한 뒤에만 화면 값을 바꾼다.
-  const handleSave = async (nodeId, { title, body, type }) => {
+  // dueDate: 목표일 'YYYY-MM-DD' 또는 null — DB 컬럼이 아직 없어 세션 전용. undefined면(교과목) 기존 값을 건드리지 않는다
+  const handleSave = async (nodeId, { title, body, type, dueDate }) => {
     let document = { nodeId, content: { format: 'plain', body }, updatedAt: new Date().toISOString() }
     if (isDb) {
       const isCustom = type ? customCategories.some((c) => c.id === type.categoryId) : false
@@ -388,7 +413,7 @@ export default function RoadmapPage() {
       if (result.error) return { ok: false, message: `저장하지 못했어요. ${result.error.message}` }
       document = result.data.document
     }
-    setNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, title, ...(type ?? {}) } : n)))
+    setNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, title, ...(type ?? {}), ...(dueDate !== undefined ? { dueDate } : {}) } : n)))
     setDocuments((prev) => ({ ...prev, [nodeId]: document }))
     return { ok: true }
   }
@@ -539,9 +564,19 @@ export default function RoadmapPage() {
           onLinkReject={handleLinkReject}
           dropPeriodId={dropPeriodId}
           onDropTargetChange={setDropPeriodId}
+          visibleIds={visibleIds}
         />
 
         <RoadmapNav />
+
+        <NodeFilter
+          open={filterOpen}
+          onToggle={() => setFilterOpen((v) => !v)}
+          onClose={closeFilter}
+          categories={categories}
+          selected={filterIds}
+          onChange={setFilterIds}
+        />
 
         <InboxPanel
           open={inboxOpen}
@@ -551,7 +586,7 @@ export default function RoadmapPage() {
           getSubtitle={getSubtitle}
           onNodeClick={openDetail}
           onAdd={openAdd}
-          onPlace={handleNodeMove}
+          onPlace={handleInboxPlace}
           onDelete={handleQuickDelete}
           onTargetChange={setDropPeriodId}
         />
@@ -585,8 +620,6 @@ export default function RoadmapPage() {
           node={detailNode}
           body={getBody(detailId)}
           connections={connections}
-          branch={detailNode ? { value: detailNode.branchVisibility ?? null, autoVisible: autoBranchVisible(detailNode.id, edges) } : null}
-          onBranchChange={handleBranchChange}
           onClose={() => setDetailId(null)}
           onSave={handleSave}
           onDelete={handleDeleteNode}

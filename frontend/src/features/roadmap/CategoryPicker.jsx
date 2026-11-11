@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { PlusIcon } from './icons.jsx'
-import { sameName } from './nodeCategories.js'
+import { courseOptions, sameName } from './nodeCategories.js'
 
 const CATEGORY_NAME_MAX = 12
 
@@ -11,11 +11,14 @@ const CATEGORY_NAME_MAX = 12
 // - onAddCategory(name): 이름 검사(빈 값·중복)를 통과한 새 종류 이름. 서버에 저장한 뒤
 //   실패하면 오류 문구(string), 성공하면 null을 돌려준다 (Promise). 성공했을 때만 입력칸을 닫는다.
 // - customNote: 직접 추가한 종류를 골랐을 때 보여 줄 안내
+// - 전공·학업(major)을 고르면 DETAIL TYPE 대신 COURSE (OPTIONAL): 교과과정 과목 칩 (하나만, 다시 누르면 해제)
+//   courseKey·onSelectCourse(course) / courseLocked: 온보딩 교과목 노드처럼 과목을 바꿀 수 없을 때
 // - emptyDetailNote: 세부 활동이 없는 종류일 때 안내
 // - resetKey: 바뀌면 종류 추가 입력칸을 닫는다 (모달을 다시 열 때)
 // display: contents 래퍼(.rm-pick)라서 두 영역이 폼의 다른 영역과 같은 간격으로 놓인다.
 export default function CategoryPicker({
   idPrefix, categories, categoryId, detailId, onSelectCategory, onSelectDetail, onAddCategory, customNote, resetKey,
+  courseKey = null, onSelectCourse, courseLocked = false,
   emptyDetailNote = '세부 활동이 없는 종류예요. 노드 이름을 직접 입력해 주세요.',
 }) {
   const [adding, setAdding] = useState(false)
@@ -30,6 +33,7 @@ export default function CategoryPicker({
   }, [resetKey])
 
   const category = categories.find((c) => c.id === categoryId) ?? categories[0]
+  const courses = category.id === 'major' ? courseOptions() : []
 
   const closeAdd = () => {
     setAdding(false)
@@ -107,6 +111,33 @@ export default function CategoryPicker({
         {category.custom && customNote && <p className="rm-field-note">{customNote}</p>}
       </div>
 
+      {category.id === 'major' ? (
+      <div className="rm-field">
+        <span className="rm-eyebrow" id={`${idPrefix}-course`}>COURSE (OPTIONAL)</span>
+        {courses.length > 0 ? (
+          <div className="rm-chips" role="radiogroup" aria-labelledby={`${idPrefix}-course`}>
+            {courses.map((course) => (
+              <button
+                key={course.key}
+                type="button"
+                role="radio"
+                aria-checked={course.key === courseKey}
+                className={`rm-chip ${course.key === courseKey ? 'is-selected' : ''}`}
+                onClick={() => onSelectCourse(course)}
+                disabled={courseLocked}
+              >
+                {course.title}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="rm-field-note">교과과정 데이터가 연결되면 여기에서 과목을 고를 수 있어요. 지금은 과목 없이 전공·학업 노드로 만들 수 있어요.</p>
+        )}
+        {courseLocked && courses.length > 0 && (
+          <p className="rm-field-note">온보딩에서 만든 교과목 노드는 연결된 과목을 바꿀 수 없어요.</p>
+        )}
+      </div>
+      ) : (
       <div className="rm-field">
         <span className="rm-eyebrow" id={`${idPrefix}-detail`}>DETAIL TYPE (OPTIONAL)</span>
         {category.details.length > 0 ? (
@@ -128,6 +159,7 @@ export default function CategoryPicker({
           <p className="rm-field-note">{emptyDetailNote}</p>
         )}
       </div>
+      )}
     </div>
   )
 }
