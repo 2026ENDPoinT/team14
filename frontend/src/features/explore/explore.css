@@ -15,11 +15,110 @@
   font-size: 34px;
   font-weight: 800;
 }
-.ex-sections {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 32px;
-  align-items: start;
+/* 상단 탭 [대외활동] [기술 뉴스] [채용]: 선택한 탭의 목록만 보인다 */
+.ex-tabs {
+  display: flex;
+  gap: 6px;
+  width: fit-content;
+  margin: 0 0 20px;
+  padding: 5px;
+  border-radius: 22px;
+  background: var(--rm-field);
+}
+.ex-tab {
+  padding: 9px 20px;
+  border: none;
+  border-radius: 18px;
+  background: transparent;
+  color: #555;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.ex-tab[aria-selected='true'] {
+  background: var(--rm-text);
+  color: #fff;
+}
+.ex-tab:focus-visible {
+  outline: 2px solid var(--rm-text);
+  outline-offset: 2px;
+}
+.ex-panel {
+  max-width: 720px;
+}
+.ex-panel__hint {
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rm-muted);
+}
+@media (max-width: 760px) {
+  .ex-tabs {
+    width: 100%;
+  }
+  .ex-tab {
+    flex: 1;
+    padding: 10px 0;
+  }
+}
+/* 기술 뉴스 상세 */
+.ex-news {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 720px;
+}
+.ex-back {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 16px;
+  background: var(--rm-field);
+  color: var(--rm-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.ex-back:focus-visible,
+.ex-news__original-link:focus-visible {
+  outline: 2px solid var(--rm-text);
+  outline-offset: 3px;
+}
+.ex-news__meta {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rm-muted);
+}
+.ex-news__title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.ex-news__original-link {
+  display: inline-block;
+  text-decoration: none;
+}
+/* 제목 앞 [직무 분야] */
+.ex-field {
+  color: #555;
+  font-weight: 800;
+}
+.ex-card__title--plain {
+  margin: 0; /* 링크가 아닌 제목 (채용 카드) */
+}
+.ex-card__title--plain:hover {
+  text-decoration: none;
+}
+.ex-card__note {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--rm-muted);
 }
 .ex-section__title {
   display: flex;

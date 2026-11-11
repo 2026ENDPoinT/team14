@@ -3,7 +3,7 @@ import { ddayInfo } from './dday.js'
 import { BASE_CATEGORIES, isCourseLinked, isMajorCategory, nodeCategoryId, nodeKindLabel } from './nodeCategories.js'
 import CategoryIcon from '../../components/CategoryIcon.jsx'
 import DeadlineBadge from '../explore/DeadlineBadge.jsx'
-import { sourceName } from '../explore/contestInfo.js'
+import { contestKindLabel, sourceName } from '../explore/contestInfo.js'
 
 // 노드 카드. 교과목·타임라인 위 노드는 작은 카드, 나머지는 종류·이름·부가 정보 카드
 // subtitle: 노드 문서의 첫 줄 (한 줄 부가 정보)
@@ -42,14 +42,24 @@ export default function NodeCard({
       {course ? (
         <strong className="rm-card__title">{node.title}</strong>
       ) : node.contest ? (
-        // 탐색에서 추가한 공모전 노드: 종류 자리에 '공모전'과 마감 배지, 부가 정보 자리에 출처
+        // 탐색에서 추가한 대외활동 노드: 종류 자리에 실제 공고 분류(공모전·멘토링 등)와 마감 배지, 부가 정보 자리에 출처
         <>
           <span className="rm-card__kind rm-card__kind--contest">
-            <CategoryIcon categoryId="contest" className="rm-card__icon" />
-            공모전 <DeadlineBadge deadline={node.contest.deadline} status={node.contest.sourceStatus} small={small} />
+            <CategoryIcon categoryId={node.contest.sourceTag === '공모전' ? 'contest' : 'external'} className="rm-card__icon" />
+            {contestKindLabel(node.contest.sourceTag)} <DeadlineBadge deadline={node.contest.deadline} status={node.contest.sourceStatus} small={small} />
           </span>
           <strong className="rm-card__title">{node.title}</strong>
           <span className="rm-card__sub">{sourceName(node.contest.source)}</span>
+        </>
+      ) : node.job ? (
+        // 탐색에서 추가한 채용 노드: 종류 자리에 '채용'과 마감 배지(마감일이 있을 때만), 부가 정보 자리에 기업명·출처
+        <>
+          <span className="rm-card__kind rm-card__kind--contest">
+            <CategoryIcon categoryId="career" className="rm-card__icon" />
+            채용 <DeadlineBadge deadline={node.job.deadline} small={small} />
+          </span>
+          <strong className="rm-card__title">{node.title}</strong>
+          <span className="rm-card__sub">{node.job.company ?? '기업명 정보 없음'} · {sourceName(node.job.source)}</span>
         </>
       ) : (
         <>
