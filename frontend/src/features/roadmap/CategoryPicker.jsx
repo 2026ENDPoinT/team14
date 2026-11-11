@@ -8,8 +8,9 @@ const CATEGORY_NAME_MAX = 12
 // ADD NODE와 NODE DETAILS가 함께 쓴다. 선택값은 부모가 관리한다.
 // - idPrefix: 화면마다 다른 aria id ('add-node' → add-node-type / add-node-detail)
 // - onSelectDetail(item): 세부 활동을 누를 때 (다시 누르면 해제는 부모가 판단)
-// - onAddCategory(name): 이름 검사(빈 값·중복)를 통과한 새 종류 이름
-// - customNote: 직접 추가한 종류를 골랐을 때 보여 줄 안내 (저장되지 않는다는 사실)
+// - onAddCategory(name): 이름 검사(빈 값·중복)를 통과한 새 종류 이름. 서버에 저장한 뒤
+//   실패하면 오류 문구(string), 성공하면 null을 돌려준다 (Promise). 성공했을 때만 입력칸을 닫는다.
+// - customNote: 직접 추가한 종류를 골랐을 때 보여 줄 안내
 // - emptyDetailNote: 세부 활동이 없는 종류일 때 안내
 // - resetKey: 바뀌면 종류 추가 입력칸을 닫는다 (모달을 다시 열 때)
 // display: contents 래퍼(.rm-pick)라서 두 영역이 폼의 다른 영역과 같은 간격으로 놓인다.
@@ -20,6 +21,7 @@ export default function CategoryPicker({
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
   const [nameError, setNameError] = useState('')
+  const [saving, setSaving] = useState(false) // 서버에 저장하는 중 (연속 클릭 방지)
 
   useEffect(() => {
     setAdding(false)
@@ -35,12 +37,16 @@ export default function CategoryPicker({
     setNameError('')
   }
 
-  const addCategory = () => {
+  const addCategory = async () => {
+    if (saving) return
     const name = newName.trim()
     if (!name) return setNameError('종류 이름을 입력해 주세요.')
     if (categories.some((c) => sameName(c.label, name))) return setNameError('이미 있는 종류예요.')
+    setSaving(true)
+    const error = await onAddCategory(name)
+    setSaving(false)
+    if (error) return setNameError(error) // 저장 실패: 입력한 이름은 그대로 두고 오류만 보여 준다
     closeAdd()
-    onAddCategory(name)
   }
 
   return (
@@ -91,7 +97,9 @@ export default function CategoryPicker({
               }}
               autoFocus
             />
-            <button type="button" className="rm-chip is-selected" onClick={addCategory}>추가</button>
+            <button type="button" className="rm-chip is-selected" onClick={addCategory} disabled={saving}>
+              {saving ? '저장 중…' : '추가'}
+            </button>
             <button type="button" className="rm-chip" onClick={closeAdd}>취소</button>
           </div>
         )}

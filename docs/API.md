@@ -92,9 +92,19 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
   "source": "recommended",
   "originKey": "course:cs2026-2-1-01",
   "completed": false,
+  "categoryKey": "contest",
+  "categoryId": null,
+  "detailKey": "hackathon",
   "createdAt": "2026-11-09T12:00:00+09:00"
 }
 ```
+- **노드 종류(카테고리)** — 화면의 NODE TYPE·DETAIL TYPE 선택값 (migration `20261111001100`)
+  - `categoryKey`: 기본 종류 키. 프론트 `nodeCategories.js`의 `BASE_CATEGORIES` id (`major`, `project`, `contest`, `club`, `external`, `career`, `study`, `campus`, `life`, `free`). 형식: 영문 소문자로 시작하는 `a-z0-9_` 40자 이내
+  - `categoryId`: 사용자 정의 종류 id (`NodeCategory.id`). **본인 종류만** 연결 가능 (DB 복합 외래키로 검증)
+  - `detailKey`: 세부 활동 키. 온보딩 경험 항목 id (예: `hackathon`). `categoryKey`가 있을 때만 쓸 수 있다
+  - `categoryKey`와 `categoryId`는 **동시에 넣을 수 없다**. 둘 다 `null`이면 `theme`으로 대표 종류를 보여 준다 (기존 노드)
+  - `theme`은 그대로 필수다. 종류를 고르면 그 종류의 테마(사용자 정의 종류는 `baseTheme`)를 `theme`에도 저장한다
+  - 사용자 정의 종류를 삭제하면 노드는 남고 `categoryId`만 `null`이 된다 → `theme`으로 표시
 - `periodId`: `null`이면 **보관함**에 있는 노드
 - `status`: `"placed"`(학기에 배치) | `"stored"`(보관함)
 - `theme`: `major` | `project` | `external` | `career` | `research` | `event` | `free` | 사용자 정의 테마 ID
@@ -106,6 +116,14 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 - `completed`: 이수 완료 표시 (`true`/`false`). STEP 3에서 사용자가 직접 고른 수강 과목만 `true`로 생성된다. 사용자가 나중에 바꿀 수 있다. (필드 이름 `(안)`)
   - 이수 완료 노드의 `periodId`는 연계도 **권장 학기** 위치이며, 실제 수강 학기를 뜻하지 않는다.
 - `position`: 학기 영역 내 상대 좌표 `[React Flow 좌표 기준 협의 필요]`
+
+### NodeCategory (사용자 정의 노드 종류, `node_categories`)
+```json
+{ "id": "c_1", "name": "알바", "baseTheme": "free", "createdAt": "2026-11-11T12:00:00+09:00" }
+```
+- `name`: 1~12자 (앞뒤 공백 제외). **사용자별로 중복 불가** (앞뒤 공백·대소문자 무시)
+- `baseTheme`: 기존 테마 7개 중 하나 (`major` | `project` | `external` | `career` | `research` | `event` | `free`). 기본값 `free`
+- 사용자 정의 종류에는 세부 활동(DETAIL TYPE)이 없다
 
 ### Edge (사용자 연결선, `edges`)
 ```json
@@ -297,17 +315,27 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 
 | 작업 | 처리 방식 | 설명 |
 | --- | --- | --- |
-| 로드맵 조회 | 테이블 `timeline_periods`, `nodes`, `edges` 조회 | periods + nodes + edges 한 번에 반환 |
+| 로드맵 조회 | 테이블 `timeline_periods`, `nodes`(+`contests` 공고 정보), `edges`, `node_documents` 조회 | `getRoadmap()` → periods + nodes + edges + documents 한 번에 반환. 탐색에서 추가한 공모전 노드에는 `contest`(출처·마감일·원문 링크)가 붙는다 |
 | 학기/기간 삽입 | RPC `insert_period` (안) | 삽입 위치 지정, 뒤 기간 order 재계산 |
 | 학기/기간 삭제 | RPC `delete_period` (안) | 소속 노드를 보관함으로 이동 후 삭제 |
 | 학기 순서 변경 | RPC `reorder_periods` (안) | 여러 행의 order를 함께 변경 |
 | 학기 이름·타입 수정 | 테이블 `timeline_periods` 수정 | 한 행만 바뀌므로 직접 수정 |
-| 노드 생성 | 테이블 `nodes` 추가 | |
-| 노드 수정 | 테이블 `nodes` 수정 | 제목·테마·위치·periodId |
+| 노드 생성 | 테이블 `nodes` 추가 | `createNode()`. 종류 선택값(`categoryKey`·`categoryId`·`detailKey`) 포함. 짧은 메모는 `node_documents`에 함께 저장 |
+| 노드 이동 | 테이블 `nodes` 수정 | `moveNodes(moves)`. periodId·position·status만. 자리 교환은 두 노드를 함께 |
+| 노드 수정 | 테이블 `nodes` 수정 + `node_documents` upsert | `saveNodeDetail()`. 제목·종류(테마·종류 선택값)·기록 |
+| 완료 상태 변경 | 테이블 `nodes` 수정 | `setNodeCompleted(id, completed)` |
+| 사용자 정의 종류 조회 | 테이블 `node_categories` 조회 | `listNodeCategories()` → `NodeCategory[]` (만든 순서) |
+| 사용자 정의 종류 추가 | 테이블 `node_categories` 추가 | `createNodeCategory(name, baseTheme?)`. `user_id`는 DB가 로그인 사용자로 채움. 이름 중복 → `CONFLICT` |
+| 사용자 정의 종류 이름 변경 | 테이블 `node_categories` 수정 | `renameNodeCategory(id, name)`. 이름 중복 → `CONFLICT` |
+| 사용자 정의 종류 삭제 | 테이블 `node_categories` 삭제 | `deleteNodeCategory(id)`. 연결된 노드는 남고 `categoryId`만 `null` |
 | 노드 복제 | 서비스 함수에서 처리 | 처리 방식(테이블 추가 / RPC) `[미확정]` |
-| 노드 삭제 | 테이블 `nodes` 삭제 | 문서도 함께 삭제 |
-| 연결선 생성 | 테이블 `edges` 추가 | |
-| 연결선 삭제 | 테이블 `edges` 삭제 | |
+| 노드 삭제 | 테이블 `nodes` 삭제 | `deleteNode(id)`. 문서·연결선도 DB에서 함께 삭제(외래키). 보관함 X·휴지통은 5초 실행 취소 뒤 저장 |
+| 연결선 생성 | 테이블 `edges` 추가 | `createEdge(sourceId, targetId)`. 내 노드끼리만(복합 외래키). 자기 자신·중복 연결은 프론트(`edgeRules.js`)가 막음 |
+| 연결선 끝점 변경 | 테이블 `edges` 수정 | `updateEdge(id, { sourceNodeId, targetNodeId })` |
+| 연결선 삭제 | 테이블 `edges` 삭제 | `deleteEdge(id)` |
+
+- 저장 결과: 모든 저장은 DB에 성공한 뒤에만 화면을 완료 상태로 바꾼다. 실패하면 화면을 되돌리고 오류 문구를 보여 준다.
+- 학기 가지선 표시 설정(`branchVisibility`)은 아직 DB 컬럼이 없어 화면에서만 유지된다 `[협의 필요]`.
 
 ```json
 // 로드맵 조회 결과
@@ -487,25 +515,42 @@ selectCourses({
 
 | 작업 | 처리 방식 | 설명 |
 | --- | --- | --- |
-| 공고 목록 | `frontend/src/data/`의 정적 샘플 데이터 | MVP는 DB 사용 안 함 |
-| 공고 → 보관함 추가 | 테이블 `nodes` 추가 (`source: "explore"`) | (고려 중) |
+| 대외활동 공고 목록 | RPC `list_open_contests_for_me(p_limit)` | `listOpenContests()`. 한국 날짜 기준 **접수 중**인 공고만(마감일 지남·수집처 '마감' 제외), 내 관심 분야와 맞는 공고 먼저, 그다음 마감 임박순 |
+| 기술 글 목록 (Hacker News) | RPC `list_tech_articles_for_me(p_limit)` | `listTechArticles()`. 내 관심 분야와 맞는 글 먼저, 그다음 최신순 |
+| 내가 추가한 공고 | 테이블 `nodes` 조회 (`contest_id`가 있는 행) | `getMyContestNodeIds()` → `{ [contestId]: nodeId }`. 카드의 '추가됨' 표시용 |
+| 공모전 → 내 로드맵 추가 | RPC `add_contest_to_roadmap(p_contest_id)` | `addContestToRoadmap(contestId)`. `[공모전]` 공고만, 마감 전만. 보관함에 노드 생성 |
+
+데이터 출처 (자동 수집, 사용자는 조회만):
+- `contests`: 서울과기대 취업진로본부 대외활동 게시판. Edge Function `sync-contests`가 매일 06:00(KST) 목록 1~3페이지를 저장
+- `tech_articles`: Hacker News 공식 API. Edge Function `sync-hacker-news`가 매시 10분 새 글 200개를 저장 (제목·출처·원문 URL·게시 시각만, 본문·댓글 없음)
+- 두 테이블의 `tags`는 제목으로 붙인 관심 분야(온보딩 희망 직무 키). 비어 있으면 미분류
 
 ```json
-// 공고 목록
+// listOpenContests() 한 항목
 {
-  "items": [
-    {
-      "id": "x_1",
-      "category": "contest",
-      "title": "○○ 공모전",
-      "organizer": "○○기관",
-      "deadline": "2026-12-15",
-      "url": "https://example.com"
-    }
-  ]
+  "id": "c0a8…",
+  "source": "seoultech_center_program",
+  "title": "[공모전] ○○ 공모전",
+  "sourceTag": "공모전",
+  "sourceStatus": "진행",
+  "deadline": "2026-12-15",
+  "dDay": 7,
+  "url": "https://job.seoultech.ac.kr/center/program?do=view&bnum=57802&bidx=…",
+  "isPinned": false,
+  "tags": ["ai"],
+  "matchesInterest": true
 }
+
+// listTechArticles() 한 항목
+{ "id": "…", "source": "hacker_news", "sourceName": "Hacker News", "title": "…", "url": "https://…",
+  "publishedAt": "2026-11-11T07:03:00Z", "tags": [], "matchesInterest": false }
+
+// addContestToRoadmap() 결과 — 같은 공고를 다시 추가하면 added: false, 기존 노드 id
+{ "added": true, "nodeId": "…" }
 ```
-- MVP: 정적 샘플 데이터. 카테고리: `contest` | `hackathon` | `internship` | `activity` | `notice`
+- **공고 → 노드:** `theme: "external"`, `source: "explore"`, `status: "stored"`(보관함), `originKey: "contest:<source>:<원본 ID>"`, `contestId`. 중복 방지는 기존 `(user_id, origin_key)` 유일 제약으로 처리(연속 클릭·동시 요청에도 1개).
+- **마감 표시 (한국 날짜 기준):** D-8 이상 기본 배지, D-7 ~ D-1 빨간 배지, 당일 빨간 `D-day`, 지난 공고·수집처 '마감'은 노드를 남기고 `마감`. 마감일이 없으면 배지를 표시하지 않는다(추정하지 않음).
+- 주최 기관(`organizer`)은 수집처 목록에 없어 제공하지 않는다. 분류는 원문 태그(`sourceTag`)를 그대로 쓴다.
 
 ## 5. RLS(행 수준 보안) 정책
 
@@ -516,6 +561,9 @@ selectCourses({
 | profiles | 본인 | 가입 시 자동 생성 | 본인 | 불가 |
 | timeline_periods | 본인 | RPC로만 | 본인 (이름·타입) | RPC로만 |
 | nodes | 본인 | 본인 | 본인 | 본인 |
+| node_categories | 본인 | 본인 (이름·baseTheme만) | 본인 (이름·baseTheme만) | 본인 (연결 노드는 유지) |
+| contests | 로그인 사용자 전체 | 불가 (수집 함수만) | 불가 | 불가 |
+| tech_articles | 로그인 사용자 전체 | 불가 (수집 함수만) | 불가 | 불가 |
 | edges | 본인 | 본인 | 본인 | 본인 |
 | node_documents | 본인 | 본인 | 본인 | 본인 (노드 삭제 시 함께) |
 | diaries | 본인 | RPC로만 | RPC로만 | 본인 |
