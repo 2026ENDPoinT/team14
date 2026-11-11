@@ -1,0 +1,45 @@
+/* 로그인 상태 확인·오류 화면 (임시 기본 스타일. 공통 디자인이 정해지면 담당자가 교체) */
+.auth-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 60vh;
+  padding: 24px 16px;
+  text-align: center;
+}
+.auth-status__title {
+  margin: 0;
+  font-size: 20px;
+}
+.auth-status__text {
+  margin: 0;
+  max-width: 420px;
+  color: #555;
+}
+.auth-status__actions {
+  display: flex;
+  gap: 8px;
+}
+.auth-status__primary,
+.auth-status__secondary {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #111;
+  font: inherit;
+  cursor: pointer;
+}
+.auth-status__primary {
+  background: #111;
+  color: #fff;
+}
+.auth-status__secondary {
+  background: #fff;
+  color: #111;
+}
+.auth-status__primary:disabled,
+.auth-status__secondary:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}

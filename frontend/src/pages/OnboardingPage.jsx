@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { completeOnboarding } from '../services/api.js'
+import { useAuth } from '../features/auth/AuthProvider.jsx'
 import { CAREERS, EXPERIENCE_GROUPS, TERMS } from '../features/onboarding/onboardingOptions.js'
 import {
   curriculum,
@@ -42,6 +43,7 @@ function toggle(list, value) {
 export default function OnboardingPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { markOnboardingCompleted, finishOnboarding } = useAuth()
   const includeTestCourse =
     import.meta.env.DEV && new URLSearchParams(location.search).has('testCourse')
 
@@ -161,13 +163,20 @@ export default function OnboardingPage() {
       setError({ messages: [result.error.message] }) // 입력값은 그대로 둔다
       return
     }
-    setDone(true) // 실제 저장에 성공했을 때만 완료 화면
+    // 실제 저장에 성공했을 때만: 프로필의 완료 상태를 바로 반영하고(이후 HOME 진입 허용) 완료 화면을 보여준다
+    markOnboardingCompleted()
+    setDone(true)
   }
 
   if (done) {
     return (
       <main className="onboarding">
-        <WelcomeStep onStart={() => navigate('/')} />
+        <WelcomeStep
+          onStart={() => {
+            finishOnboarding() // 이제부터 /onboarding에 오면 HOME으로 보낸다
+            navigate('/', { replace: true })
+          }}
+        />
       </main>
     )
   }

@@ -184,6 +184,17 @@ export async function signOut() {
   return { data: null }
 }
 
+// 로그인 상태 변화 구독 (로그인·로그아웃·비밀번호 재설정 링크 등)
+// callback(event, userId): event는 Supabase 이벤트 이름, userId는 로그아웃이면 null
+// 반환: 구독 해제 함수
+export function subscribeAuthChange(callback) {
+  if (!supabase) return () => {}
+  const { data } = supabase.auth.onAuthStateChange((event, session) => {
+    callback(event, session?.user?.id ?? null)
+  })
+  return () => data.subscription.unsubscribe()
+}
+
 // 내 정보 조회: 로그인 안 했으면 { data: null }
 export async function getMyProfile() {
   if (!supabase) {
