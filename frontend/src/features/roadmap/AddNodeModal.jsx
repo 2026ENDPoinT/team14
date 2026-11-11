@@ -19,6 +19,8 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
   const [autoTitle, setAutoTitle] = useState('') // 세부 활동으로 자동 입력한 제목 (사용자가 고치지 않았는지 확인용)
   const [destination, setDestination] = useState(INBOX)
   const [memo, setMemo] = useState('')
+  const [saving, setSaving] = useState(false) // 서버에 저장하는 중 (연속 클릭 방지)
+  const [saveError, setSaveError] = useState('')
 
   const categories = [...BASE_CATEGORIES, ...customCategories]
   const category = categories.find((c) => c.id === categoryId) ?? categories[0]
@@ -34,6 +36,8 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
       setAutoTitle('')
       setDestination(INBOX)
       setMemo('')
+      setSaving(false)
+      setSaveError('')
     }
   }, [open])
 
@@ -63,24 +67,32 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
     setAutoTitle(item.title)
   }
 
-  // 종류 추가 (이름 검사는 CategoryPicker): 추가하고 바로 선택
-  const addCategory = (name) => {
-    selectCategory(onAddCustomCategory(name))
+  // 종류 추가 (이름 검사는 CategoryPicker): 서버에 저장되면 바로 선택. 실패하면 오류 문구를 돌려준다
+  const addCategory = async (name) => {
+    const result = await onAddCustomCategory(name)
+    if (result.error) return result.error
+    selectCategory(result.id)
+    return null
   }
 
-  const handleSubmit = (e) => {
+  // onCreate는 저장 결과를 돌려준다: 성공 null / 실패 오류 문구 (실패하면 창을 닫지 않고 입력값을 유지)
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!title.trim()) return
-    onCreate({
+    if (!title.trim() || saving) return
+    setSaving(true)
+    setSaveError('')
+    const error = await onCreate({
       theme,
       title: title.trim(),
       periodId: destination === INBOX ? null : destination,
       memo: memo.trim(),
-      // 고른 카테고리·세부 활동 (NODE DETAILS와 같은 세션 전용 값. 아직 DB에는 theme만 저장할 수 있다)
+      // 고른 카테고리·세부 활동 (로그인 상태면 노드와 함께 DB에 저장된다)
       categoryId: category.id,
       detailId: detail?.id ?? null,
       categoryLabel: category.label,
     })
+    setSaving(false)
+    if (error) setSaveError(error)
   }
 
   return (
@@ -106,7 +118,7 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
           onSelectDetail={selectDetail}
           onAddCategory={addCategory}
           resetKey={open}
-          customNote="직접 추가한 종류는 아직 서버에 저장되지 않아요. 내부 분류는 ‘자유 노드’로 정해지고, 새로고침하면 이 종류는 목록에서 사라져요."
+          customNote="직접 추가한 종류는 내 계정에 저장돼요. 내부 분류는 ‘자유 노드’로 정해져요. (로드맵은 아직 예시 데이터라, 노드에 고른 종류는 새로고침하면 처음 값으로 돌아가요.)"
         />
 
         <label className="rm-field">
@@ -145,8 +157,9 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
           />
         </label>
 
-        <button type="submit" className="rm-primary-btn" disabled={!title.trim()}>
-          CREATE NODE
+        {saveError && <p className="rm-field-note is-error" role="alert">{saveError}</p>}
+        <button type="submit" className="rm-primary-btn" disabled={!title.trim() || saving}>
+          {saving ? 'SAVING…' : 'CREATE NODE'}
         </button>
       </form>
     </Modal>

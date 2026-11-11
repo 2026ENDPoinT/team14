@@ -239,3 +239,364 @@ export async function completeOnboarding(input) {
     },
   }
 }
+
+// ---- 로드맵 (API.md 4.3) ----
+// DB와 연결된 것: 학기·노드·연결선·노드 문서 조회, 노드 생성·이동·수정(이름·종류·기록)·완료 표시·삭제, 연결선 추가·변경·삭제
+// 아직 화면에서만 바뀌는 것: 학기 가지선 표시 설정(branchVisibility, DB 컬럼 없음), 학기 추가·삭제(RPC 미구현)
+
+// 로드맵 화면용 노드
+// - 보관함 노드는 position을 null로 둔다 (화면 배치 규칙과 같게)
+// - categoryId: 사용자 정의 종류 id(category_id) 또는 기본 종류 키(category_key). 둘 다 없으면 null → theme으로 표시
+function toRoadmapNode(row) {
+  const node = toNode(row)
+  return {
+    ...node,
+    position: node.status === 'placed' ? node.position : null,
+    categoryId: row.category_id ?? row.category_key ?? null,
+    detailId: row.detail_key ?? null,
+    contestId: row.contest_id ?? null,
+    contest: toNodeContest(row.contest), // 탐색에서 추가한 공모전 노드의 공고 정보 (없으면 null)
+    branchVisibility: null, // 학기 가지선 설정은 아직 DB에 없다 (화면에서만 유지)
+  }
+}
+
+// 공고 노드에 붙는 공고 정보 (contests 행)
+function toNodeContest(row) {
+  if (!row) return null
+  return {
+    id: row.id,
+    source: row.source,
+    sourceTag: row.source_tag,
+    sourceStatus: row.source_status,
+    deadline: row.deadline, // 'YYYY-MM-DD' (KST) 또는 null
+    url: row.url,
+  }
+}
+
+// 노드 조회·생성 결과에 공고 정보를 함께 붙인다 (nodes.contest_id → contests)
+const ROADMAP_NODE_SELECT = '*, contest:contests(id, source, source_tag, source_status, deadline, url)'
+
+function toNodeDocument(row) {
+  return { nodeId: row.node_id, content: row.content, updatedAt: row.updated_at }
+}
+
+// 노드 저장 오류: 다른 사람 학기·종류(외래키), 규칙 위반을 알아볼 수 있는 문구로
+function toNodeError(error) {
+  if (error.code === '23503') return { code: 'VALIDATION_ERROR', message: '내 학기나 종류가 아니어서 저장할 수 없어요. 새로고침 후 다시 시도해 주세요.' }
+  if (error.code === '23514') return { code: 'VALIDATION_ERROR', message: '노드 정보가 저장 규칙에 맞지 않아요.' }
+  return toError(error)
+}
+
+function toEdge(row) {
+  return { id: row.id, sourceNodeId: row.source_node_id, targetNodeId: row.target_node_id }
+}
+
+// 내 로드맵: { data: { periods, nodes, edges, documents } }  documents = { [nodeId]: NodeDocument }
+export async function getRoadmap() {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+
+  const [periods, nodes, edges, documents] = await Promise.all([
+    supabase.from('timeline_periods').select('*').order('sort_order'),
+    supabase.from('nodes').select(ROADMAP_NODE_SELECT).order('created_at'),
+    supabase.from('edges').select('*').order('created_at'),
+    supabase.from('node_documents').select('*'),
+  ])
+  const failed = [periods, nodes, edges, documents].find((r) => r.error)
+  if (failed) return { error: toError(failed.error) }
+
+  return {
+    data: {
+      periods: periods.data.map(toPeriod),
+      nodes: nodes.data.map(toRoadmapNode),
+      edges: edges.data.map(toEdge),
+      documents: Object.fromEntries(documents.data.map((row) => [row.node_id, toNodeDocument(row)])),
+    },
+  }
+}
+
+// 바뀐 행이 0개면 NOT_FOUND (이미 지워졌거나 내 데이터가 아님 → RLS로 0행)
+const notFound = (what) => ({ error: { code: 'NOT_FOUND', message: `${what}을(를) 찾을 수 없어요. 새로고침 후 다시 시도해 주세요.` } })
+
+async function currentUserId() {
+  const { data } = await supabase.auth.getSession()
+  return data.session.user.id
+}
+
+// 노드 이동 저장: moves = [{ id, periodId, position: { x, y } }] → 학기에 배치(placed)
+// 자리 교환은 두 노드를 함께 보낸다. 하나라도 실패하면 오류.
+export async function moveNodes(moves) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+  const results = await Promise.all(
+    moves.map((move) =>
+      supabase
+        .from('nodes')
+        .update({ period_id: move.periodId, position_x: move.position.x, position_y: move.position.y, status: 'placed' })
+        .eq('id', move.id)
+        .select('id'),
+    ),
+  )
+  const failed = results.find((r) => r.error || r.data.length === 0)
+  if (failed) return failed.error ? { error: toNodeError(failed.error) } : notFound('노드')
+  return { data: { moved: moves.length } }
+}
+
+// 완료 상태 저장
+export async function setNodeCompleted(nodeId, completed) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+  const { data, error } = await supabase.from('nodes').update({ completed }).eq('id', nodeId).select('id')
+  if (error) return { error: toNodeError(error) }
+  if (data.length === 0) return notFound('노드')
+  return { data: { completed } }
+}
+
+// 노드 상세 저장 (NODE DETAILS)
+// input: { title, body, type } — type이 있으면 종류도 저장: { theme, categoryKey, categoryId, detailKey }
+// 노드(이름·종류)를 먼저 고치고, 기록은 node_documents에 upsert(노드당 1개). 성공: { data: { document } }
+export async function saveNodeDetail(nodeId, { title, body, type }) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+
+  const patch = { title }
+  if (type) {
+    Object.assign(patch, {
+      theme: type.theme,
+      category_key: type.categoryKey ?? null,
+      category_id: type.categoryId ?? null,
+      detail_key: type.detailKey ?? null,
+    })
+  }
+  const updated = await supabase.from('nodes').update(patch).eq('id', nodeId).select('id')
+  if (updated.error) return { error: toNodeError(updated.error) }
+  if (updated.data.length === 0) return notFound('노드')
+
+  const { data, error } = await supabase
+    .from('node_documents')
+    .upsert({ node_id: nodeId, user_id: await currentUserId(), content: { format: 'plain', body } }, { onConflict: 'node_id' })
+    .select('*')
+    .single()
+  if (error) return { error: toError(error) }
+  return { data: { document: toNodeDocument(data) } }
+}
+
+// 노드 삭제: 노드 문서·연결선은 DB에서 함께 지워진다 (외래키 on delete cascade)
+export async function deleteNode(nodeId) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+  const { data, error } = await supabase.from('nodes').delete().eq('id', nodeId).select('id')
+  if (error) return { error: toError(error) }
+  if (data.length === 0) return notFound('노드')
+  return { data: { deleted: true } }
+}
+
+// 연결선 추가: 내 노드끼리만 (DB 복합 외래키). 성공: { data: Edge }
+export async function createEdge(sourceNodeId, targetNodeId) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+  const { data, error } = await supabase
+    .from('edges')
+    .insert({ user_id: await currentUserId(), source_node_id: sourceNodeId, target_node_id: targetNodeId })
+    .select('*')
+    .single()
+  if (error) return { error: toNodeError(error) }
+  return { data: toEdge(data) }
+}
+
+// 연결선 끝점 바꾸기. 성공: { data: Edge }
+export async function updateEdge(edgeId, { sourceNodeId, targetNodeId }) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+  const { data, error } = await supabase
+    .from('edges')
+    .update({ source_node_id: sourceNodeId, target_node_id: targetNodeId })
+    .eq('id', edgeId)
+    .select('*')
+  if (error) return { error: toNodeError(error) }
+  if (data.length === 0) return notFound('연결선')
+  return { data: toEdge(data[0]) }
+}
+
+// 연결선 삭제
+export async function deleteEdge(edgeId) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+  const { data, error } = await supabase.from('edges').delete().eq('id', edgeId).select('id')
+  if (error) return { error: toError(error) }
+  if (data.length === 0) return notFound('연결선')
+  return { data: { deleted: true } }
+}
+
+// 노드 생성 (ADD NODE)
+// input: { title, theme, periodId, position, categoryKey, categoryId, detailKey, memo }
+//   periodId가 있으면 학기에 배치(placed, position 필요), 없으면 보관함(stored)
+//   categoryKey(기본 종류)와 categoryId(사용자 정의 종류)는 하나만. detailKey는 기본 종류일 때만
+// 성공: { data: { node, document } }  document는 메모가 있을 때만 (메모 저장 실패 시 documentError)
+export async function createNode(input) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+  const { data: sessionData } = await supabase.auth.getSession()
+  const userId = sessionData.session.user.id
+
+  const placed = Boolean(input.periodId)
+  const { data, error } = await supabase
+    .from('nodes')
+    .insert({
+      user_id: userId,
+      title: input.title,
+      theme: input.theme,
+      period_id: placed ? input.periodId : null,
+      position_x: placed ? input.position.x : 0,
+      position_y: placed ? input.position.y : 0,
+      status: placed ? 'placed' : 'stored',
+      source: 'user',
+      category_key: input.categoryKey ?? null,
+      category_id: input.categoryId ?? null,
+      detail_key: input.detailKey ?? null,
+    })
+    .select('*')
+    .single()
+  if (error) return { error: toNodeError(error) }
+
+  const node = toRoadmapNode(data)
+  if (!input.memo) return { data: { node, document: null } }
+
+  // 짧은 메모는 노드 문서로 저장 (노드는 이미 저장됨: 실패해도 노드는 남기고 오류만 알린다)
+  const doc = await supabase
+    .from('node_documents')
+    .insert({ node_id: node.id, user_id: userId, content: { format: 'plain', body: input.memo } })
+    .select('*')
+    .single()
+  if (doc.error) return { data: { node, document: null, documentError: toError(doc.error) } }
+  return { data: { node, document: toNodeDocument(doc.data) } }
+}
+
+// ---- 탐색 (공고 · 기술 글) ----
+// 두 목록 모두 내 관심 분야와 태그가 겹치는 글이 먼저 온다. (migration 00700의 조회 함수)
+
+// 접수 중인 대외활동 (한국 날짜 기준, 마감 임박순)
+export async function listOpenContests(limit = 30) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+
+  const { data, error } = await supabase.rpc('list_open_contests_for_me', { p_limit: limit })
+  if (error) return { error: toError(error) }
+  return {
+    data: data.map((row) => ({
+      id: row.id,
+      source: row.source,
+      title: row.title,
+      sourceTag: row.source_tag,
+      sourceStatus: row.source_status,
+      deadline: row.deadline,
+      dDay: row.d_day,
+      url: row.url,
+      isPinned: row.is_pinned,
+      tags: row.tags,
+      matchesInterest: row.matches_interest,
+    })),
+  }
+}
+
+// 기술 글 (최신순)
+export async function listTechArticles(limit = 30) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+
+  const { data, error } = await supabase.rpc('list_tech_articles_for_me', { p_limit: limit })
+  if (error) return { error: toError(error) }
+  return {
+    data: data.map((row) => ({
+      id: row.id,
+      source: row.source,
+      sourceName: row.source_name,
+      title: row.title,
+      url: row.url,
+      publishedAt: row.published_at,
+      tags: row.tags,
+      matchesInterest: row.matches_interest,
+    })),
+  }
+}
+
+// 내가 이미 로드맵에 추가한 공고: { data: { [contestId]: nodeId } }
+export async function getMyContestNodeIds() {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+
+  const { data, error } = await supabase.from('nodes').select('id, contest_id').not('contest_id', 'is', null)
+  if (error) return { error: toError(error) }
+  return { data: Object.fromEntries(data.map((row) => [row.contest_id, row.id])) }
+}
+
+// 공모전 공고를 내 보관함에 추가 (RPC add_contest_to_roadmap, migration 01000). 이미 추가했으면 기존 노드 (added: false)
+// 성공: { data: { added, nodeId } }
+export async function addContestToRoadmap(contestId) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+
+  const { data, error } = await supabase.rpc('add_contest_to_roadmap', { p_contest_id: contestId })
+  if (error) return { error: toError(error) }
+  return { data: { added: data.added, nodeId: data.node.id } }
+}
+
+// ---- 사용자 정의 노드 종류 (API.md NodeCategory, 4.3) ----
+// 로그인한 사용자 본인의 종류만 조회·추가·수정·삭제된다 (RLS).
+
+function toNodeCategory(row) {
+  return { id: row.id, name: row.name, baseTheme: row.base_theme, createdAt: row.created_at }
+}
+
+// 종류 저장 오류: 이름 중복·규칙 위반을 알아볼 수 있는 문구로
+function toCategoryError(error) {
+  if (error.code === '23505') return { code: 'CONFLICT', message: '이미 있는 종류예요.' }
+  if (error.code === '23514') return { code: 'VALIDATION_ERROR', message: '종류 이름은 1~12자로 입력해 주세요.' }
+  return toError(error)
+}
+
+// 내 종류 목록 (만든 순서): { data: NodeCategory[] }
+export async function listNodeCategories() {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+  const { data, error } = await supabase.from('node_categories').select('*').order('created_at')
+  if (error) return { error: toCategoryError(error) }
+  return { data: data.map(toNodeCategory) }
+}
+
+// 종류 추가: user_id는 DB가 로그인 사용자로 채운다. { data: NodeCategory }
+export async function createNodeCategory(name, baseTheme = 'free') {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+  const { data, error } = await supabase
+    .from('node_categories')
+    .insert({ name: name.trim(), base_theme: baseTheme })
+    .select('*')
+    .single()
+  if (error) return { error: toCategoryError(error) }
+  return { data: toNodeCategory(data) }
+}
+
+// 종류 이름 변경: { data: NodeCategory }
+export async function renameNodeCategory(id, name) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+  const { data, error } = await supabase
+    .from('node_categories')
+    .update({ name: name.trim() })
+    .eq('id', id)
+    .select('*')
+  if (error) return { error: toCategoryError(error) }
+  if (data.length === 0) return { error: { code: 'NOT_FOUND', message: '종류를 찾을 수 없어요.' } }
+  return { data: toNodeCategory(data[0]) }
+}
+
+// 종류 삭제: 연결된 노드는 남고, 노드의 사용자 정의 종류 연결(category_id)만 비워진다. { data: { deleted: true } }
+export async function deleteNodeCategory(id) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+  const { data, error } = await supabase.from('node_categories').delete().eq('id', id).select('id')
+  if (error) return { error: toCategoryError(error) }
+  if (data.length === 0) return { error: { code: 'NOT_FOUND', message: '종류를 찾을 수 없어요.' } }
+  return { data: { deleted: true } }
+}
