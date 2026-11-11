@@ -1,11 +1,12 @@
-// 펫 성장 단계 기준 (SPEC.md 8장, API.md 2장 Pet)
-// 누적 에너지 0 / 50 / 150 / 300에 도달하면 각 단계가 된다. 성장해도 에너지는 차감하지 않는다.
+// 펫 성장 단계 기준 (보상 이름: 온기)
+// 누적 온기 0 / 1,200 / 2,800 / 5,000에 도달하면 각 단계가 된다. 성장해도 온기는 차감하지 않는다.
+// ※ 새 기준(팀 확정). SPEC 8장·API.md는 아직 0/50/150/300 → 문서 담당이 바꿔야 함
 // 화면 표시용이다. 실제 단계는 서버가 계산한 pet.stage를 우선 사용한다.
 export const PET_STAGES = [
-  { stage: 1, name: '알', minEnergy: 0 },
-  { stage: 2, name: '아기', minEnergy: 50 },
-  { stage: 3, name: '성장기', minEnergy: 150 },
-  { stage: 4, name: '성체', minEnergy: 300 },
+  { stage: 1, name: '알 / 아기 펫', minEnergy: 0 },
+  { stage: 2, name: '어린 펫', minEnergy: 1200 },
+  { stage: 3, name: '성장한 펫', minEnergy: 2800 },
+  { stage: 4, name: '최종 성장 펫', minEnergy: 5000 },
 ]
 
 export const MAX_STAGE = PET_STAGES[PET_STAGES.length - 1].stage

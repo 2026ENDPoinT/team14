@@ -1,6 +1,8 @@
 import { isPill } from './layout.js'
 import { ddayInfo } from './dday.js'
 import { isCourseLinked, nodeKindLabel } from './nodeCategories.js'
+import DeadlineBadge from '../explore/DeadlineBadge.jsx'
+import { sourceName } from '../explore/contestInfo.js'
 
 // 노드 카드. 교과목·타임라인 위 노드는 작은 카드, 나머지는 종류·이름·부가 정보 카드
 // subtitle: 노드 문서의 첫 줄 (한 줄 부가 정보)
@@ -37,6 +39,15 @@ export default function NodeCard({
       )}
       {course ? (
         <strong className="rm-card__title">{node.title}</strong>
+      ) : node.contest ? (
+        // 탐색에서 추가한 공모전 노드: 종류 자리에 '공모전'과 마감 배지, 부가 정보 자리에 출처
+        <>
+          <span className="rm-card__kind rm-card__kind--contest">
+            공모전 <DeadlineBadge deadline={node.contest.deadline} status={node.contest.sourceStatus} small={small} />
+          </span>
+          <strong className="rm-card__title">{node.title}</strong>
+          <span className="rm-card__sub">{sourceName(node.contest.source)}</span>
+        </>
       ) : (
         <>
           <span className="rm-card__kind">{nodeKindLabel(node)}</span>

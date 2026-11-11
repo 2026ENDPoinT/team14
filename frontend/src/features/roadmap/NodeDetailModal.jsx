@@ -5,6 +5,8 @@ import { BASE_CATEGORIES, courseOptions, nodeCategoryId, nodeCourseKey, nodeDeta
 import { isCourse } from './layout.js'
 import CategoryPicker from './CategoryPicker.jsx'
 import { ddayInfo } from './dday.js'
+import DeadlineBadge from '../explore/DeadlineBadge.jsx'
+import { sourceName } from '../explore/contestInfo.js'
 
 // 노드 상세 창. 노드를 클릭했을 때만 열린다.
 // node가 null이 되어도 닫힘 애니메이션 동안 마지막 노드를 보여 준다.
@@ -19,6 +21,8 @@ export default function NodeDetailModal({
   const [title, setTitle] = useState('')
   const [record, setRecord] = useState('')
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false) // 서버에 저장하는 중 (연속 클릭 방지)
+  const [saveError, setSaveError] = useState('')
   const [categoryId, setCategoryId] = useState(null)
   const [detailId, setDetailId] = useState(null)
   const [typeOpen, setTypeOpen] = useState(false) // 종류 선택 칩 펼침
@@ -41,6 +45,7 @@ export default function NodeDetailModal({
     setTitle(node.title)
     setRecord(body)
     setSaved(false)
+    setSaveError('')
     setCategoryId(nodeCategoryId(node, categories))
     setDetailId(nodeDetailId(node))
     setTypeOpen(false)
@@ -78,10 +83,11 @@ export default function NodeDetailModal({
     setSaved(false)
   }
 
-  const handleSave = () => {
-    if (!title.trim()) return
-    // 종류를 바꿨을 때만 함께 보낸다. theme은 기존 7개 중 하나, 나머지는 세션 전용 값
-    // courseKey: 직접 만든 노드에만 (온보딩 교과목은 originKey로 이미 연결돼 있어 건드리지 않음)
+  // onSave는 { ok, message }를 돌려준다. 저장에 성공했을 때만 '저장됨'을 표시한다.
+  const handleSave = async () => {
+    if (!title.trim() || saving) return
+    // 종류를 바꿨을 때만 함께 보낸다. theme은 기존 7개 중 하나 (카테고리·세부 활동은 DB에 저장)
+    // courseKey: 직접 만든 노드에만, 세션 전용 (온보딩 교과목은 originKey로 이미 연결돼 있어 건드리지 않음)
     const type = typeChanged
       ? {
           theme: detail?.theme ?? category.theme,
@@ -91,9 +97,13 @@ export default function NodeDetailModal({
           ...(isCourse(shown) ? {} : { courseKey: category.id === 'major' ? courseKey : null }),
         }
       : undefined
-    // 교과목(연결 포함)은 날짜를 다루지 않으므로 보내지 않는다 (기존 값은 그대로 둔다)
+    // 교과목(연결 포함)은 날짜를 다루지 않으므로 보내지 않는다 (기존 값은 그대로 둔다). dueDate는 세션 전용
     const due = noDueDate ? undefined : dueDate || null
-    onSave(shown.id, { title: title.trim(), body: record, type, dueDate: due })
+    setSaving(true)
+    setSaveError('')
+    const result = await onSave(shown.id, { title: title.trim(), body: record, type, dueDate: due })
+    setSaving(false)
+    if (!result?.ok) return setSaveError(result?.message ?? '저장하지 못했어요.') // 입력값·바꾼 종류·날짜는 그대로 둔다
     setTypeChanged(false)
     setSaved(true)
   }
@@ -111,8 +121,10 @@ export default function NodeDetailModal({
           <header className="rm-modal__head">
             <p className="rm-eyebrow">NODE DETAILS</p>
             <div className="rm-modal__actions">
-              {saved && <span className="rm-saved">저장됨</span>}
-              <button type="button" className="rm-save-btn" onClick={handleSave}>
+              {saving && <span className="rm-saved">저장 중…</span>}
+              {saved && !saving && <span className="rm-saved">저장됨</span>}
+              {saveError && <span className="rm-saved rm-save-error" role="alert">{saveError}</span>}
+              <button type="button" className="rm-save-btn" onClick={handleSave} disabled={saving}>
                 저장
               </button>
               <button type="button" className="rm-icon-btn" aria-label="삭제" onClick={handleDelete}>
@@ -131,6 +143,26 @@ export default function NodeDetailModal({
             onChange={(e) => { setTitle(e.target.value); setSaved(false) }}
           />
 
+          {/* 탐색에서 추가한 공모전: 출처·마감일·원문 링크 (공고 정보는 수집 데이터에서 읽어 오며 여기서 고치지 않는다) */}
+          {shown.contest && (
+            <div className="rm-field">
+              <span className="rm-eyebrow">CONTEST</span>
+              <dl className="rm-contest-info">
+                <dt>출처</dt>
+                <dd>{sourceName(shown.contest.source)}</dd>
+                <dt>마감일</dt>
+                <dd>
+                  {shown.contest.deadline ?? '정보 없음'}
+                  <DeadlineBadge deadline={shown.contest.deadline} status={shown.contest.sourceStatus} />
+                </dd>
+                <dt>원문</dt>
+                <dd>
+                  <a href={shown.contest.url} target="_blank" rel="noopener noreferrer">공고 원문 보기</a>
+                </dd>
+              </dl>
+            </div>
+          )}
+
           {typeOpen ? (
             <>
               <CategoryPicker
@@ -140,16 +172,22 @@ export default function NodeDetailModal({
                 detailId={detailId}
                 onSelectCategory={selectCategory}
                 onSelectDetail={selectDetail}
-                onAddCategory={(name) => selectCategory(onAddCustomCategory(name))}
+                onAddCategory={async (name) => {
+                  // 서버에 저장되면 바로 선택. 실패하면 오류 문구를 돌려준다
+                  const result = await onAddCustomCategory(name)
+                  if (result.error) return result.error
+                  selectCategory(result.id)
+                  return null
+                }}
                 resetKey={shown.id}
-                customNote="직접 추가한 종류는 아직 서버에 저장되지 않아 새로고침하면 목록에서 사라져요."
+                customNote="직접 추가한 종류는 내 계정에 저장돼요. (로드맵은 아직 예시 데이터라, 노드에 고른 종류는 새로고침하면 처음 값으로 돌아가요.)"
                 emptyDetailNote="세부 활동이 없는 종류예요."
                 courseKey={courseKey}
                 onSelectCourse={selectCourse}
                 courseLocked={isCourse(shown)}
               />
               <p className="rm-field-note rm-type-note">
-                저장 버튼을 누르면 종류가 바뀌어요. 제목은 바뀌지 않아요. 카테고리 이름·세부 활동은 아직 서버에 저장할 곳이 없어 지금 화면에서만 유지돼요.
+                저장 버튼을 누르면 종류가 바뀌어요. 카테고리·세부 활동은 로그인한 내 로드맵에 저장돼요. 교과목 연결은 아직 서버에 저장할 곳이 없어 지금 화면에서만 유지돼요.
               </p>
             </>
           ) : (

@@ -963,6 +963,11 @@ span.rm-nav__link {
 .rm-save-btn:hover {
   transform: translateY(-1px);
 }
+.rm-save-btn:disabled {
+  opacity: 0.5; /* 저장 중 */
+  cursor: default;
+  transform: none;
+}
 .rm-saved {
   font-size: 12px;
   font-weight: 700;

@@ -5,6 +5,10 @@ import DiaryCalendar from '../features/diary/DiaryCalendar.jsx'
 import DiaryModal from '../features/diary/DiaryModal.jsx'
 import MonthPicker from '../features/diary/MonthPicker.jsx'
 import { listDiaries } from '../features/diary/diaryMock.js'
+import { getPet } from '../features/pet/petMock.js'
+import { getStageByNumber, PET_STAGES } from '../features/pet/petStages.js'
+
+const MAX_WARMTH = PET_STAGES[PET_STAGES.length - 1].minEnergy // 최종 단계 기준 (5,000)
 import { getTodayKST, isValidDateString, toDateString } from '../features/diary/dateUtils.js'
 // 로드맵과 같은 디자인 (rm-* 스타일은 수정하지 않고 사용만)
 import '../features/roadmap/roadmap.css'
@@ -42,6 +46,9 @@ export default function DiaryPage() {
   const [todayYear, todayMonth] = today.split('-').map(Number)
 
   const fromMemories = searchParams.get('from') === 'memories'
+  // 마이페이지(내 활동·기록 관리)에서 들어왔으면 왼쪽 위에 돌아가기 화살표
+  const fromMyPage = searchParams.get('from') === 'mypage'
+  const backTab = searchParams.get('tab') || 'activity'
   const dateParam = searchParams.get('date')
   // 형식이 틀리거나 미래 날짜면 무시한다
   const initialDate = isValidDateString(dateParam) && dateParam <= today ? dateParam : null
@@ -64,6 +71,8 @@ export default function DiaryPage() {
     toDateString(view.year, view.month, lastDay),
   )
   const isCurrentMonth = view.year === todayYear && view.month === todayMonth
+  const pet = getPet() // 일기를 저장해 온기를 받으면 다시 그릴 때 늘어난 값이 보인다
+  const stage = getStageByNumber(pet.stage)
 
   function moveMonth(step) {
     setView(({ year, month }) => {
@@ -89,6 +98,19 @@ export default function DiaryPage() {
         {/* 왼쪽 소개 */}
         <aside className="dp-intro">
           <div>
+            {fromMyPage && (
+              <button
+                type="button"
+                className="rm-icon-btn dy-back"
+                aria-label="마이페이지로 돌아가기"
+                onClick={() => navigate(`/mypage?tab=${backTab}`)}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M19 12H5M11 6l-6 6 6 6" />
+                </svg>
+              </button>
+            )}
             <h1 className="dp-title">MY DIARY</h1>
             <p className="dp-lead">날짜를 눌러 오늘의 마음을 남겨보세요.</p>
           </div>
@@ -115,7 +137,36 @@ export default function DiaryPage() {
             <p className="dp-stat__hint">하루 한 줄도 충분해요.</p>
           </div>
 
-          <p className="dp-foot">오늘의 한 점이 내일의 추억이 되도록.</p>
+          {/* 펫 온기: 전체(최종 단계 5,000)까지 얼마나 찼는지 + 단계 기준선 */}
+          <div className="dp-warmth">
+            <div className="dp-warmth__top">
+              <span className="dp-warmth__label">지금의 나 : <strong>{stage.name}</strong></span>
+              <span className="dp-warmth__num">
+                {pet.energy.toLocaleString()} / {MAX_WARMTH.toLocaleString()}
+              </span>
+            </div>
+            <div className="dp-warmth__bar" aria-hidden="true">
+              <div
+                className="dp-warmth__fill"
+                style={{ width: `${Math.min(100, (pet.energy / MAX_WARMTH) * 100)}%` }}
+              />
+              {/* 단계 기준선 (1단계 0은 시작점이라 생략) */}
+              {PET_STAGES.slice(1, -1).map((s) => (
+                <span key={s.stage} className="dp-warmth__tick" style={{ left: `${(s.minEnergy / MAX_WARMTH) * 100}%` }} />
+              ))}
+            </div>
+            <div className="dp-warmth__marks">
+              {PET_STAGES.slice(1).map((s) => (
+                <span
+                  key={s.stage}
+                  className={`dp-warmth__mark ${pet.energy >= s.minEnergy ? 'is-reached' : ''}`}
+                  style={{ left: `${(s.minEnergy / MAX_WARMTH) * 100}%` }}
+                >
+                  {s.minEnergy.toLocaleString()}
+                </span>
+              ))}
+            </div>
+          </div>
         </aside>
 
         {/* 오른쪽 달력 카드 */}

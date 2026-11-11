@@ -1,0 +1,131 @@
+/* 탐색 화면. 색·글꼴 변수(--rm-*)는 roadmap.css의 .roadmap-page에서 가져온다. */
+.explore-page {
+  overflow-y: auto; /* 로드맵과 달리 목록은 세로로 스크롤 */
+}
+.ex-main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 120px 32px 64px;
+}
+.ex-head {
+  margin-bottom: 32px;
+}
+.ex-title {
+  margin: 4px 0 6px;
+  font-size: 34px;
+  font-weight: 800;
+}
+.ex-sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px;
+  align-items: start;
+}
+.ex-section__title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 16px;
+  font-size: 20px;
+  font-weight: 800;
+}
+.ex-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ex-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 24px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #f8f8f8, #ececec);
+  box-shadow: var(--rm-shadow);
+}
+.ex-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.ex-tag,
+.ex-interest {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--rm-field);
+  font-size: 11px;
+  font-weight: 800;
+  color: #555;
+}
+.ex-interest {
+  background: var(--rm-accent);
+}
+.ex-card__title {
+  color: var(--rm-text);
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.4;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.ex-card__title:hover {
+  text-decoration: underline;
+}
+.ex-card__sub {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rm-muted);
+}
+.ex-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+.ex-add {
+  padding: 9px 16px;
+  border: none;
+  border-radius: 18px;
+  background: var(--rm-text);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+.ex-add:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.ex-added {
+  font-size: 13px;
+  font-weight: 800;
+  color: #555;
+}
+.ex-link {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--rm-text);
+}
+.ex-error {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e5484d;
+}
+.explore-page a:focus-visible,
+.ex-add:focus-visible {
+  outline: 2px solid var(--rm-text);
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .ex-main {
+    padding: 110px 16px 48px;
+  }
+  .ex-sections {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
