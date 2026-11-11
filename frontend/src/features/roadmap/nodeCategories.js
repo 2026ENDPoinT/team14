@@ -1,4 +1,6 @@
 import { EXPERIENCE_GROUPS } from '../onboarding/onboardingOptions.js'
+import { curriculum } from '../onboarding/courseRecommendationSlot.js'
+import { isCourse, themeLabel } from './layout.js'
 
 // ADD NODE의 NODE TYPE(카테고리)·DETAIL TYPE(세부 활동)
 // - 화면에는 온보딩 경험 대분류 이름을 그대로 보여 주고, 세부 활동은 온보딩 48개 목록을 그대로 읽어 쓴다. (복사하지 않음)
@@ -35,6 +37,7 @@ export const BASE_CATEGORIES = [
     theme: GROUP_THEME[group.id] ?? 'free',
     details: group.items.map((item) => ({
       id: item.id,
+      dbKey: item.dbKey, // 온보딩 DB 경험 키 (있는 항목만)
       title: item.title,
       theme: ITEM_THEME[item.id] ?? GROUP_THEME[group.id] ?? 'free',
     })),
@@ -59,8 +62,56 @@ const THEME_CATEGORY = {
   free: 'free',
 }
 
-// 노드의 현재 카테고리 id: 세션에서 고른 값(categoryId)이 있으면 그것, 없으면 theme으로 추정
+// 온보딩 경험 노드: originKey 'experience:<경험 키>' → 카테고리·세부 활동 (제목은 보지 않는다)
+// 경험 키는 온보딩 DB 키(dbKey) 또는 화면 항목 id (EXPERIENCE_GROUPS와 같은 정의)
+// ※ 지금 온보딩 RPC는 경험 노드에 origin_key를 저장하지 않는다 → RPC 변경 후 동작 (그 전에는 theme 기준)
+export function experienceOf(node) {
+  if (!node.originKey?.startsWith('experience:')) return null
+  const key = node.originKey.slice('experience:'.length)
+  for (const category of BASE_CATEGORIES) {
+    const detail = category.details.find((d) => d.dbKey === key || d.id === key)
+    if (detail) return { categoryId: category.id, detailId: detail.id, label: category.label }
+  }
+  return null
+}
+
+// 노드의 현재 카테고리 id
+// 우선순위: 세션에서 고른 값(categoryId) → 온보딩 경험 키(originKey) → theme에 맞는 기본 카테고리
 export function nodeCategoryId(node, categories) {
   if (node.categoryId && categories.some((c) => c.id === node.categoryId)) return node.categoryId
-  return THEME_CATEGORY[node.theme] ?? 'free'
+  return experienceOf(node)?.categoryId ?? THEME_CATEGORY[node.theme] ?? 'free'
+}
+
+// 노드의 현재 세부 활동 id (모르면 null — 임의로 고르지 않는다)
+// 사용자가 카테고리를 직접 고른 적이 있으면 그 선택을 따르고, 아니면 온보딩 경험 키
+export function nodeDetailId(node) {
+  if (node.categoryId) return node.detailId ?? null
+  return experienceOf(node)?.detailId ?? null
+}
+
+// 카드에 보일 종류 이름: 고른 카테고리 → 온보딩 경험의 카테고리 → theme 이름
+export function nodeKindLabel(node) {
+  return node.categoryLabel ?? experienceOf(node)?.label ?? themeLabel(node.theme)
+}
+
+// ───── 전공·학업: 교과목 선택 (COURSE) ─────
+// 온보딩과 같은 교과과정 데이터·과목 키(curriculum.courses)를 쓴다. 데이터가 비어 있으면 빈 목록.
+// 공식 교육과정 순서(1-1 → 4-2)로, 같은 학기 안에서는 데이터 순서 그대로. 화면을 그릴 때마다 읽어서
+// 4번 담당 데이터가 연결되면 자동으로 목록이 나타난다.
+export function courseOptions() {
+  return curriculum.courses
+    .map((course, index) => ({ course, index }))
+    .sort((a, b) => a.course.year - b.course.year || a.course.semester - b.course.semester || a.index - b.index)
+    .map(({ course }) => course)
+}
+
+// 노드에 연결된 교과목 키: 직접 고른 값(courseKey, 세션 전용) → 온보딩 교과목 노드의 originKey 'course:<키>'
+export function nodeCourseKey(node) {
+  if (node.courseKey) return node.courseKey
+  return isCourse(node) ? node.originKey.slice('course:'.length) : null
+}
+
+// 실제 교과목과 연결된 노드인지 (D-DAY를 쓰지 않는다)
+export function isCourseLinked(node) {
+  return isCourse(node) || Boolean(node.courseKey)
 }

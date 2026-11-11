@@ -15,6 +15,7 @@ const DEFAULT_CATEGORY = 'project'
 export default function AddNodeModal({ open, periods, onClose, onCreate, customCategories, onAddCustomCategory }) {
   const [categoryId, setCategoryId] = useState(DEFAULT_CATEGORY)
   const [detailId, setDetailId] = useState(null)
+  const [courseKey, setCourseKey] = useState(null) // 전공·학업에서 고른 교과목 키 (교과과정 데이터 key)
   const [title, setTitle] = useState('')
   const [autoTitle, setAutoTitle] = useState('') // 세부 활동으로 자동 입력한 제목 (사용자가 고치지 않았는지 확인용)
   const [destination, setDestination] = useState(INBOX)
@@ -30,6 +31,7 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
     if (open) {
       setCategoryId(DEFAULT_CATEGORY)
       setDetailId(null)
+      setCourseKey(null)
       setTitle('')
       setAutoTitle('')
       setDestination(INBOX)
@@ -48,7 +50,20 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
     if (id === categoryId) return
     setCategoryId(id)
     setDetailId(null)
+    setCourseKey(null)
     clearAutoTitle()
+  }
+
+  // 교과목: 하나만, 다시 누르면 해제. 고르면 NODE NAME에 과목명 자동 입력 (세부 활동과 같은 규칙)
+  const selectCourse = (course) => {
+    if (course.key === courseKey) {
+      setCourseKey(null)
+      clearAutoTitle()
+      return
+    }
+    setCourseKey(course.key)
+    setTitle(course.title)
+    setAutoTitle(course.title)
   }
 
   // 세부 활동: 하나만, 다시 누르면 해제. 고르면 NODE NAME 자동 입력
@@ -80,6 +95,7 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
       categoryId: category.id,
       detailId: detail?.id ?? null,
       categoryLabel: category.label,
+      courseKey: category.id === 'major' ? courseKey : null, // 연결한 교과목 (세션 전용)
     })
   }
 
@@ -106,6 +122,8 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
           onSelectDetail={selectDetail}
           onAddCategory={addCategory}
           resetKey={open}
+          courseKey={courseKey}
+          onSelectCourse={selectCourse}
           customNote="직접 추가한 종류는 아직 서버에 저장되지 않아요. 내부 분류는 ‘자유 노드’로 정해지고, 새로고침하면 이 종류는 목록에서 사라져요."
         />
 

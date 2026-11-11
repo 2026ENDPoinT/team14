@@ -14,6 +14,7 @@ export default function CardNode({ data }) {
   const isTarget = target?.id === node.id
   const linkClass = [
     isTarget ? `is-link-target ${target.valid ? 'is-valid' : 'is-invalid'}` : '',
+    isTarget && target.drop ? 'is-drop' : '', // 일반 드래그 연결 후보: 은은한 강조
     connectMode ? 'nodrag' : '', // CONNECT 모드: 카드를 끌면 이동 대신 관계선 그리기 (클릭은 그대로)
   ].join(' ')
   return (

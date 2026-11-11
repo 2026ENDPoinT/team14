@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react'
 import Modal from './Modal.jsx'
-import { ClipIcon, CloseIcon, SaveIcon, TrashIcon } from './icons.jsx'
-import { BRANCH_OPTIONS } from './branchLines.js'
-import { BASE_CATEGORIES, nodeCategoryId } from './nodeCategories.js'
+import { ClipIcon, CloseIcon, TrashIcon } from './icons.jsx'
+import { BASE_CATEGORIES, courseOptions, nodeCategoryId, nodeCourseKey, nodeDetailId } from './nodeCategories.js'
+import { isCourse } from './layout.js'
 import CategoryPicker from './CategoryPicker.jsx'
+import { ddayInfo } from './dday.js'
 
 // 노드 상세 창. 노드를 클릭했을 때만 열린다.
 // node가 null이 되어도 닫힘 애니메이션 동안 마지막 노드를 보여 준다.
-// branch: 학기 가지선 설정 { value, autoVisible } / onBranchChange: 바로 반영 (저장 버튼과 무관)
+// 학기 가지선은 자동 규칙으로만 그린다 (설정 UI 없음, branchLines.js)
+// DUE DATE: 실제 교과목 노드(originKey 'course:...')에는 보이지 않는다
 // NODE TYPE: 현재 종류를 누르면 ADD NODE와 같은 카테고리·세부 활동 칩이 펼쳐진다. 저장 버튼을 누르면 반영.
 //   종류를 바꿔도 제목은 바꾸지 않는다. 직접 추가한 종류는 customCategories (페이지 공용)
 export default function NodeDetailModal({
-  node, body, connections, branch, onBranchChange, onClose, onSave, onDelete, onOpenNode, customCategories, onAddCustomCategory,
+  node, body, connections, onClose, onSave, onDelete, onOpenNode, customCategories, onAddCustomCategory,
 }) {
   const [shown, setShown] = useState(node)
   const [title, setTitle] = useState('')
@@ -21,10 +23,16 @@ export default function NodeDetailModal({
   const [detailId, setDetailId] = useState(null)
   const [typeOpen, setTypeOpen] = useState(false) // 종류 선택 칩 펼침
   const [typeChanged, setTypeChanged] = useState(false) // 사용자가 종류를 바꿨는지 (안 바꾸면 theme 그대로)
+  const [dueDate, setDueDate] = useState('') // 목표일·마감일 'YYYY-MM-DD' (빈 값 = 없음)
+  const [courseKey, setCourseKey] = useState(null) // 전공·학업에서 연결한 교과목 키
 
   const categories = [...BASE_CATEGORIES, ...customCategories]
   const category = categories.find((c) => c.id === categoryId) ?? categories[0]
   const detail = category.details.find((d) => d.id === detailId) ?? null
+  const course = category.id === 'major' && courseKey ? courseOptions().find((c) => c.key === courseKey) ?? null : null
+  // 실제 교과목이거나 교과목을 연결한(또는 지금 고른) 노드는 D-DAY를 다루지 않는다
+  // (온보딩 교과목은 originKey 기준, 직접 만든 노드는 지금 고른 과목 기준)
+  const noDueDate = shown ? isCourse(shown) || (category.id === 'major' && Boolean(courseKey)) : false
 
   // 다른 노드를 열 때만 입력값을 새로 채운다 (저장 후에는 그대로 유지)
   useEffect(() => {
@@ -34,9 +42,11 @@ export default function NodeDetailModal({
     setRecord(body)
     setSaved(false)
     setCategoryId(nodeCategoryId(node, categories))
-    setDetailId(node.detailId ?? null)
+    setDetailId(nodeDetailId(node))
     setTypeOpen(false)
     setTypeChanged(false)
+    setDueDate(node.dueDate ?? '')
+    setCourseKey(nodeCourseKey(node))
   }, [node?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 카테고리 변경: 세부 활동 선택만 해제 (제목은 그대로)
@@ -44,6 +54,20 @@ export default function NodeDetailModal({
     if (id === categoryId) return
     setCategoryId(id)
     setDetailId(null)
+    if (!isCourse(shown)) setCourseKey(null) // 온보딩 교과목의 과목 연결(originKey)은 바뀌지 않는다
+    setTypeChanged(true)
+    setSaved(false)
+  }
+  // 교과목: 하나만, 다시 누르면 해제
+  // 새 과목을 직접 고르거나 다른 과목으로 바꾸면 제목 입력칸에 과목명을 넣는다 (해제할 때는 제목 그대로)
+  // 입력칸만 바뀌고, 저장 버튼을 눌러야 노드에 반영된다. 제목을 다시 고쳐도 과목 연결(courseKey)은 그대로
+  const selectCourse = (item) => {
+    if (item.key === courseKey) {
+      setCourseKey(null)
+    } else {
+      setCourseKey(item.key)
+      setTitle(item.title)
+    }
     setTypeChanged(true)
     setSaved(false)
   }
@@ -57,10 +81,19 @@ export default function NodeDetailModal({
   const handleSave = () => {
     if (!title.trim()) return
     // 종류를 바꿨을 때만 함께 보낸다. theme은 기존 7개 중 하나, 나머지는 세션 전용 값
+    // courseKey: 직접 만든 노드에만 (온보딩 교과목은 originKey로 이미 연결돼 있어 건드리지 않음)
     const type = typeChanged
-      ? { theme: detail?.theme ?? category.theme, categoryId: category.id, detailId: detail?.id ?? null, categoryLabel: category.label }
+      ? {
+          theme: detail?.theme ?? category.theme,
+          categoryId: category.id,
+          detailId: detail?.id ?? null,
+          categoryLabel: category.label,
+          ...(isCourse(shown) ? {} : { courseKey: category.id === 'major' ? courseKey : null }),
+        }
       : undefined
-    onSave(shown.id, { title: title.trim(), body: record, type })
+    // 교과목(연결 포함)은 날짜를 다루지 않으므로 보내지 않는다 (기존 값은 그대로 둔다)
+    const due = noDueDate ? undefined : dueDate || null
+    onSave(shown.id, { title: title.trim(), body: record, type, dueDate: due })
     setTypeChanged(false)
     setSaved(true)
   }
@@ -79,8 +112,8 @@ export default function NodeDetailModal({
             <p className="rm-eyebrow">NODE DETAILS</p>
             <div className="rm-modal__actions">
               {saved && <span className="rm-saved">저장됨</span>}
-              <button type="button" className="rm-icon-btn" aria-label="저장" onClick={handleSave}>
-                <SaveIcon />
+              <button type="button" className="rm-save-btn" onClick={handleSave}>
+                저장
               </button>
               <button type="button" className="rm-icon-btn" aria-label="삭제" onClick={handleDelete}>
                 <TrashIcon />
@@ -111,6 +144,9 @@ export default function NodeDetailModal({
                 resetKey={shown.id}
                 customNote="직접 추가한 종류는 아직 서버에 저장되지 않아 새로고침하면 목록에서 사라져요."
                 emptyDetailNote="세부 활동이 없는 종류예요."
+                courseKey={courseKey}
+                onSelectCourse={selectCourse}
+                courseLocked={isCourse(shown)}
               />
               <p className="rm-field-note rm-type-note">
                 저장 버튼을 누르면 종류가 바뀌어요. 제목은 바뀌지 않아요. 카테고리 이름·세부 활동은 아직 서버에 저장할 곳이 없어 지금 화면에서만 유지돼요.
@@ -126,10 +162,37 @@ export default function NodeDetailModal({
                 aria-expanded="false"
                 onClick={() => setTypeOpen(true)}
               >
-                <span>{category.label}{detail ? ` · ${detail.title}` : ''}</span>
+                <span>{category.label}{detail ? ` · ${detail.title}` : ''}{course ? ` · ${course.title}` : ''}</span>
                 <span className="rm-type-current__edit">변경</span>
               </button>
             </div>
+          )}
+
+          {/* 목표일·마감일 (선택). 저장 버튼을 눌러야 반영. 실제 교과목에는 표시하지 않음 */}
+          {!noDueDate && (
+          <div className="rm-field">
+            <span className="rm-eyebrow" id="detail-node-due">DUE DATE (OPTIONAL)</span>
+            <div className="rm-due">
+              <input
+                type="date"
+                className="rm-input rm-due__input"
+                aria-labelledby="detail-node-due"
+                value={dueDate}
+                onChange={(e) => { setDueDate(e.target.value); setSaved(false) }}
+              />
+              {dueDate && (
+                <>
+                  <span className={`rm-dday is-${ddayInfo(dueDate).tone} is-inline`}>{ddayInfo(dueDate).label}</span>
+                  <button type="button" className="rm-due__clear" onClick={() => { setDueDate(''); setSaved(false) }}>
+                    날짜 삭제
+                  </button>
+                </>
+              )}
+            </div>
+            <p className="rm-field-note">
+              한국 시간 기준으로 D-DAY를 표시해요. 날짜가 지나도 자동으로 완료되거나 삭제되지 않아요. 지금은 이 화면에서만 유지되고 아직 서버에 저장되지 않아요.
+            </p>
+          </div>
           )}
 
           <label className="rm-field">
@@ -160,28 +223,6 @@ export default function NodeDetailModal({
                 </button>
               ))}
             </div>
-          </div>
-          {/* 학기 가지선: 타임라인에서 이 노드로 이어지는 선 */}
-          <div className="rm-field">
-            <span className="rm-eyebrow">TIMELINE LINE</span>
-            <div className="rm-segment" role="group" aria-label="학기 가지선 표시">
-              {BRANCH_OPTIONS.map((o) => (
-                <button
-                  key={o.label}
-                  type="button"
-                  className={branch?.value === o.value ? 'is-active' : ''}
-                  aria-pressed={branch?.value === o.value}
-                  onClick={() => onBranchChange(shown.id, o.value)}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
-            <span className="rm-muted">
-              {branch?.value == null
-                ? `자동: 다른 노드에서 들어오는 관계선이 ${branch?.autoVisible ? '없어 가지선을 표시해요.' : '있어 가지선을 숨겨요.'}`
-                : '직접 정한 설정이 자동 규칙보다 우선해요.'}
-            </span>
           </div>
         </div>
       )}

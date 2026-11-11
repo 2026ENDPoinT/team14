@@ -35,9 +35,11 @@ export function canSitOnLine(node) {
 }
 
 // 지금 타임라인 선 위에 놓여 있는지: 카드 윗변이 선보다 위 (선 아래 노드는 윗변이 선 + 16px 아래부터)
-// 따로 저장하는 값 없이 위치(position)로만 판단한다
+// 따로 저장하는 값 없이 위치(position)로만 판단한다.
+// 선 위에는 canSitOnLine 노드만 놓을 수 있으므로(placeNode) 종류는 다시 보지 않는다.
+// → 선 위의 전공·학업 노드를 다른 종류로 바꿔도, 선 위에 있는 동안은 작은 카드 그대로 (선 아래로 옮기면 일반 카드)
 export function isOnLine(node) {
-  return canSitOnLine(node) && node.status === 'placed' && Boolean(node.position) && node.position.y < TIMELINE_Y
+  return node.status === 'placed' && Boolean(node.position) && node.position.y < TIMELINE_Y
 }
 
 // 작은 카드(제목만)로 보여 줄지: 교과목은 항상, 전공·학업 노드는 선 위에 있을 때만
@@ -225,7 +227,8 @@ const SWAP_INSET = 8 // 끄는 카드의 중심이 대상 카드 안쪽(가장�
 
 // 노드를 topLeft(캔버스 좌표)에 놓으면 자리를 바꿀 타임라인 위 카드. 없으면 null
 // - 선 위에 놓일 수 있는 노드(교과목·전공·학업)를 선 근처에 놓았을 때만
-export function findSwapTarget(node, topLeft, nodes, layout) {
+// canSwapWith: 자리 교환 대상이 될 수 있는 노드인지 (필터로 숨긴 노드는 제외)
+export function findSwapTarget(node, topLeft, nodes, layout, canSwapWith = () => true) {
   if (!canSitOnLine(node)) return null
   const { w, h } = cardSize(node)
   const cx = topLeft.x + w / 2
@@ -233,7 +236,7 @@ export function findSwapTarget(node, topLeft, nodes, layout) {
   if (cy > TIMELINE_Y + SNAP) return null
   return (
     nodes.find((n) => {
-      if (n.id === node.id || !isOnLine(n)) return false
+      if (n.id === node.id || !isOnLine(n) || !canSwapWith(n)) return false
       const b = nodeBox(n, layout)
       return b && cx > b.x + SWAP_INSET && cx < b.x + b.w - SWAP_INSET && cy > b.y + SWAP_INSET && cy < b.y + b.h - SWAP_INSET
     }) ?? null
@@ -245,8 +248,9 @@ export function findSwapTarget(node, topLeft, nodes, layout) {
 // ② 다른 학기·선 아래에서 가져와 선 위 카드 B에 놓음: 끈 노드가 B 자리를 차지하고, B는 같은 선의 가장 가까운 빈자리로
 // ③ 그 밖: placeNode (가까운 빈자리, 학기 자동 확장)
 // 바뀌는 값은 periodId·position뿐 (완료 상태·연결선·기록은 노드 id 기준이라 그대로)
-export function planDrop(node, topLeft, nodes, layout) {
-  const target = findSwapTarget(node, topLeft, nodes, layout)
+// nodes: 빈자리 계산은 항상 전체 노드 기준 (필터로 숨긴 노드도 자리를 차지한다)
+export function planDrop(node, topLeft, nodes, layout, canSwapWith) {
+  const target = findSwapTarget(node, topLeft, nodes, layout, canSwapWith)
   if (!target) {
     const placement = placeNode(node, topLeft, nodes, layout)
     return placement ? [{ id: node.id, ...placement }] : null

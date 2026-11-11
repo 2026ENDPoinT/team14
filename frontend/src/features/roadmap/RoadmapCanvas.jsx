@@ -11,6 +11,7 @@ import useLinkDrag from './useLinkDrag.js'
 import useWheelZoom from './useWheelZoom.js'
 import { TrashIcon } from './icons.jsx'
 import { routeBetween, routeEdges, routeToPoint } from './edgeRouting.js'
+import { linkProblem } from './edgeRules.js'
 import { CANVAS_HEIGHT, cardSize, findPeriodAt, findSwapTarget, initialViewport, nodeBox, planDrop } from './layout.js'
 
 // React Flow에 등록할 노드·연결선 종류 (컴포넌트 밖에 두어야 매번 새로 만들지 않는다)
@@ -19,6 +20,7 @@ const edgeTypes = { roadmap: RoadmapEdge }
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 1.6
 const CLICK_DISTANCE = 4 // 이 거리(px) 이하로 움직이면 클릭으로 판정
+const DROP_INSET = 8 // 일반 드래그 연결: 끄는 노드의 중심이 대상 카드 안쪽(가장자리 8px 제외)에 들어가야 연결 후보
 
 // 마우스·터치 이벤트의 화면 좌표
 function pointOf(event) {
@@ -36,7 +38,9 @@ function boxAt(position, node) {
 // - 데이터는 학기(periodId) 기준 상대 좌표, 화면에는 캔버스 좌표로 바꿔서 그린다. (layout.js nodeBox)
 // - 빈 공간 드래그·휠·두 손가락 스크롤: 이동 / 핀치·Ctrl(⌘)+휠: 확대·축소 / 노드 드래그: 위치 이동·학기 재배정
 // - 타임라인 위 카드(교과목·전공·학업)를 다른 선 위 카드에 놓으면: 자리 교환 (layout.js planDrop)
-// - 관계선은 CONNECT 모드에서만 만든다: 카드 몸통이나 오른쪽 핸들을 끌어 다른 노드에 놓기
+// - 관계선: 일반 모드에서 노드를 다른 노드 위에 놓기 / CONNECT 모드에서 카드 몸통이나 오른쪽 핸들을 끌어 놓기
+// - 일반 드롭 판정 순서: ① 휴지통 → 삭제 ② 타임라인 위 카드끼리 → 자리 교환 ③ 다른 카드 위 → 관계선 ④ 빈 곳 → 이동
+// - 종류 필터(visibleIds): 화면에 그리는 카드·관계선만 거른다. 학기 구조·빈자리 계산·가지선 자동 규칙은 전체 데이터 기준
 // - 왼쪽 아래 휴지통: 노드를 끌어 휴지통 위에서 놓으면 삭제 (화면에 고정된 휴지통의 실제 영역과 마우스 위치로 판정)
 // - layout: 학기별 x·너비 (layout.js computeLayout). 데이터가 바뀔 때만 다시 계산되므로
 //   드래그하는 동안에는 학기 경계가 고정되고, 놓은 뒤에 필요한 만큼만 학기가 넓어진다.
@@ -44,6 +48,7 @@ export default function RoadmapCanvas({
   layout, nodes, edges, getSubtitle, onNodeClick, onNodesMove, onNodeDelete, onEdgeDelete, onToggleComplete,
   dropPeriodId, onDropTargetChange, // 드래그 중 강조할 학기 (보관함 드래그와 함께 쓰려고 페이지에서 관리)
   connectMode, onEdgeCreate, onEdgeReconnect, onLinkReject, // 관계선 만들기·끝점 옮기기
+  visibleIds = null, // 종류 필터로 보이는 노드 id (Set). null이면 전체
 }) {
   const width = layout.width + 200
 
@@ -54,6 +59,7 @@ export default function RoadmapCanvas({
   useWheelZoom(wrapRef, { minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM, extent })
   const [draggingId, setDraggingId] = useState(null) // 끌고 있는 노드 (연결선 애니메이션 끔, 가지선 잠시 숨김)
   const [swapId, setSwapId] = useState(null) // 드래그 중 자리를 바꿀 타임라인 위 카드
+  const [dropLink, setDropLink] = useState(null) // 드래그 중 연결 후보 { id, valid, problem }
   const trashRef = useRef(null)
   const [overTrash, setOverTrash] = useState(false) // 드래그 중인 노드가 휴지통 위에 있는지
   const draggedRef = useRef(false) // 드래그 직후의 클릭은 무시하기 위한 표시
@@ -83,7 +89,7 @@ export default function RoadmapCanvas({
     }
 
     const cards = nodes
-      .filter((n) => n.status === 'placed')
+      .filter((n) => n.status === 'placed' && (!visibleIds || visibleIds.has(n.id)))
       .map((n) => {
         const box = nodeBox(n, layout)
         if (!box) return null
@@ -98,7 +104,7 @@ export default function RoadmapCanvas({
       .filter(Boolean)
 
     return [background, ...cards]
-  }, [nodes, layout, width, getSubtitle, handleCardClick, onToggleComplete])
+  }, [nodes, layout, width, getSubtitle, handleCardClick, onToggleComplete, visibleIds])
 
   // React Flow가 드래그 위치·크기 측정값을 기록할 수 있도록 노드를 상태로 관리한다.
   // 데이터가 바뀌면 다시 만들되, 이미 측정한 크기(measured)는 이어서 쓴다.
@@ -122,8 +128,16 @@ export default function RoadmapCanvas({
   )
   const liveBoxes = useMemo(() => new Map(liveCards.map((c) => [c.node.id, c.box])), [liveCards])
 
+  // 필터: 양 끝 노드가 모두 보이는 관계선만 그린다 (데이터는 그대로)
+  const shownEdges = useMemo(
+    () => (visibleIds ? edges.filter((e) => visibleIds.has(e.sourceNodeId) && visibleIds.has(e.targetNodeId)) : edges),
+    [edges, visibleIds],
+  )
+  // 숨긴 노드와는 자리 교환하지 않는다
+  const canSwapWith = useCallback((n) => !visibleIds || visibleIds.has(n.id), [visibleIds])
+
   // 노드 관계선 경로 (위·아래·오른쪽 중 알맞은 접점, 카드 관통 피하기, 접점 나누기)
-  const routes = useMemo(() => routeEdges(edges, liveBoxes), [edges, liveBoxes])
+  const routes = useMemo(() => routeEdges(shownEdges, liveBoxes), [shownEdges, liveBoxes])
   // 학기 가지선 (끌고 있는 노드는 놓을 때까지 잠시 숨김)
   const branches = useMemo(
     () => computeBranches(liveCards.filter((c) => c.node.id !== draggingId), edges, layout),
@@ -137,6 +151,25 @@ export default function RoadmapCanvas({
     if (!point || !rect) return false
     return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom
   }, [])
+
+  // 끄는 노드 중심이 다른 카드 안쪽에 들어갔는지 (연결 후보)
+  // 캔버스 좌표로 비교하므로 확대·축소·화면 이동과 상관없다. liveBoxes는 화면에 그려진 카드만이라 필터로 숨긴 노드는 제외
+  const findDropLink = useCallback(
+    (flowNode) => {
+      const me = boxAt(flowNode.position, flowNode.data.node)
+      const cx = me.x + me.w / 2
+      const cy = me.y + me.h / 2
+      for (const [id, b] of liveBoxes) {
+        if (id === flowNode.id) continue
+        if (cx > b.x + DROP_INSET && cx < b.x + b.w - DROP_INSET && cy > b.y + DROP_INSET && cy < b.y + b.h - DROP_INSET) {
+          const problem = linkProblem(edges, flowNode.id, id) // 자기 자신·중복(방향 무관) 검사
+          return { id, valid: !problem, problem }
+        }
+      }
+      return null
+    },
+    [liveBoxes, edges],
+  )
 
   const onNodeDragStart = useCallback((event, flowNode) => {
     dragStartRef.current = { x: event.clientX, y: event.clientY }
@@ -156,15 +189,23 @@ export default function RoadmapCanvas({
       setOverTrash(inTrash)
       if (inTrash) {
         setSwapId(null)
+        setDropLink(null)
         onDropTargetChange(null)
         return
       }
-      const swap = findSwapTarget(flowNode.data.node, flowNode.position, nodes, layout)
+      const swap = findSwapTarget(flowNode.data.node, flowNode.position, nodes, layout, canSwapWith)
       setSwapId(swap?.id ?? null)
+      // 자리 교환 대상이 없고, 다른 카드 위면 연결 후보 강조 (학기 강조는 끈다)
+      const candidate = swap ? null : findDropLink(flowNode)
+      setDropLink((prev) => (prev?.id === candidate?.id && prev?.valid === candidate?.valid ? prev : candidate))
+      if (candidate) {
+        onDropTargetChange(null)
+        return
+      }
       const { x, y, w, h } = boxAt(flowNode.position, flowNode.data.node)
       onDropTargetChange(findPeriodAt(x + w / 2, y + h / 2, layout)?.id ?? null)
     },
-    [nodes, layout, onDropTargetChange, isOverTrash],
+    [nodes, layout, onDropTargetChange, isOverTrash, canSwapWith, findDropLink],
   )
 
   // 드롭: 휴지통 위면 삭제 / 아니면 자리 교환 또는 학기 판정 → 겹침 보정 → periodId와 상대 좌표 저장 (layout.js planDrop)
@@ -174,19 +215,31 @@ export default function RoadmapCanvas({
       onDropTargetChange(null)
       setDraggingId(null)
       setSwapId(null)
+      setDropLink(null)
       setOverTrash(false)
+      // ① 휴지통
       if (isOverTrash(event)) {
         onNodeDelete(flowNode.id)
         return
       }
-      const moves = planDrop(flowNode.data.node, flowNode.position, nodes, layout)
+      // ③ 다른 카드 위 → 관계선 (② 자리 교환 대상이 있으면 planDrop이 처리). 클릭·손떨림(4px 이하)은 제외
+      const swap = findSwapTarget(flowNode.data.node, flowNode.position, nodes, layout, canSwapWith)
+      const candidate = !swap && draggedRef.current ? findDropLink(flowNode) : null
+      if (candidate) {
+        if (candidate.valid) onEdgeCreate(flowNode.id, candidate.id)
+        else onLinkReject(candidate.problem)
+        setResetKey((k) => k + 1) // 끈 노드는 원래 자리로 (두 노드 위치는 그대로)
+        return
+      }
+      // ②·④ 자리 교환 또는 이동
+      const moves = planDrop(flowNode.data.node, flowNode.position, nodes, layout, canSwapWith)
       if (!moves) {
         setResetKey((k) => k + 1) // 학기 영역 밖이거나 빈 자리가 없음 → 원래 자리로
         return
       }
       onNodesMove(moves)
     },
-    [nodes, layout, onNodesMove, onNodeDelete, onDropTargetChange, isOverTrash],
+    [nodes, layout, onNodesMove, onNodeDelete, onDropTargetChange, isOverTrash, canSwapWith, findDropLink, onEdgeCreate, onLinkReject],
   )
 
   // ───── 관계선 만들기(CONNECT 핸들)·끝점 옮기기 ─────
@@ -213,10 +266,12 @@ export default function RoadmapCanvas({
     [startLink],
   )
   // 카드 강조: 관계선을 끄는 중이면 그 대상, 노드를 끄는 중이면 자리 교환 대상 (swap: '자리 바꾸기' 안내 표시)
-  const linkTarget = link?.target ?? (swapId ? { id: swapId, valid: true, swap: true } : null)
+  // drop: 일반 드래그 연결 후보 (은은한 강조)
+  const linkTarget = link?.target
+    ?? (swapId ? { id: swapId, valid: true, swap: true } : dropLink ? { id: dropLink.id, valid: dropLink.valid, drop: true } : null)
   const linkValue = useMemo(
     () => ({ connectMode, startConnect, startConnectDrag, target: linkTarget }),
-    [connectMode, startConnect, startConnectDrag, linkTarget?.id, linkTarget?.valid, linkTarget?.swap], // eslint-disable-line react-hooks/exhaustive-deps
+    [connectMode, startConnect, startConnectDrag, linkTarget?.id, linkTarget?.valid, linkTarget?.swap, linkTarget?.drop], // eslint-disable-line react-hooks/exhaustive-deps
   )
 
   // 드래그 중 미리보기 선: 연결할 수 있는 노드 위에서는 실제로 그려질 경로 그대로
@@ -236,7 +291,7 @@ export default function RoadmapCanvas({
 
   const flowEdges = useMemo(
     () =>
-      edges.map((e) => ({
+      shownEdges.map((e) => ({
         id: e.id,
         source: e.sourceNodeId,
         target: e.targetNodeId,
@@ -250,7 +305,7 @@ export default function RoadmapCanvas({
           onStartReconnect: (event, end) => startReconnect(event, e, end),
         },
       })),
-    [edges, routes, onEdgeDelete, startReconnect, link?.edgeId],
+    [shownEdges, routes, onEdgeDelete, startReconnect, link?.edgeId],
   )
 
   const canvasClass = [
