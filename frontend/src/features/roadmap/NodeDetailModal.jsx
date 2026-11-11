@@ -2,15 +2,29 @@ import { useEffect, useState } from 'react'
 import Modal from './Modal.jsx'
 import { ClipIcon, CloseIcon, SaveIcon, TrashIcon } from './icons.jsx'
 import { BRANCH_OPTIONS } from './branchLines.js'
+import { BASE_CATEGORIES, nodeCategoryId } from './nodeCategories.js'
+import CategoryPicker from './CategoryPicker.jsx'
 
 // 노드 상세 창. 노드를 클릭했을 때만 열린다.
 // node가 null이 되어도 닫힘 애니메이션 동안 마지막 노드를 보여 준다.
 // branch: 학기 가지선 설정 { value, autoVisible } / onBranchChange: 바로 반영 (저장 버튼과 무관)
-export default function NodeDetailModal({ node, body, connections, branch, onBranchChange, onClose, onSave, onDelete, onOpenNode }) {
+// NODE TYPE: 현재 종류를 누르면 ADD NODE와 같은 카테고리·세부 활동 칩이 펼쳐진다. 저장 버튼을 누르면 반영.
+//   종류를 바꿔도 제목은 바꾸지 않는다. 직접 추가한 종류는 customCategories (페이지 공용)
+export default function NodeDetailModal({
+  node, body, connections, branch, onBranchChange, onClose, onSave, onDelete, onOpenNode, customCategories, onAddCustomCategory,
+}) {
   const [shown, setShown] = useState(node)
   const [title, setTitle] = useState('')
   const [record, setRecord] = useState('')
   const [saved, setSaved] = useState(false)
+  const [categoryId, setCategoryId] = useState(null)
+  const [detailId, setDetailId] = useState(null)
+  const [typeOpen, setTypeOpen] = useState(false) // 종류 선택 칩 펼침
+  const [typeChanged, setTypeChanged] = useState(false) // 사용자가 종류를 바꿨는지 (안 바꾸면 theme 그대로)
+
+  const categories = [...BASE_CATEGORIES, ...customCategories]
+  const category = categories.find((c) => c.id === categoryId) ?? categories[0]
+  const detail = category.details.find((d) => d.id === detailId) ?? null
 
   // 다른 노드를 열 때만 입력값을 새로 채운다 (저장 후에는 그대로 유지)
   useEffect(() => {
@@ -19,11 +33,35 @@ export default function NodeDetailModal({ node, body, connections, branch, onBra
     setTitle(node.title)
     setRecord(body)
     setSaved(false)
+    setCategoryId(nodeCategoryId(node, categories))
+    setDetailId(node.detailId ?? null)
+    setTypeOpen(false)
+    setTypeChanged(false)
   }, [node?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 카테고리 변경: 세부 활동 선택만 해제 (제목은 그대로)
+  const selectCategory = (id) => {
+    if (id === categoryId) return
+    setCategoryId(id)
+    setDetailId(null)
+    setTypeChanged(true)
+    setSaved(false)
+  }
+  // 세부 활동: 하나만, 다시 누르면 해제 (제목은 그대로)
+  const selectDetail = (item) => {
+    setDetailId(item.id === detailId ? null : item.id)
+    setTypeChanged(true)
+    setSaved(false)
+  }
 
   const handleSave = () => {
     if (!title.trim()) return
-    onSave(shown.id, { title: title.trim(), body: record })
+    // 종류를 바꿨을 때만 함께 보낸다. theme은 기존 7개 중 하나, 나머지는 세션 전용 값
+    const type = typeChanged
+      ? { theme: detail?.theme ?? category.theme, categoryId: category.id, detailId: detail?.id ?? null, categoryLabel: category.label }
+      : undefined
+    onSave(shown.id, { title: title.trim(), body: record, type })
+    setTypeChanged(false)
     setSaved(true)
   }
 
@@ -59,6 +97,40 @@ export default function NodeDetailModal({ node, body, connections, branch, onBra
             aria-label="노드 이름"
             onChange={(e) => { setTitle(e.target.value); setSaved(false) }}
           />
+
+          {typeOpen ? (
+            <>
+              <CategoryPicker
+                idPrefix="detail-node"
+                categories={categories}
+                categoryId={category.id}
+                detailId={detailId}
+                onSelectCategory={selectCategory}
+                onSelectDetail={selectDetail}
+                onAddCategory={(name) => selectCategory(onAddCustomCategory(name))}
+                resetKey={shown.id}
+                customNote="직접 추가한 종류는 아직 서버에 저장되지 않아 새로고침하면 목록에서 사라져요."
+                emptyDetailNote="세부 활동이 없는 종류예요."
+              />
+              <p className="rm-field-note rm-type-note">
+                저장 버튼을 누르면 종류가 바뀌어요. 제목은 바뀌지 않아요. 카테고리 이름·세부 활동은 아직 서버에 저장할 곳이 없어 지금 화면에서만 유지돼요.
+              </p>
+            </>
+          ) : (
+            <div className="rm-field">
+              <span className="rm-eyebrow">NODE TYPE</span>
+              <button
+                type="button"
+                className="rm-type-current"
+                aria-label="노드 종류 바꾸기"
+                aria-expanded="false"
+                onClick={() => setTypeOpen(true)}
+              >
+                <span>{category.label}{detail ? ` · ${detail.title}` : ''}</span>
+                <span className="rm-type-current__edit">변경</span>
+              </button>
+            </div>
+          )}
 
           <label className="rm-field">
             <span className="rm-eyebrow">MY RECORD</span>

@@ -46,3 +46,21 @@ export const BASE_CATEGORIES = [
 export function sameName(a, b) {
   return a.trim().toLowerCase() === b.trim().toLowerCase()
 }
+
+// ───── 이미 만든 노드의 종류 (NODE DETAILS) ─────
+// 노드에는 theme만 저장되므로, 카테고리를 직접 고른 적이 없는 노드는 theme으로 대표 카테고리를 보여 준다.
+const THEME_CATEGORY = {
+  major: 'major',
+  project: 'project',
+  external: 'external',
+  career: 'career',
+  research: 'career', // 연구·진로
+  event: 'life', // 대학생활 이벤트
+  free: 'free',
+}
+
+// 노드의 현재 카테고리 id: 세션에서 고른 값(categoryId)이 있으면 그것, 없으면 theme으로 추정
+export function nodeCategoryId(node, categories) {
+  if (node.categoryId && categories.some((c) => c.id === node.categoryId)) return node.categoryId
+  return THEME_CATEGORY[node.theme] ?? 'free'
+}
