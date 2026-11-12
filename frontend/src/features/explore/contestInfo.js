@@ -1,8 +1,9 @@
-// 공고 표시 규칙 (탐색 카드·로드맵 공모전 노드에서 같이 쓴다)
+// 공고 표시 규칙 (탐색 카드·로드맵의 대외활동·채용 노드에서 같이 쓴다)
 
 // 수집처 키 → 화면에 보일 출처 이름
 const SOURCE_NAMES = {
   seoultech_center_program: '서울과기대 대외활동',
+  work24_open_recruit: '고용24',
 }
 
 export function sourceName(source) {
@@ -32,7 +33,16 @@ export function deadlineBadge(deadline, { status = null, today = kstToday() } = 
   return { label: `D-${days}`, tone: days <= 7 ? 'urgent' : 'normal' }
 }
 
-// 탐색에서 로드맵에 추가할 수 있는 공고: 제목 앞 분류가 [공모전]인 것만
-export function canAddToRoadmap(contest) {
-  return contest.sourceTag === '공모전'
+// 대외활동 공고의 실제 분류 (제목 앞 [분류]). 분류가 없으면 '대외활동'
+export function contestKindLabel(sourceTag) {
+  return sourceTag || '대외활동'
+}
+
+// 로드맵에 추가할 수 없는 이유. 추가할 수 있으면 null
+// 분류(공모전·멘토링·설명회 등)와 상관없이 모두 추가할 수 있고, 이미 마감된 공고만 막는다.
+// (서버 RPC add_contest_to_roadmap·add_job_posting_to_roadmap도 같은 규칙으로 다시 확인한다)
+export function addBlockReason({ deadline, status = null }, today = kstToday()) {
+  const days = daysLeft(deadline, today)
+  if (status === '마감' || (days !== null && days < 0)) return '이미 마감된 공고라 로드맵에 추가할 수 없어요.'
+  return null
 }
