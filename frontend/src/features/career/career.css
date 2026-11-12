@@ -1,0 +1,95 @@
+/* 홈 AI 진로 추천: 온보딩 화면(.onboarding)을 전체 화면 팝업으로 띄운다 */
+
+/* 공통 메뉴(GlobalNav, z-index 35) 위, 화면 팝업 층(40)과 같은 높이 */
+.career-panel.onboarding {
+  z-index: 40;
+}
+.career-panel__top {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 560px;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 40px 24px 0;
+  font-size: 15px;
+}
+.career-panel__close {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--ob-text);
+  font-size: 16px;
+}
+.career-panel__close:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+.career-panel__status {
+  margin: 48px 0 0;
+  font-size: 14px;
+  color: var(--ob-muted);
+  text-align: center;
+}
+.career-panel__note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ob-muted);
+}
+
+/* 이수 과목 3개 미만 안내 안의 버튼 */
+.ob-empty__action {
+  align-self: center;
+  margin-top: 10px;
+  height: 36px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 18px;
+  background: var(--ob-text);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* 홈의 진입 버튼: 오른쪽 위 '온기'(.hm-warmth)와 대칭인 왼쪽 위 알약 버튼 */
+.career-entry {
+  position: absolute;
+  top: 26px;
+  left: 28px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 13px 6px 10px;
+  border: none;
+  border-radius: 999px;
+  background: #fff2e4;
+  box-shadow: 0 2px 8px rgba(137, 107, 84, 0.08);
+  color: #896b54;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.career-entry:hover {
+  background: #ffe9d2;
+}
+.career-entry:focus-visible {
+  outline: 2px solid #dca36c;
+  outline-offset: 2px;
+}
+.career-entry__icon {
+  flex: none;
+  color: #dca36c;
+}
+/* 좁은 화면에서는 온기처럼 상단 메뉴 아래로 */
+@media (max-width: 900px) {
+  .career-entry {
+    top: 86px;
+    left: 16px;
+  }
+}

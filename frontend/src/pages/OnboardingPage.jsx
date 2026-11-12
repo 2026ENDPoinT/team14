@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { completeOnboarding } from '../services/api.js'
+import { completeOnboarding, moveNodes } from '../services/api.js'
+import { recommendCareer } from '../services/careerRecommendation.js'
 import { useAuth } from '../features/auth/AuthProvider.jsx'
 import { CAREERS, EXPERIENCE_GROUPS, TERMS } from '../features/onboarding/onboardingOptions.js'
 import {
@@ -8,8 +9,11 @@ import {
   jobRelevance,
   selectCourses,
 } from '../features/onboarding/courseRecommendationSlot.js'
+import { placeCourseNodes } from '../features/onboarding/placeCourseNodes.js'
+import { rankKeywords } from '../features/onboarding/careerKeywords.js'
 import { ProgressHeader } from '../features/onboarding/OnboardingParts.jsx'
 import {
+  CareerAiStep,
   CareerStep,
   CourseStep,
   ExperienceStep,
@@ -19,9 +23,11 @@ import {
 } from '../features/onboarding/OnboardingSteps.jsx'
 import '../features/onboarding/onboarding.css'
 
-// 단계: 0 프로필 → 1 경험 → 2 수강 과목 → 3 희망 직무 → 4 로드맵 구성 → 저장 성공 시 완료 화면
-const STEP_COUNT = 5
-const STEP = { profile: 0, experience: 1, course: 2, career: 3, setup: 4 }
+// 단계: 0 프로필 → 1 경험 → 2 수강 과목 → 3 AI 진로 추천(건너뛰기 가능) → 4 희망 직무 → 5 로드맵 구성
+//       → 저장 성공 시 완료 화면
+const STEP_COUNT = 6
+const STEP = { profile: 0, experience: 1, course: 2, ai: 3, career: 4, setup: 5 }
+const AI_IDLE = { status: 'idle', result: null, error: null }
 
 // 개발용: 주소에 ?testCourse=1을 붙이면 저장 요청에만 테스트 과목 1개를 넣는다.
 // (추천 목록·미리보기에는 표시하지 않음, 배포 빌드에서는 동작하지 않음)
@@ -56,16 +62,27 @@ export default function OnboardingPage() {
   const [experienceIds, setExperienceIds] = useState([]) // 화면 항목 id
   const [completedCourseKeys, setCompletedCourseKeys] = useState([])
   const [careerId, setCareerId] = useState(null)
+  // AI 진로 추천: 추천에 반영할 과목·성적은 화면 상태로만 둔다 (저장·전송하지 않음)
+  const [aiPickedKeys, setAiPickedKeys] = useState([])
+  const [grades, setGrades] = useState({}) // { 과목 키: 'A+' ... }
+  const [ai, setAi] = useState(AI_IDLE)
   const [setupMode, setSetupMode] = useState('auto') // 'auto' | 'manual'
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null) // { messages, fixes }
+  // 과목 위치 저장 결과 (온보딩 저장 후 따로 실행): null | { moves, status: 'failed' | 'retrying' | 'saved' }
+  const [placement, setPlacement] = useState(null)
 
   const term = TERMS.find((t) => t.id === termId) ?? null
   const grade = term?.grade ?? null // 지금 DB에는 학년만 저장된다 (학기는 백엔드 변경 후)
   const career = CAREERS.find((c) => c.id === careerId) ?? null
   // 선정 함수에 넘길 직무 키 목록 (저장 가능한 키만, 대표 1개)
   const jobs = career?.dbKey ? [career.dbKey] : []
-  const hasCurriculum = curriculum.courses.length > 0
+  // 미래 학년 추천(직무 관련도)이 연결됐는지. 지금은 비어 있어 이수 과목만 저장된다.
+  const hasRecommendation = Object.keys(jobRelevance.jobs).length > 0
+
+  // AI 추천 단계에서 고를 수 있는 과목 = 이수했다고 고른 과목 (교과과정 순서)
+  const completedCourses = curriculum.courses.filter((c) => completedCourseKeys.includes(c.key))
+  const aiPicked = aiPickedKeys.filter((key) => completedCourseKeys.includes(key))
 
   const pickedExperiences = EXPERIENCE_ITEMS.filter((item) => experienceIds.includes(item.id))
   const unsupportedExperiences = pickedExperiences.filter((item) => !item.dbKey)
@@ -106,6 +123,30 @@ export default function OnboardingPage() {
   useEffect(() => {
     scrollRef.current?.scrollTo(0, 0)
   }, [step])
+
+  // 과목·성적을 바꾸면 이전 추천 결과·오류는 지운다
+  function changeAiInput(update) {
+    update()
+    setAi(AI_IDLE)
+  }
+
+  // AI 진로 추천 요청: 성적은 여기서 키워드 순서로만 바꾸고, 키워드만 보낸다
+  async function requestRecommendation() {
+    const graded = aiPicked.filter((key) => grades[key]).map((key) => ({ courseKey: key, grade: grades[key] }))
+    const keywords = rankKeywords(graded)
+    if (keywords.length === 0) {
+      setAi({ status: 'error', result: null, error: { message: '추천에 쓸 역량이 없어요. 다른 과목의 성적을 입력하거나 직접 직무를 골라 주세요.' } })
+      return
+    }
+    setAi({ ...AI_IDLE, status: 'loading' })
+    const response = await recommendCareer(keywords)
+    const known = response.data && CAREERS.some((c) => c.id === response.data.job && c.dbKey)
+    if (response.error || !known) {
+      setAi({ status: 'error', result: null, error: response.error ?? { message: '지금은 AI 추천을 받을 수 없어요. 직접 직무를 골라 주세요.' } })
+      return
+    }
+    setAi({ status: 'result', result: response.data, error: null })
+  }
 
   // 저장 전에 지금 저장 계약으로 보낼 수 없는 선택이 있는지 확인한다.
   // (지원하지 않는 키를 보내거나, 조용히 빼고 저장하지 않는다)
@@ -158,20 +199,37 @@ export default function OnboardingPage() {
       courseNodes,
     })
 
-    setSaving(false)
     if (result.error) {
+      setSaving(false)
       setError({ messages: [result.error.message] }) // 입력값은 그대로 둔다
       return
     }
+    // 학기에 들어간 과목 노드를 타임라인 선 위에 겹치지 않게 놓는다 (RPC는 위치를 (0, 0)으로 저장)
+    // 실패해도 온보딩·과목은 이미 저장됐으므로 완료로 진행하고, 완료 화면에서 위치 저장만 다시 시도하게 한다.
+    const moves = placeCourseNodes(result.data)
+    if (moves.length > 0) {
+      const moved = await moveNodes(moves)
+      setPlacement({ moves, status: moved.error ? 'failed' : 'saved' })
+    }
+    setSaving(false)
     // 실제 저장에 성공했을 때만: 프로필의 완료 상태를 바로 반영하고(이후 HOME 진입 허용) 완료 화면을 보여준다
     markOnboardingCompleted()
     setDone(true)
+  }
+
+  // 위치 저장만 다시 시도 (온보딩은 다시 제출하지 않는다. 같은 위치를 다시 보내므로 여러 번 눌러도 결과가 같다)
+  async function retryPlacement() {
+    setPlacement((prev) => ({ ...prev, status: 'retrying', retried: true }))
+    const moved = await moveNodes(placement.moves)
+    setPlacement((prev) => ({ ...prev, status: moved.error ? 'failed' : 'saved' }))
   }
 
   if (done) {
     return (
       <main className="onboarding">
         <WelcomeStep
+          placement={placement}
+          onRetryPlacement={retryPlacement}
           onStart={() => {
             finishOnboarding() // 이제부터 /onboarding에 오면 HOME으로 보낸다
             navigate('/', { replace: true })
@@ -231,8 +289,26 @@ export default function OnboardingPage() {
             courses={curriculum.courses}
             selectedKeys={completedCourseKeys}
             onToggle={(key) => setCompletedCourseKeys((prev) => toggle(prev, key))}
-            onNext={() => goTo(STEP.career)}
+            onNext={() => goTo(STEP.ai)}
             onSkip={skipStep}
+          />
+        )}
+
+        {step === STEP.ai && (
+          <CareerAiStep
+            courses={completedCourses}
+            pickedKeys={aiPicked}
+            grades={grades}
+            ai={ai}
+            onTogglePick={(key) => changeAiInput(() => setAiPickedKeys((prev) => toggle(prev, key)))}
+            onGrade={(key, grade) => changeAiInput(() => setGrades((prev) => ({ ...prev, [key]: grade })))}
+            onRequest={requestRecommendation}
+            onAccept={() => {
+              setCareerId(ai.result.job) // 추천 직무를 최종 직무로 선택
+              goTo(STEP.setup)
+            }}
+            onChooseOther={() => goTo(STEP.career)} // 기존 직무 선택 화면에서 직접 고른다
+            onSkip={() => goTo(STEP.career)}
           />
         )}
 
@@ -248,7 +324,7 @@ export default function OnboardingPage() {
           <SetupStep
             mode={setupMode}
             onSelect={setSetupMode}
-            hasCurriculum={hasCurriculum}
+            hasRecommendation={hasRecommendation}
             saving={saving}
             error={error}
             onFix={goTo}

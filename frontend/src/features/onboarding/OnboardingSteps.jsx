@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ActionBar, Bubble, Chip, Hint, StepTitle } from './OnboardingParts.jsx'
 import { CAREERS, EXPERIENCE_GROUPS, SETUP_MODES, TERMS } from './onboardingOptions.js'
+import { GRADE_OPTIONS, MIN_GRADED_COURSES } from './careerKeywords.js'
 
 // 온보딩 단계별 화면. 상태와 저장은 OnboardingPage가 맡고, 여기서는 화면만 그린다.
 
@@ -146,12 +147,14 @@ export function ExperienceStep({ selectedIds, onToggle, hasUnsupported, onNext, 
 }
 
 // ───── 3. 수강 과목: 학년·학기별 (복수 선택) ─────
+// 실제로 이수한 과목을 직접 고른다. 선택은 페이지(OnboardingPage)에 모아 두어 단계를 오가도 유지된다.
 export function CourseStep({ courses, selectedKeys, onToggle, onNext, onSkip }) {
   // 교과과정 데이터의 권장 학년·학기로 묶는다
   const groups = TERMS.map((t) => ({
     ...t,
     courses: courses.filter((c) => c.year === t.grade && c.semester === t.semester),
   })).filter((g) => g.courses.length > 0)
+  const selectedCourses = courses.filter((c) => selectedKeys.includes(c.key))
 
   return (
     <>
@@ -164,21 +167,190 @@ export function CourseStep({ courses, selectedKeys, onToggle, onNext, onSkip }) 
           </div>
         ) : (
           groups.map((g) => (
-            <section key={g.id} className="ob-section" aria-label={`${g.id} 과목`}>
-              <h2 className="ob-section__title">{g.id}</h2>
+            <section key={g.id} className="ob-section" aria-label={`${g.grade}학년 ${g.semester}학기 과목`}>
+              <h2 className="ob-section__title">{g.grade}학년 {g.semester}학기</h2>
               <div className="ob-chips">
                 {g.courses.map((course) => (
                   <Chip key={course.key} selected={selectedKeys.includes(course.key)} onClick={() => onToggle(course.key)}>
                     {course.title}
+                    {course.category === '전공필수' && <span className="ob-chip__tag">전공필수</span>}
                   </Chip>
                 ))}
               </div>
             </section>
           ))
         )}
-        <Hint>실제 이수 학기는 로드맵에서 나중에 수정할 수 있습니다.</Hint>
+
+        {selectedCourses.length > 0 && (
+          <div className="ob-picked">
+            <span className="ob-picked__label">이수한 과목 {selectedCourses.length}개</span>
+            <div className="ob-picked__list">
+              {selectedCourses.map((course) => (
+                <button key={course.key} type="button" className="ob-picked__item" onClick={() => onToggle(course.key)} aria-label={`${course.title} 선택 해제`}>
+                  {course.title}
+                  <span aria-hidden="true">×</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <Hint>고른 과목은 연계도의 권장 학기에 ‘이수 완료’로 배치돼요. 실제 이수 학기는 로드맵에서 나중에 수정할 수 있습니다.</Hint>
       </div>
       <ActionBar onConfirm={onNext} onSkip={onSkip} />
+    </>
+  )
+}
+
+// ───── 3-1. AI 진로 추천: 이수 과목 중 고른 과목의 성적 → 추천 (건너뛰기 가능) ─────
+// 성적은 화면 상태로만 가지고 있다. (저장·전송하지 않는다. 추천 요청에는 역량 키워드만 간다)
+// ai: { status: 'idle' | 'loading' | 'result' | 'error', result, error }
+// context: 'onboarding'(온보딩 단계) | 'home'(홈에서 다시 추천)
+//   home에서는 결과 화면을 쓰지 않고(부모가 CareerAiResult로 보여 준다), 문구·버튼만 바뀐다.
+//   home 전용 콜백: onAddCourses(이수 과목 3개 미만일 때), onShowPrevious(실패 시 직전 결과 보기, 없으면 null)
+const COUNT_WORDS = ['', '한', '두', '세']
+
+// 추천 결과 카드 (온보딩·홈 공통). label: 카드 위 작은 제목, time: 추천 시각 문구(선택)
+export function CareerAiResult({ result, label = '추천 진로', time }) {
+  const job = CAREERS.find((c) => c.id === result.job)
+  return (
+    <section className="ob-ai-result" aria-label="AI 추천 결과">
+      <span className="ob-ai-result__label">{label}{time && ` · ${time}`}</span>
+      <strong className="ob-ai-result__job">{job?.title ?? result.job}</strong>
+      <p className="ob-ai-result__reason">{result.reason}</p>
+      {result.basedOn?.length > 0 && (
+        <div className="ob-picked__list" aria-label="근거 역량">
+          {result.basedOn.map((k) => (
+            <span key={k} className="ob-ai-result__keyword">{k}</span>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+export function CareerAiStep({
+  context = 'onboarding', courses, pickedKeys, grades, ai,
+  onTogglePick, onGrade, onRequest, onAccept, onChooseOther, onSkip, onAddCourses, onShowPrevious,
+}) {
+  const home = context === 'home'
+  const picked = courses.filter((c) => pickedKeys.includes(c.key))
+  const gradedCount = picked.filter((c) => grades[c.key]).length
+  const remaining = Math.max(0, MIN_GRADED_COURSES - gradedCount)
+  const loading = ai.status === 'loading'
+
+  if (!home && ai.status === 'result') {
+    return (
+      <>
+        <StepTitle>AI가 추천하는 진로예요.</StepTitle>
+        <div className="ob-body">
+          <CareerAiResult result={ai.result} />
+          <p className="ob-ai-question">이 진로로 로드맵을 구상할까요?</p>
+          <Hint>AI 추천은 참고용이에요. 입력한 과목의 역량만 보고 고른 결과예요.</Hint>
+        </div>
+        <div className="ob-actions">
+          <button type="button" className="ob-primary" onClick={onAccept}>이 진로로 계속</button>
+          <button type="button" className="ob-skip" onClick={onChooseOther}>다른 진로 선택</button>
+        </div>
+      </>
+    )
+  }
+
+  return (
+    <>
+      <StepTitle>
+        성적을 바탕으로 어울리는 진로를 {home && onShowPrevious ? '다시 ' : ''}추천해 드릴게요.
+        <br />
+        진로 추천에 반영할 과목을 3개 이상 골라 주세요.
+      </StepTitle>
+      <div className="ob-body">
+        {courses.length < MIN_GRADED_COURSES ? (
+          <div className="ob-empty">
+            <strong>이수 과목이 {MIN_GRADED_COURSES}개 미만이에요</strong>
+            {home ? (
+              <>
+                <span>
+                  AI 추천에는 이수 과목 {MIN_GRADED_COURSES}개 이상의 성적이 필요해요. 지금 이수 과목은 {courses.length}개예요.
+                  로드맵에서 [+] → ‘전공·학업’으로 교과목을 추가하고 완료로 표시하면 여기에 나타나요.
+                </span>
+                <button type="button" className="ob-empty__action" onClick={onAddCourses}>로드맵에서 과목 추가하기</button>
+              </>
+            ) : (
+              <span>AI 추천에는 {MIN_GRADED_COURSES}과목 이상의 성적이 필요해요. 건너뛰고 직접 직무를 골라 주세요.</span>
+            )}
+          </div>
+        ) : (
+          <>
+            <section className="ob-section" aria-label="추천에 반영할 과목">
+              <h2 className="ob-section__title">이수한 과목</h2>
+              <div className="ob-chips">
+                {courses.map((course) => (
+                  <Chip key={course.key} selected={pickedKeys.includes(course.key)} onClick={() => onTogglePick(course.key)}>
+                    {course.title}
+                  </Chip>
+                ))}
+              </div>
+            </section>
+
+            {picked.length > 0 && (
+              <section className="ob-section" aria-label="성적 입력">
+                <h2 className="ob-section__title">성적 등급</h2>
+                <div className="ob-grades">
+                  {picked.map((course) => (
+                    <label key={course.key} className="ob-grade">
+                      <span>{course.title}</span>
+                      <select
+                        aria-label={`${course.title} 성적`}
+                        value={grades[course.key] ?? ''}
+                        onChange={(e) => onGrade(course.key, e.target.value)}
+                      >
+                        <option value="">등급 선택</option>
+                        {GRADE_OPTIONS.map((g) => (
+                          <option key={g.id} value={g.id}>{g.id}</option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <p className="ob-ai-count" aria-live="polite">
+              {remaining > 0
+                ? `${COUNT_WORDS[remaining] ?? remaining} 과목 더 입력하면 추천을 받을 수 있어요. (입력 ${gradedCount}개)`
+                : `성적을 입력한 ${gradedCount}과목으로 추천을 받을 수 있어요.`}
+            </p>
+          </>
+        )}
+
+        {ai.status === 'error' && (
+          <div className="ob-error" role="alert">
+            <strong>AI 추천을 받지 못했어요</strong>
+            <p>{ai.error.message}</p>
+            {home ? (
+              onShowPrevious && (
+                <div className="ob-error__fixes">
+                  <button type="button" onClick={onShowPrevious}>직전 추천 결과 보기</button>
+                </div>
+              )
+            ) : (
+              <div className="ob-error__fixes">
+                <button type="button" onClick={onChooseOther}>직무 직접 선택하기</button>
+              </div>
+            )}
+          </div>
+        )}
+        <Hint>
+          성적은 이 브라우저에서만 쓰고 저장하지 않아요. AI에는 과목에서 뽑은 역량 키워드만 보내요.
+          {home && ' 추천을 받아도 희망 직무와 로드맵은 바뀌지 않아요.'}
+        </Hint>
+      </div>
+      <ActionBar
+        onConfirm={onRequest}
+        confirmLabel={loading ? '추천 받는 중…' : 'AI 진로 추천 받기'}
+        disabled={remaining > 0 || loading || courses.length < MIN_GRADED_COURSES}
+        onSkip={onSkip}
+        skipLabel={home ? '닫기' : undefined}
+      />
     </>
   )
 }
@@ -214,7 +386,7 @@ export function CareerStep({ selectedId, onSelect, onNext }) {
 }
 
 // ───── 5. 로드맵 구성 방식 ─────
-export function SetupStep({ mode, onSelect, hasCurriculum, saving, error, onFix, onConfirm }) {
+export function SetupStep({ mode, onSelect, hasRecommendation, saving, error, onFix, onConfirm }) {
   return (
     <>
       <StepTitle>당신의 로드맵을 어떻게 시작할까요?</StepTitle>
@@ -234,8 +406,8 @@ export function SetupStep({ mode, onSelect, hasCurriculum, saving, error, onFix,
             </button>
           ))}
         </div>
-        {mode === 'auto' && !hasCurriculum && (
-          <Hint>교과과정 데이터가 연결되기 전이라 지금은 추천 과목이 추가되지 않아요.</Hint>
+        {mode === 'auto' && !hasRecommendation && (
+          <Hint>과목 추천 기능이 연결되기 전이라 지금은 추천 과목이 추가되지 않아요. 고른 이수 과목만 반영돼요.</Hint>
         )}
 
         {error && (
@@ -262,11 +434,29 @@ export function SetupStep({ mode, onSelect, hasCurriculum, saving, error, onFix,
 }
 
 // ───── 완료 ─────
-export function WelcomeStep({ onStart }) {
+// placement: 과목 위치 저장 결과. 실패하면 과목은 저장됐다고 알리고 위치 저장만 다시 시도하게 한다.
+export function WelcomeStep({ onStart, placement, onRetryPlacement }) {
+  const failed = placement?.status === 'failed' || placement?.status === 'retrying'
+  const retrying = placement?.status === 'retrying'
   return (
     <div className="ob-welcome">
       <p className="ob-welcome__text">이제 당신만의 여정을 시작할 시간입니다!</p>
-      <button type="button" className="ob-primary" onClick={onStart}>
+      {failed && (
+        <div className="ob-error ob-placement" role="alert">
+          <strong>과목 위치를 저장하지 못했어요</strong>
+          <p>
+            선택한 이수 과목 {placement.moves.length}개는 로드맵에 저장됐어요. 다만 학기 안 위치를 정하지 못해
+            과목이 겹쳐 보일 수 있어요.
+          </p>
+          <div className="ob-error__fixes">
+            <button type="button" onClick={onRetryPlacement} disabled={retrying}>
+              {retrying ? '저장 중…' : '위치 다시 저장하기'}
+            </button>
+          </div>
+        </div>
+      )}
+      {placement?.status === 'saved' && placement.retried && <Hint>과목 위치를 저장했어요.</Hint>}
+      <button type="button" className="ob-primary" onClick={onStart} disabled={retrying}>
         시작하기
       </button>
     </div>
