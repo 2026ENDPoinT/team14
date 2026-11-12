@@ -1,0 +1,675 @@
+{
+  "schemaVersion": "1.0.0",
+  "project": "Campus Tree",
+  "academicYear": 2026,
+  "dataStatus": "draft_editorial_scores",
+  "description": "10개 직무별 교과목 관련도(0~3점) MVP 초안. key는 curriculum-2026.json courseCatalog의 내부 고유 키.",
+  "courseCatalogFile": "curriculum-2026.json",
+  "keyPolicy": {
+    "canonicalKey": "courseCatalog 객체의 키 (예: db, algo, ml)",
+    "courseCode": "학교 학수번호이며 내부 키와 별개",
+    "unknownCourseCode": "null 유지. 학수번호가 나중에 확인되어도 canonicalKey 유지",
+    "uniqueness": "동일 교과목은 courseCatalog에 1회만 등록하고 여러 직무에서 같은 키를 참조"
+  },
+  "minScore": 2,
+  "scoringRubric": {
+    "3": "직무 핵심 교과목",
+    "2": "직무에 직접적으로 관련된 교과목",
+    "1": "간접적으로 도움이 되는 보조 과목",
+    "0": "직접 관련성이 낮은 과목",
+    "unlisted": "목록에 없는 과목은 0점으로 처리"
+  },
+  "jobs": {
+    "backend": {
+      "jobName": "백엔드 개발자",
+      "courses": {
+        "intro1": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "intro2": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "oop": {
+          "score": 3,
+          "stageId": "s1",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "ds": {
+          "score": 3,
+          "stageId": "s1",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "algo": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "db": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "web": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "os": {
+          "score": 2,
+          "stageId": "s2",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "network": {
+          "score": 2,
+          "stageId": "s2",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "unix": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "sysprog": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "sweng": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "advweb": {
+          "score": 3,
+          "stageId": "s3",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        }
+      }
+    },
+    "frontend": {
+      "jobName": "프론트엔드 개발자",
+      "courses": {
+        "intro1": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "intro2": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "oop": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "ds": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "web": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "algo": {
+          "score": 2,
+          "stageId": "s2",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "sweng": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "advweb": {
+          "score": 3,
+          "stageId": "s3",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "db": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "opensource": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        }
+      }
+    },
+    "mobile": {
+      "jobName": "모바일 앱 개발자",
+      "courses": {
+        "intro1": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "intro2": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "oop": {
+          "score": 3,
+          "stageId": "s1",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "ds": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "algo": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "db": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "mobile": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "sweng": {
+          "score": 2,
+          "stageId": "s2",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "web": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "network": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "security": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        }
+      }
+    },
+    "ai_ml": {
+      "jobName": "AI·머신러닝 엔지니어",
+      "courses": {
+        "intro1": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "intro2": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "linear": {
+          "score": 3,
+          "stageId": "s1",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "prob": {
+          "score": 3,
+          "stageId": "s1",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "ds": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "algo": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "aiintro": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "ml": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "db": {
+          "score": 2,
+          "stageId": "s2",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "vision": {
+          "score": 3,
+          "stageId": "s3",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "analysis": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "bigdata": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "datamining": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        }
+      }
+    },
+    "data": {
+      "jobName": "데이터 분석가·엔지니어",
+      "courses": {
+        "intro1": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "intro2": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "prob": {
+          "score": 3,
+          "stageId": "s1",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "linear": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "ds": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "db": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "algo": {
+          "score": 2,
+          "stageId": "s2",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "analysis": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "ml": {
+          "score": 2,
+          "stageId": "s2",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "datamining": {
+          "score": 3,
+          "stageId": "s3",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "bigdata": {
+          "score": 3,
+          "stageId": "s3",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "unix": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "sweng": {
+          "score": 1,
+          "stageId": "s3",
+          "reason": "직무 역량 확장에 도움이 되는 보조 과목"
+        }
+      }
+    },
+    "security": {
+      "jobName": "정보보안 엔지니어",
+      "courses": {
+        "intro1": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "intro2": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "oop": {
+          "score": 1,
+          "stageId": "s1",
+          "reason": "직무 역량 확장에 도움이 되는 보조 과목"
+        },
+        "ds": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "os": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "network": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "unix": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "datacomm": {
+          "score": 2,
+          "stageId": "s2",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "security": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "cyber": {
+          "score": 3,
+          "stageId": "s3",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "sysprog": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "blockchain": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        }
+      }
+    },
+    "cloud": {
+      "jobName": "시스템·네트워크·클라우드 엔지니어",
+      "courses": {
+        "intro1": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "intro2": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "ds": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "digital": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "os": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "network": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "datacomm": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "unix": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "arch": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "sysprog": {
+          "score": 3,
+          "stageId": "s3",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "security": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "sweng": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "opensource": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        }
+      }
+    },
+    "embedded": {
+      "jobName": "임베디드·IoT 개발자",
+      "courses": {
+        "intro1": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "intro2": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "digital": {
+          "score": 3,
+          "stageId": "s1",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "ds": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "arch": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "os": {
+          "score": 2,
+          "stageId": "s2",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "datacomm": {
+          "score": 2,
+          "stageId": "s2",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "sysprog": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "embedded": {
+          "score": 3,
+          "stageId": "s3",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "iot": {
+          "score": 3,
+          "stageId": "s3",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "network": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "security": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        }
+      }
+    },
+    "game": {
+      "jobName": "게임 개발자",
+      "courses": {
+        "intro1": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "intro2": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "oop": {
+          "score": 3,
+          "stageId": "s1",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "ds": {
+          "score": 3,
+          "stageId": "s1",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "algo": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "graphics": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "game": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "linear": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "os": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "network": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "sweng": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "mobile": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        }
+      }
+    },
+    "uiux": {
+      "jobName": "UI/UX 엔지니어",
+      "courses": {
+        "intro1": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "intro2": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "oop": {
+          "score": 2,
+          "stageId": "s1",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "web": {
+          "score": 3,
+          "stageId": "s1",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "sweng": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "algo": {
+          "score": 2,
+          "stageId": "s2",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "advweb": {
+          "score": 3,
+          "stageId": "s2",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "mobile": {
+          "score": 3,
+          "stageId": "s3",
+          "reason": "직무 핵심 역량과 직접 연결되는 과목"
+        },
+        "db": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        },
+        "opensource": {
+          "score": 2,
+          "stageId": "s3",
+          "reason": "직무 수행에 직접적으로 관련된 과목"
+        }
+      }
+    }
+  },
+  "notes": [
+    "추천 임계값은 2점이며, 여러 직무 선택 시 교과목별 최고 점수를 사용함.",
+    "관련도 점수는 교육적 추천 가설이며 학교 또는 채용기관의 공식 평가가 아님.",
+    "needsCheck=true 과목은 curriculum-2026.json에서 학수번호 및 개설 확인이 필요함.",
+    "직무별 추천 목록의 순서는 curriculum-2026.json stages 순서를 따름."
+  ]
+}
