@@ -215,6 +215,63 @@ export async function getMyProfile() {
   return { data: toUser({ ...data, email: session.user.email }) }
 }
 
+// 내 희망 직무 변경 (마이페이지): profiles.interests를 [jobKey] 하나로 바꾼다.
+// 본인 행의 interests만 수정할 수 있다 (RLS profiles_update_own + 컬럼 권한, migration 00200).
+// 펫 온기·성장 단계·보상 기록은 건드리지 않는다. HOME 펫 종류는 이 값으로 정해진다.
+// 성공: { data: User }
+export async function updateMyDesiredJob(jobKey) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+  if (typeof jobKey !== 'string' || !jobKey.trim()) {
+    return { error: { code: 'VALIDATION_ERROR', message: '희망 직무를 골라 주세요.' } }
+  }
+  const { data: sessionData } = await supabase.auth.getSession()
+  const session = sessionData.session
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ interests: [jobKey] })
+    .eq('id', session.user.id)
+    .select('*')
+    .maybeSingle()
+  if (error) return { error: toError(error) }
+  if (!data) return { error: { code: 'NOT_FOUND', message: '프로필이 없습니다.' } }
+  return { data: toUser({ ...data, email: session.user.email }) }
+}
+
+// ---- 출석 (RPC check_in, docs/backend-pet-home.md 8장) ----
+// 서버가 한국 날짜(KST)로 오늘 출석 여부를 판단하고, 처음일 때만 누적 온기·보유 온기를 +100 한다.
+// 중복 지급 방지는 서버(reward_events 고유 제약 + 한 트랜잭션)가 한다. 프론트는 결과만 보여 준다.
+// 성공: { data: { rewarded, energy, date, pet: { energy, warmthBalance, stage } } }
+//   rewarded=false면 오늘 이미 출석함 (energy 0)
+// RPC가 아직 없으면: { error: { code: 'NOT_READY' } }
+export async function checkInToday() {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+
+  const { data, error } = await supabase.rpc('check_in')
+  if (error) {
+    // PGRST202: 함수를 찾을 수 없음 (아직 migration 미적용)
+    if (error.code === 'PGRST202' || error.code === '42883') {
+      return { error: { code: 'NOT_READY', message: '출석 기능은 서버 준비 중이에요.' } }
+    }
+    return { error: toError(error) }
+  }
+  // 응답 모양이 다르면 지급으로 처리하지 않는다
+  const pet = data?.pet
+  if (typeof data?.rewarded !== 'boolean' || !pet || !Number.isFinite(pet.energy) || !Number.isFinite(pet.warmth_balance)) {
+    return { error: { code: 'SERVER_ERROR', message: '출석 결과를 확인하지 못했어요.' } }
+  }
+  return {
+    data: {
+      rewarded: data.rewarded,
+      energy: data.rewarded ? data.energy : 0,
+      date: data.date ?? null,
+      pet: { energy: pet.energy, warmthBalance: pet.warmth_balance, stage: pet.stage },
+    },
+  }
+}
+
 // ---- 온보딩 (API.md 4.2) ----
 
 // input: { nickname, grade, experiences, completedCourses, interests, roadmapMode, courseNodes }

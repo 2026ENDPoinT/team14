@@ -75,6 +75,11 @@ export function AuthProvider({ children }) {
     setJustCompleted(true)
   }, [])
 
+  // 서버에 저장한 프로필 변경(예: 희망 직무)을 바로 반영한다. 로딩 화면 없이 다른 화면(HOME 등)도 새 값을 쓴다.
+  const applyProfile = useCallback((profile) => {
+    setState((prev) => (prev.status === 'ready' ? { ...prev, profile: { ...prev.profile, ...profile } } : prev))
+  }, [])
+
   // 완료 화면의 [시작하기]: 이후 /onboarding으로 오면 HOME으로 보낸다
   const finishOnboarding = useCallback(() => setJustCompleted(false), [])
 
@@ -89,8 +94,8 @@ export function AuthProvider({ children }) {
   }, [])
 
   const value = useMemo(
-    () => ({ ...state, recovery, justCompleted, reload, markOnboardingCompleted, finishOnboarding, logout }),
-    [state, recovery, justCompleted, reload, markOnboardingCompleted, finishOnboarding, logout],
+    () => ({ ...state, recovery, justCompleted, reload, markOnboardingCompleted, applyProfile, finishOnboarding, logout }),
+    [state, recovery, justCompleted, reload, markOnboardingCompleted, applyProfile, finishOnboarding, logout],
   )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
