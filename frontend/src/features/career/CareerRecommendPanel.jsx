@@ -110,7 +110,7 @@ export default function CareerRecommendPanel({ onClose }) {
                 onTogglePick={(key) => change(() => setPickedKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key])))}
                 onGrade={(key, grade) => change(() => setGrades((prev) => ({ ...prev, [key]: grade })))}
                 onRequest={request}
-                onSkip={last ? () => setView('last') : onClose}
+                onSkip={onClose}
                 onAddCourses={() => navigate('/roadmap')}
                 onShowPrevious={last ? () => { setAi(AI_IDLE); setView('last') } : null}
               />

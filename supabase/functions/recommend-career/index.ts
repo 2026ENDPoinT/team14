@@ -19,9 +19,12 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
-// 무료 한도가 있는 Flash-Lite 모델. 앞의 모델이 없거나(404) 한도를 넘으면(429) 다음 모델을 쓴다.
+// 무료 한도가 있는 Flash-Lite 모델. 앞의 모델이 없거나(404), 한도를 넘었거나(429),
+// Gemini 서버가 일시적으로 응답하지 못하면(500·502·503·504, 시간 초과·네트워크 오류) 다음 모델을 쓴다.
 const MODELS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
+const TRY_NEXT = new Set([404, 429, 500, 502, 503, 504])
+const MODEL_TIMEOUT_MS = 12000 // 모델 하나당 대기 시간 (두 모델 모두 시도해도 함수 제한 시간 안에 끝나게)
 
 // 온보딩 희망 직무 10개 (frontend/src/features/onboarding/onboardingOptions.js CAREERS와 같은 키·이름)
 const JOBS: Record<string, string> = {
@@ -85,7 +88,7 @@ async function askGemini(model: string, apiKey: string, keywords: string[]) {
   const response = await fetch(`${API_BASE}/${model}:generateContent`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
       contents: [{ role: 'user', parts: [{ text: JSON.stringify({ keywords }) }] }],
@@ -158,11 +161,13 @@ Deno.serve(async (request) => {
     try {
       answer = await askGemini(model, apiKey, keywords)
     } catch {
-      console.error(`recommend-career: ${model} 요청 실패(시간 초과·네트워크)`)
-      return fail(502, 'AI_ERROR', 'AI 추천 서버에 연결하지 못했습니다.')
+      // 시간 초과·네트워크 오류: 다음 모델을 시도한다
+      console.error(`recommend-career: ${model} 요청 실패(시간 초과·네트워크) → 다음 모델`)
+      lastStatus = 504
+      continue
     }
     lastStatus = answer.status
-    if (answer.status === 404 || answer.status === 429) {
+    if (TRY_NEXT.has(answer.status)) {
       console.error(`recommend-career: ${model} HTTP ${answer.status} → 다음 모델`)
       continue
     }
@@ -183,5 +188,6 @@ Deno.serve(async (request) => {
     return json({ ...answer.result, model, recommendedAt, saved: !saveError })
   }
   if (lastStatus === 429) return fail(429, 'RATE_LIMITED', 'AI 추천 사용 한도를 넘었습니다. 잠시 후 다시 시도해 주세요.')
+  if (lastStatus >= 500) return fail(502, 'AI_ERROR', 'AI 추천 서버가 잠시 응답하지 않습니다.')
   return fail(502, 'AI_ERROR', '사용할 수 있는 AI 모델이 없습니다.')
 })
