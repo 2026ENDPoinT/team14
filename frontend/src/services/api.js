@@ -239,11 +239,12 @@ export async function updateMyDesiredJob(jobKey) {
   return { data: toUser({ ...data, email: session.user.email }) }
 }
 
-// ---- 출석 (RPC check_in, docs/backend-pet-home.md 8장) ----
+// ---- 출석 (RPC check_in, migration 20261113001900, docs/API.md 4.7) ----
 // 서버가 한국 날짜(KST)로 오늘 출석 여부를 판단하고, 처음일 때만 누적 온기·보유 온기를 +100 한다.
 // 중복 지급 방지는 서버(reward_events 고유 제약 + 한 트랜잭션)가 한다. 프론트는 결과만 보여 준다.
-// 성공: { data: { rewarded, energy, date, pet: { energy, warmthBalance, stage } } }
-//   rewarded=false면 오늘 이미 출석함 (energy 0)
+// 서버 응답: { date, reward: { rewarded, energy?, reason? }, pet: pets 행 }
+// 성공: { data: { rewarded, energy, date, pet: { energy, warmthBalance, stage }, petRow } }
+//   rewarded=false면 오늘 이미 출석함 (energy 0). petRow는 서버의 pets 행 그대로 (펫 저장소 갱신용)
 // RPC가 아직 없으면: { error: { code: 'NOT_READY' } }
 export async function checkInToday() {
   const sessionError = await requireSession()
@@ -259,15 +260,17 @@ export async function checkInToday() {
   }
   // 응답 모양이 다르면 지급으로 처리하지 않는다
   const pet = data?.pet
-  if (typeof data?.rewarded !== 'boolean' || !pet || !Number.isFinite(pet.energy) || !Number.isFinite(pet.warmth_balance)) {
+  const rewarded = data?.reward?.rewarded
+  if (typeof rewarded !== 'boolean' || !pet || !Number.isFinite(pet.energy) || !Number.isFinite(pet.warmth_balance)) {
     return { error: { code: 'SERVER_ERROR', message: '출석 결과를 확인하지 못했어요.' } }
   }
   return {
     data: {
-      rewarded: data.rewarded,
-      energy: data.rewarded ? data.energy : 0,
+      rewarded,
+      energy: rewarded ? data.reward.energy : 0,
       date: data.date ?? null,
       pet: { energy: pet.energy, warmthBalance: pet.warmth_balance, stage: pet.stage },
+      petRow: pet,
     },
   }
 }

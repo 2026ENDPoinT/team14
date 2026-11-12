@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { getMyProfile, isSupabaseConfigured, signOut, subscribeAuthChange } from '../../services/api.js'
+import { autoCheckIn } from '../home/homeActions.js'
+import { reloadPet } from '../pet/petStore.js'
 
 // 로그인·온보딩 상태를 앱 전체에서 한 곳에서 관리한다.
 //
@@ -42,6 +44,29 @@ export function AuthProvider({ children }) {
     return next
   }, [])
 
+  // 자동 출석: 로그인한 사용자가 (KST) 그날 처음 앱을 쓰면 서버 check_in을 부른다.
+  // HOME과 같은 요청(homeActions.autoCheckIn, 사용자·날짜별 1개)을 같이 쓰므로 요청이 겹치지 않는다.
+  // 지급 여부(하루 1회, 여러 탭·재로그인 포함)는 서버가 판단한다. 온보딩 전 첫 로그인도 여기서 지급된다.
+  const runAttendance = useCallback((userId) => {
+    if (userId) autoCheckIn(userId)
+  }, [])
+
+  // 로그인·프로필 확인이 끝나면 출석 (온보딩 전 계정도 지급 → 펫이 생기면 그대로 남는다)
+  const readyUserId = state.status === 'ready' ? state.profile?.id : null
+  useEffect(() => {
+    if (readyUserId) runAttendance(readyUserId)
+  }, [readyUserId, runAttendance])
+
+  // 탭을 열어 둔 채 KST 날짜가 바뀐 뒤 다시 보면 그날 출석을 확인한다
+  useEffect(() => {
+    if (!readyUserId) return undefined
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') runAttendance(readyUserId)
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [readyUserId, runAttendance])
+
   useEffect(() => {
     if (!isSupabaseConfigured) return undefined
     let alive = true
@@ -69,9 +94,13 @@ export function AuthProvider({ children }) {
     }
   }, [reload])
 
-  // 온보딩 저장 성공: 프로필의 완료 상태를 바로 반영하고, 완료 화면에 머물게 한다
-  const markOnboardingCompleted = useCallback(() => {
-    setState((prev) => (prev.status === 'ready' ? { ...prev, profile: { ...prev.profile, onboardingCompleted: true } } : prev))
+  // 온보딩 저장 성공: 서버가 돌려준 최신 프로필(닉네임·학년·희망 직무)을 바로 반영하고, 완료 화면에 머물게 한다
+  // (예전에는 완료 표시만 바꿔서 홈의 펫 종류가 재로그인 전까지 '미정'으로 보였다)
+  const markOnboardingCompleted = useCallback((latestProfile) => {
+    setState((prev) => (prev.status === 'ready'
+      ? { ...prev, profile: { ...prev.profile, ...(latestProfile ?? {}), onboardingCompleted: true } }
+      : prev))
+    reloadPet() // 온보딩이 펫을 만들었거나(출석 전) 이미 있는 펫을 그대로 쓴다 → 서버 값으로 다시 읽기
     setJustCompleted(true)
   }, [])
 

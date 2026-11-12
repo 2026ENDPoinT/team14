@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { TrashIcon } from '../roadmap/icons.jsx'
 import { countChars, REWARD_MIN_CHARS } from './countChars.js'
-import { deleteDiary, getDiaryByDate, hasDiaryRewardToday, saveDiary } from './diaryMock.js'
+import { deleteDiary, getDiaryByDate, hasDiaryRewardToday, saveDiary } from './diaryStore.js'
 import { getTodayKST } from './dateUtils.js'
 import PhotoModal from './PhotoModal.jsx'
 import WarmthEffect from './WarmthEffect.jsx'
@@ -23,7 +23,7 @@ function formatDateLong(date) {
 
 // 날짜를 눌렀을 때 뜨는 일기 팝업 (2-7, 2-8, 2-16)
 // - 이미 쓴 일기는 먼저 읽기만 하고, '수정하기'를 눌러야 고칠 수 있다.
-// - 저장·삭제는 Mock 함수 사용 (2-9 데이터 연동 때 services 함수로 교체)
+// - 저장·삭제는 서버에 한다 (diaryStore → services/diary.js). 실패하면 입력한 내용은 그대로 두고 다시 시도할 수 있다.
 // onChanged: 저장·삭제 후 달력(노란 점)을 다시 그리게 알린다.
 export default function DiaryModal({ date, onClose, onChanged }) {
   const [content, setContent] = useState(() => getDiaryByDate(date)?.content ?? '')
@@ -32,6 +32,8 @@ export default function DiaryModal({ date, onClose, onChanged }) {
   const [photoOpen, setPhotoOpen] = useState(false)
   const [toast, setToast] = useState('')
   const [reward, setReward] = useState(null) // 받은 온기 양 (연출 중일 때만 값이 있음)
+  const [busy, setBusy] = useState(false) // 저장·삭제 요청 중 (중복 클릭 방지)
+  const [saveError, setSaveError] = useState('') // 저장 실패 안내 (사라지지 않고 다시 시도할 때까지 남는다)
   const textareaRef = useRef(null)
   const endReward = useCallback(() => setReward(null), [])
 
@@ -64,10 +66,15 @@ export default function DiaryModal({ date, onClose, onChanged }) {
     return () => clearTimeout(timer)
   }, [toast])
 
-  function handleSave() {
-    const result = saveDiary({ date, content })
+  async function handleSave() {
+    if (busy) return
+    setBusy(true)
+    setSaveError('')
+    const result = await saveDiary({ date, content })
+    setBusy(false)
     if (result.error) {
-      setToast(result.error.message)
+      // 저장 실패: 입력한 내용은 그대로 두고, 보상도 없다 (서버가 저장과 보상을 한 번에 처리)
+      setSaveError(`${result.error.message} 입력한 내용은 그대로 있어요.`)
       return
     }
     // 온기를 받았으면 연기 연출, 아니면 저장 안내 + 받지 못한 이유
@@ -86,9 +93,11 @@ export default function DiaryModal({ date, onClose, onChanged }) {
     setEditing(false)
   }
 
-  function handleDelete() {
-    if (!window.confirm(`${formatDateLong(date)} 일기를 삭제할까요?`)) return
-    const result = deleteDiary(date)
+  async function handleDelete() {
+    if (busy || !window.confirm(`${formatDateLong(date)} 일기를 삭제할까요?`)) return
+    setBusy(true)
+    const result = await deleteDiary(date)
+    setBusy(false)
     if (result.error) {
       setToast(result.error.message)
       return
@@ -172,6 +181,8 @@ export default function DiaryModal({ date, onClose, onChanged }) {
           사진 추가
         </button>
 
+        {saveError && <p className="dp-save-error" role="alert">{saveError}</p>}
+
         <div className="dp-actions">
           {readOnly ? (
             <>
@@ -189,8 +200,8 @@ export default function DiaryModal({ date, onClose, onChanged }) {
                   취소
                 </button>
               )}
-              <button type="button" className="dp-btn dp-btn--accent" onClick={handleSave}>
-                {isExisting ? '수정 저장' : '저장'}
+              <button type="button" className="dp-btn dp-btn--accent" onClick={handleSave} disabled={busy}>
+                {busy ? '저장 중…' : saveError ? '다시 시도' : isExisting ? '수정 저장' : '저장'}
               </button>
             </>
           )}

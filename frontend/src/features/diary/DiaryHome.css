@@ -643,3 +643,14 @@
 .dp-warmth__mark.is-reached {
   color: var(--dy-ink);
 }
+
+/* 일기 저장 실패 안내 (다시 시도할 때까지 남는다) */
+.dp-save-error {
+  margin: 0 0 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fff1f0;
+  color: #c0392b;
+  font-size: 13px;
+  line-height: 1.5;
+}

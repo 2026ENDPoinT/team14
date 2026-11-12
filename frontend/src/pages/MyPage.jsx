@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { getPet } from '../features/pet/petMock.js'
+import { EMPTY_PET, usePet } from '../features/pet/petStore.js'
 import { useAuth } from '../features/auth/AuthProvider.jsx'
 import { JOB_TO_PET, PET_CHARACTERS } from '../features/home/petCharacter.js'
 import { updateMyDesiredJob } from '../services/api.js'
@@ -53,7 +53,7 @@ export default function MyPage() {
   const [profile, setProfile] = useState(mockProfile)
   const [settings, setSettings] = useState(mockSettings)
   const [toast, setToast] = useState('')
-  const pet = getPet()
+  const pet = usePet().pet ?? EMPTY_PET // 서버의 내 펫 (누적 온기·잔액)
   // 로그인했으면 희망 직무는 DB 프로필(interests 첫 번째 = 대표 직무) 값을 쓴다. 나머지 항목은 아직 Mock
   const auth = useAuth()
   const signedIn = auth.status === 'ready'
