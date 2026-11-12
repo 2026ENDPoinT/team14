@@ -149,3 +149,93 @@ grant execute on function public.change_desired_job(text) to authenticated;
 ```
 - 온보딩(`complete_onboarding`)에서도 같은 규칙으로 `pets.type`을 채우면 좋다 (지금은 null).
 - RPC 적용 후 프론트: `updateMyDesiredJob`을 이 RPC 호출로 바꾸고, 마이페이지의 '미정' 차단을 푼다.
+
+## 8. 자동 출석 `check_in` (2026-11-12 추가)
+
+HOME의 '출석하기' 버튼을 없애고, **로그인 사용자가 HOME에 들어오면 자동으로** `check_in`을 부른다.
+프론트(`services/api.js` `checkInToday`, `features/home/homeActions.js` `autoCheckIn`)는 이미 연결되어 있고,
+RPC가 없으면(`PGRST202`) 조용히 넘어간다 — 지급 연출·숫자 변경 없음, 오류 안내 없음.
+
+### 프론트가 기대하는 응답 (jsonb)
+```json
+{
+  "rewarded": true,
+  "energy": 100,
+  "date": "2026-11-12",
+  "pet": { "energy": 1500, "warmth_balance": 1500, "stage": 2 }
+}
+```
+- 오늘 이미 출석했으면 `rewarded: false`, `energy: 0` (pet은 현재 값)
+- `pet.energy` = 누적 획득 온기(단계 판정, 줄지 않음) / `pet.warmth_balance` = 보유 온기(이름 변경 등에 사용)
+- 응답에 `rewarded`(boolean)·`pet.energy`·`pet.warmth_balance`(숫자)가 없으면 프론트는 지급으로 보지 않는다
+
+### 중복 방지 (서버가 보장)
+- 날짜는 서버가 정한다: `(now() at time zone 'Asia/Seoul')::date`
+- `reward_events (user_id, type, ref_id)` 고유 제약 + `insert … on conflict do nothing returning`
+  → 새로 들어간 경우에만 같은 트랜잭션에서 `pets` 갱신. 여러 탭이 동시에 불러도 한 번만 지급
+- 프론트는 같은 사용자·같은 한국 날짜에 요청을 한 번만 보내도록 줄일 뿐, 지급 여부는 항상 서버 응답으로만 판단
+
+### migration 초안 (적용 전 검토, 아직 실행하지 않음)
+```sql
+-- 1) 보유 온기 칸 (기존 행은 누적 온기로 채움)
+alter table public.pets
+  add column if not exists warmth_balance integer not null default 0 check (warmth_balance >= 0);
+update public.pets set warmth_balance = energy where warmth_balance = 0 and energy > 0;
+
+-- 2) 출석 RPC
+create or replace function public.check_in()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_today date := (now() at time zone 'Asia/Seoul')::date;
+  v_reward constant integer := 100;
+  v_inserted uuid;
+  v_pet public.pets;
+begin
+  if v_uid is null then
+    raise exception 'UNAUTHENTICATED' using detail = '로그인이 필요합니다.';
+  end if;
+
+  -- 펫이 없으면 보상 기록도 남기지 않는다
+  if not exists (select 1 from public.pets where user_id = v_uid) then
+    raise exception 'NOT_FOUND' using detail = '펫이 없습니다. 온보딩을 먼저 완료해 주세요.';
+  end if;
+
+  insert into public.reward_events (user_id, type, ref_id, energy)
+  values (v_uid, 'attendance', v_today::text, v_reward)
+  on conflict (user_id, type, ref_id) do nothing
+  returning id into v_inserted;
+
+  if v_inserted is not null then
+    update public.pets
+       set energy = energy + v_reward,
+           warmth_balance = warmth_balance + v_reward,
+           stage = case
+             when energy + v_reward >= 5000 then 4
+             when energy + v_reward >= 2800 then 3
+             when energy + v_reward >= 1200 then 2
+             else 1 end
+     where user_id = v_uid
+    returning * into v_pet;
+  else
+    select * into v_pet from public.pets where user_id = v_uid;
+  end if;
+
+  return jsonb_build_object(
+    'rewarded', v_inserted is not null,
+    'energy', case when v_inserted is not null then v_reward else 0 end,
+    'date', v_today,
+    'pet', jsonb_build_object('energy', v_pet.energy, 'warmth_balance', v_pet.warmth_balance, 'stage', v_pet.stage)
+  );
+end;
+$$;
+
+revoke all on function public.check_in() from public, anon;
+grant execute on function public.check_in() to authenticated;
+```
+- `save_diary`의 +200도 같은 방식으로 `warmth_balance`를 함께 올려야 한다 (5번 항목).
+- 펫 조회 서비스가 생기면 HOME의 Mock 펫(`getPet`)을 실제 값으로 바꾼다 → 출석 전에도 실제 잔액 표시.
