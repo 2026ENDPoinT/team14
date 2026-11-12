@@ -54,18 +54,42 @@
   font-weight: 800;
 }
 
-/* 홈의 진입 버튼 */
+/* 홈의 진입 버튼: 오른쪽 위 '온기'(.hm-warmth)와 대칭인 왼쪽 위 알약 버튼 */
 .career-entry {
-  display: inline-flex;
+  position: absolute;
+  top: 26px;
+  left: 28px;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  height: 44px;
-  padding: 0 20px;
+  gap: 5px;
+  padding: 6px 13px 6px 10px;
   border: none;
-  border-radius: 22px;
-  background: #111;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 800;
+  border-radius: 999px;
+  background: #fff2e4;
+  box-shadow: 0 2px 8px rgba(137, 107, 84, 0.08);
+  color: #896b54;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
   cursor: pointer;
+}
+.career-entry:hover {
+  background: #ffe9d2;
+}
+.career-entry:focus-visible {
+  outline: 2px solid #dca36c;
+  outline-offset: 2px;
+}
+.career-entry__icon {
+  flex: none;
+  color: #dca36c;
+}
+/* 좁은 화면에서는 온기처럼 상단 메뉴 아래로 */
+@media (max-width: 900px) {
+  .career-entry {
+    top: 86px;
+    left: 16px;
+  }
 }
