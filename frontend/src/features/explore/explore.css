@@ -228,3 +228,9 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* 기술 뉴스 [더 보기]: 목록 아래 가운데 */
+.ex-more {
+  display: block;
+  margin: 16px auto 0;
+}

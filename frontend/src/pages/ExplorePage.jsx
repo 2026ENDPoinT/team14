@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import DeadlineBadge from '../features/explore/DeadlineBadge.jsx'
 import { addBlockReason, sourceName } from '../features/explore/contestInfo.js'
 import { pickCsJobs } from '../features/explore/csJobFilter.js'
-import { fieldLabelsOf } from '../features/explore/jobField.js'
+import { FIELD_LABELS, fieldLabelsOf, newsFieldsOf, newsMatchesJob } from '../features/explore/jobField.js'
+import { useAuth } from '../features/auth/AuthProvider.jsx'
+import { listRecentTechArticles } from '../services/techNews.js'
 import {
   addContestToRoadmap,
   addJobPostingToRoadmap,
@@ -13,7 +15,6 @@ import {
   isSupabaseConfigured,
   listOpenContests,
   listOpenJobPostings,
-  listTechArticles,
 } from '../services/api.js'
 import '../features/roadmap/roadmap.css' // 로드맵과 같은 색·글꼴
 import '../features/explore/explore.css'
@@ -35,6 +36,7 @@ const toList = (result) => {
   if (!result.error) return { state: 'ready', items: result.data }
   return { state: result.error.code === 'UNAUTHENTICATED' ? 'login' : 'error', items: [] }
 }
+const NEWS_SHOWN = 60 // 기술 뉴스 탭에 처음 보여 줄 글 수. [더 보기]로 불러온 글을 모두 볼 수 있다
 const LOADING = { state: isSupabaseConfigured ? 'loading' : 'no-config', items: [] }
 
 // { [공고 id]: 노드 id } → { '<종류>:<공고 id>': 노드 id }
@@ -42,7 +44,9 @@ const prefixKeys = (kind, map) => Object.fromEntries(Object.entries(map).map(([i
 
 // 탐색: [대외활동] [기술 뉴스] [채용] 탭 중 선택한 탭의 목록만 보여 준다.
 // - 대외활동: 접수 중, 마감 임박순. 분류와 상관없이 모두 '내 로드맵에 추가'할 수 있다.
-// - 기술 뉴스: 최신순. 내 관심 분야와 맞는 글이 먼저 온다.
+// - 기술 뉴스: 최근 500개 중 제목에서 분야가 분명하고 그 분야가 마이페이지의 희망 직무와 같은 글을 '관심 분야'로 먼저,
+//   나머지는 최신순으로 채워 60개씩 보여 준다 ([더 보기]로 불러온 글 전부)
+//   (판단 기준: jobField.js newsFieldsOf. 직무가 없거나 '아직 정하지 않음'이면 표시·우선 정렬 없음, 순서는 최신순)
 // - 채용: 고용24 공채속보 중 컴퓨터공학 관련 직무만, 마감 임박순 최대 50건. 제목을 누르면 원문, 버튼으로 로드맵 추가.
 // 주소: /explore?tab=<탭> (탭을 주소에 둬서 뒤로 가기·새로고침 때 같은 탭으로 돌아온다)
 //       /explore?tab=articles&news=<글 id> → 기술 뉴스 상세 (App.jsx 라우트를 바꾸지 않고 이 화면 안에서 연다)
@@ -64,6 +68,19 @@ export default function ExplorePage() {
   const pendingRef = useRef(new Set()) // 연속 클릭 막기 (화면 갱신 전 두 번째 클릭도 막는다)
   const tabRefs = useRef({})
 
+  // 기술 뉴스 '관심 분야': 지금 희망 직무(프로필 interests 첫 번째, 마이페이지에서 바꾸면 바로 반영)와
+  // 제목에서 분명하게 확인된 분야가 같을 때만. 배지와 우선 정렬이 같은 기준을 쓴다. 배지가 없는 글도 모두 보인다.
+  const { profile } = useAuth()
+  const desiredJob = profile?.interests?.[0] ?? null
+  const [newsShown, setNewsShown] = useState(NEWS_SHOWN)
+  const sortedNews = useMemo(() => {
+    const items = articles.items.map((a) => ({ ...a, matchesInterest: newsMatchesJob(a.title, desiredJob) }))
+    const matched = items.filter((a) => a.matchesInterest) // 관심 분야 글 (최신순)
+    const rest = items.filter((a) => !a.matchesInterest) // 나머지 (최신순)
+    return [...matched, ...rest]
+  }, [articles.items, desiredJob])
+  const newsItems = sortedNews.slice(0, Math.max(newsShown, sortedNews.filter((a) => a.matchesInterest).length))
+
   // 세 목록을 한꺼번에 따로따로 불러온다 (탭을 바꿀 때 기다리지 않게)
   useEffect(() => {
     if (!isSupabaseConfigured) return undefined
@@ -74,7 +91,7 @@ export default function ExplorePage() {
       setContests(toList(failed ?? c))
       if (!failed) setAddedNodes((m) => ({ ...m, ...prefixKeys('contest', mine.data) }))
     })
-    listTechArticles(30).then((a) => { if (!cancelled) setArticles(toList(a)) })
+    listRecentTechArticles(500).then((a) => { if (!cancelled) setArticles(toList(a)) })
     Promise.all([listOpenJobPostings(), getMyJobPostingNodeIds()]).then(([j, mine]) => {
       if (cancelled) return
       const failed = [j, mine].find((r) => r.error)
@@ -206,10 +223,12 @@ export default function ExplorePage() {
         </section>
 
         <section id="ex-panel-articles" role="tabpanel" aria-labelledby="ex-tab-articles" className="ex-panel" hidden={tab !== 'articles'}>
-          <p className="ex-panel__hint">최신순</p>
+          <p className="ex-panel__hint">
+            {desiredJob && desiredJob !== 'undecided' ? '희망 직무와 관련이 분명한 글 먼저 · 최신순' : '최신순'}
+          </p>
           <ListStatus list={articles} empty="아직 기술 뉴스가 없어요." />
           <ul className="ex-list">
-            {articles.items.map((a) => (
+            {newsItems.map((a) => (
               <li key={a.id} className="ex-card ex-card--article" data-testid="article-card">
                 <div className="ex-card__meta">
                   <span className="ex-tag">{a.sourceName}</span>
@@ -222,12 +241,17 @@ export default function ExplorePage() {
                   state={{ fromNewsList: true }}
                   onClick={rememberNewsScroll}
                 >
-                  <FieldTitle title={a.title} />
+                  <NewsTitle title={a.title} />
                 </Link>
                 <p className="ex-card__sub">{formatKst(a.publishedAt)}</p>
               </li>
             ))}
           </ul>
+          {newsItems.length < sortedNews.length && (
+            <button type="button" className="ex-add ex-more" onClick={() => setNewsShown((n) => n + NEWS_SHOWN)}>
+              더 보기 ({newsItems.length}/{sortedNews.length})
+            </button>
+          )}
         </section>
 
         <section id="ex-panel-jobs" role="tabpanel" aria-labelledby="ex-tab-jobs" className="ex-panel" hidden={tab !== 'jobs'}>
@@ -276,6 +300,18 @@ function FieldTitle({ title }) {
   )
 }
 
+// 기술 뉴스 제목: 분야가 분명할 때만 [분야]를 붙인다. 판단하기 어려우면 [기타]도 붙이지 않는다.
+function NewsTitle({ title }) {
+  return (
+    <>
+      {newsFieldsOf(title).map((field) => (
+        <span key={field} className="ex-field" data-field={FIELD_LABELS[field]}>[{FIELD_LABELS[field]}] </span>
+      ))}
+      {title}
+    </>
+  )
+}
+
 // 기술 뉴스 상세: [기술 뉴스 목록으로], 출처·게시 시각, [분야] 원제, [원문 보기](새 탭)
 // fromList: 목록에서 이미 받은 글 (없으면 = 주소로 바로 들어오거나 새로고침 → 한 건 조회)
 function NewsDetail({ id, fromList, onBack }) {
@@ -304,7 +340,7 @@ function NewsDetail({ id, fromList, onBack }) {
         <>
           <p className="ex-news__meta">{article.sourceName} · {formatKst(article.publishedAt)}</p>
           <h1 className="ex-news__title">
-            <FieldTitle title={article.title} />
+            <NewsTitle title={article.title} />
           </h1>
           <a className="ex-add ex-news__original-link" href={article.url} target="_blank" rel="noopener noreferrer">원문 보기</a>
         </>
