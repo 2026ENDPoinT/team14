@@ -215,6 +215,30 @@ export async function getMyProfile() {
   return { data: toUser({ ...data, email: session.user.email }) }
 }
 
+// 내 희망 직무 변경 (마이페이지): profiles.interests를 [jobKey] 하나로 바꾼다.
+// 본인 행의 interests만 수정할 수 있다 (RLS profiles_update_own + 컬럼 권한, migration 00200).
+// 펫 온기·성장 단계·보상 기록은 건드리지 않는다. HOME 펫 종류는 이 값으로 정해진다.
+// 성공: { data: User }
+export async function updateMyDesiredJob(jobKey) {
+  const sessionError = await requireSession()
+  if (sessionError) return { error: sessionError }
+  if (typeof jobKey !== 'string' || !jobKey.trim()) {
+    return { error: { code: 'VALIDATION_ERROR', message: '희망 직무를 골라 주세요.' } }
+  }
+  const { data: sessionData } = await supabase.auth.getSession()
+  const session = sessionData.session
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ interests: [jobKey] })
+    .eq('id', session.user.id)
+    .select('*')
+    .maybeSingle()
+  if (error) return { error: toError(error) }
+  if (!data) return { error: { code: 'NOT_FOUND', message: '프로필이 없습니다.' } }
+  return { data: toUser({ ...data, email: session.user.email }) }
+}
+
 // ---- 온보딩 (API.md 4.2) ----
 
 // input: { nickname, grade, experiences, completedCourses, interests, roadmapMode, courseNodes }

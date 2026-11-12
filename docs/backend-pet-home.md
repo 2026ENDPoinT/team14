@@ -76,3 +76,76 @@
 - [ ] 이름 변경 후에도 `energy`·단계 그대로
 - [ ] 9자 이상 이름 거부
 - [ ] 다른 사용자의 펫을 읽거나 바꿀 수 없음 (RLS)
+
+## 7. 희망 직무 변경 → 펫 종류 (2026-11-12 추가)
+
+### 지금 프론트 동작 (DB 변경 없이 연결됨)
+- 마이페이지에서 희망 직무를 바꾸면 `profiles.interests`를 `[직무 키]`로 저장한다 (`updateMyDesiredJob`, 기존 RLS·컬럼 권한 그대로).
+- HOME 펫 종류는 `pets.type`이 비어 있으면 `interests[0]`(대표 직무)로 정한다 → 저장하면 펫이 바뀌고 새로고침 후에도 유지.
+- 펫 온기·단계·보상 기록은 건드리지 않는다. 기본 이름은 새 펫의 기본 이름을 따르고, `pets.name`이 생기면 그 이름이 우선이다.
+
+### 남은 문제
+- '미정'으로 바꾸면 이전 펫을 기억할 곳이 없다 (`pets.type`이 모두 null, `pets`는 프론트에서 수정 불가).
+  → 지금은 마이페이지에서 '미정'으로 바꾸는 것을 막는다 (직무 목록에도 '미정'이 없다).
+- 나중에 `pets.type`에 값이 들어가면 HOME은 `pets.type`을 먼저 보므로, 직무를 바꿀 때 `pets.type`도 함께 바꿔야 한다.
+
+### 요청: 희망 직무 변경 RPC (초안, 적용 전 검토)
+```sql
+-- 희망 직무 변경 + 펫 종류 맞추기 (온기·단계·이름 변경 횟수·보상 기록은 그대로)
+create or replace function public.change_desired_job(p_job text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_old text;
+  v_pet text;
+begin
+  if v_uid is null then
+    raise exception 'UNAUTHENTICATED' using detail = '로그인이 필요합니다.';
+  end if;
+  if p_job is null or btrim(p_job) = '' then
+    raise exception 'VALIDATION_ERROR' using detail = '희망 직무를 골라 주세요.';
+  end if;
+
+  select interests[1] into v_old from profiles where id = v_uid for update;
+
+  v_pet := case
+    when p_job in ('backend', 'frontend', 'mobile') then 'penguin'
+    when p_job in ('ai', 'data') then 'otter'
+    when p_job in ('security', 'system_network') then 'black_cat'
+    when p_job in ('embedded_iot', 'game') then 'hamster'
+    when p_job = 'uiux' then 'rabbit'
+    else null -- undecided·기타: 기존 펫 유지
+  end;
+
+  update profiles set interests = array[p_job] where id = v_uid;
+
+  if v_pet is not null then
+    update pets set type = v_pet where user_id = v_uid and type is distinct from v_pet;
+  else
+    -- 처음 미정으로 바꿀 때 이전 직무의 펫을 기록해 둔다 (type이 비어 있을 때만)
+    update pets set type = case
+        when v_old in ('backend', 'frontend', 'mobile') then 'penguin'
+        when v_old in ('ai', 'data') then 'otter'
+        when v_old in ('security', 'system_network') then 'black_cat'
+        when v_old in ('embedded_iot', 'game') then 'hamster'
+        when v_old = 'uiux' then 'rabbit'
+      end
+    where user_id = v_uid and type is null;
+  end if;
+
+  return jsonb_build_object(
+    'user', (select to_jsonb(p) from profiles p where p.id = v_uid),
+    'pet', (select to_jsonb(pt) from pets pt where pt.user_id = v_uid)
+  );
+end;
+$$;
+
+revoke all on function public.change_desired_job(text) from public, anon;
+grant execute on function public.change_desired_job(text) to authenticated;
+```
+- 온보딩(`complete_onboarding`)에서도 같은 규칙으로 `pets.type`을 채우면 좋다 (지금은 null).
+- RPC 적용 후 프론트: `updateMyDesiredJob`을 이 RPC 호출로 바꾸고, 마이페이지의 '미정' 차단을 푼다.

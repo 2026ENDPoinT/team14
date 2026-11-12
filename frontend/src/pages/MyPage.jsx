@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getPet } from '../features/pet/petMock.js'
+import { useAuth } from '../features/auth/AuthProvider.jsx'
+import { JOB_TO_PET, PET_CHARACTERS } from '../features/home/petCharacter.js'
+import { updateMyDesiredJob } from '../services/api.js'
 import { mockProfile, mockSettings } from '../features/mypage/myPageMock.js'
 import { Icon } from '../features/mypage/ui.jsx'
 import {
@@ -51,6 +54,10 @@ export default function MyPage() {
   const [settings, setSettings] = useState(mockSettings)
   const [toast, setToast] = useState('')
   const pet = getPet()
+  // 로그인했으면 희망 직무는 DB 프로필(interests 첫 번째 = 대표 직무) 값을 쓴다. 나머지 항목은 아직 Mock
+  const auth = useAuth()
+  const signedIn = auth.status === 'ready'
+  const shownProfile = signedIn ? { ...profile, desiredJob: auth.profile.interests?.[0] ?? null } : profile
 
   useEffect(() => {
     if (!toast) return
@@ -61,17 +68,36 @@ export default function MyPage() {
   // 설정 한 개 바꾸기 (지금은 화면에서만 바뀌고 저장되지 않음)
   const update = (key, value) => setSettings((s) => ({ ...s, [key]: value }))
   const notReady = () => setToast('준비 중인 기능이에요.')
-  // choices: 희망 직무를 바꿨을 때만 { resetCourses, resetPet }
-  // ※ 과목 재설정·펫 재시작은 실제로는 서버 RPC로 처리해야 한다. (지금은 Mock: 안내만)
-  function saveProfile(next, choices) {
-    setProfile(next)
+  // choices: 희망 직무를 바꿨을 때만 { resetCourses }
+  // - 로그인했으면 희망 직무를 DB(profiles.interests)에 저장하고, 성공했을 때만 화면·HOME에 반영한다.
+  //   HOME 펫 종류는 희망 직무로 정해지므로 저장만 하면 펫도 바뀐다. 온기·성장 단계는 그대로.
+  // - '미정' 등 펫이 정해지지 않는 직무는 이전 펫을 저장할 곳(pets.type)이 아직 없어 막는다.
+  // ※ 과목 재설정은 실제로는 서버 RPC로 처리해야 한다. (지금은 Mock: 안내만)
+  async function saveProfile(next, choices) {
     if (!choices) {
+      setProfile(next)
       setToast('프로필을 저장했어요.')
       return
     }
+    const newPet = JOB_TO_PET[next.desiredJob]
+    if (!newPet) {
+      setToast('지금은 펫을 유지한 채 미정으로 바꿀 수 없어요. 서버 준비 후 바꿀 수 있어요.')
+      return
+    }
+    if (signedIn) {
+      const result = await updateMyDesiredJob(next.desiredJob)
+      if (result.error) {
+        setToast(`희망 직무를 저장하지 못했어요. ${result.error.message}`)
+        return
+      }
+      auth.applyProfile({ interests: result.data.interests })
+    }
+    setProfile(next)
+    const samePet = JOB_TO_PET[shownProfile.desiredJob] === newPet
     const parts = ['희망 직무를 바꿨어요.']
+    parts.push(samePet ? `펫은 그대로 ${PET_CHARACTERS[newPet].name}예요.` : `펫이 ${PET_CHARACTERS[newPet].name}(${PET_CHARACTERS[newPet].label})로 바뀌었어요.`)
     if (choices.resetCourses) parts.push('이후 과목을 다시 짤게요.')
-    if (choices.resetPet) parts.push('펫을 새로 시작해요.')
+    if (!signedIn) parts.push('(예시 화면이라 저장되지 않아요)')
     setToast(parts.join(' '))
   }
 
@@ -84,7 +110,7 @@ export default function MyPage() {
     }))
     .filter((g) => g.items.length > 0)
 
-  const panelProps = { profile, pet, settings, update, notReady }
+  const panelProps = { profile: shownProfile, pet, settings, update, notReady }
 
   return (
     <div className="diary-page">
