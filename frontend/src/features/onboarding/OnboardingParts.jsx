@@ -69,7 +69,7 @@ export function Hint({ children, tone }) {
 }
 
 // 아래쪽 확인 버튼 + 건너뛰기
-export function ActionBar({ onConfirm, confirmLabel = '확인', disabled = false, onSkip }) {
+export function ActionBar({ onConfirm, confirmLabel = '확인', disabled = false, onSkip, skipLabel = '건너뛰기' }) {
   return (
     <div className="ob-actions">
       <button type="button" className="ob-primary" onClick={onConfirm} disabled={disabled}>
@@ -77,7 +77,7 @@ export function ActionBar({ onConfirm, confirmLabel = '확인', disabled = false
       </button>
       {onSkip && (
         <button type="button" className="ob-skip" onClick={onSkip}>
-          건너뛰기
+          {skipLabel}
         </button>
       )}
     </div>

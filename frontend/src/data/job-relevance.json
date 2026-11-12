@@ -1,0 +1,1454 @@
+{
+  "basis": "team",
+  "curriculumYear": 2026,
+  "minScore": 2,
+  "note": "직무별 교과목 관련도 = 팀 자체 판단 (학교 공식 평가 아님). 3 핵심 과목 · 2 관련 있음. 목록에 없는 과목은 0점. 캡스톤디자인(1)·(2)는 전공필수 졸업 프로젝트라 모든 직무에 2점. 현장실습·코업 칸은 과목 구성이 확인되지 않아(needsCheck) 넣지 않았다.",
+  "integration": "팀원 점수표(PR #25)를 cs2026 키·앱 직무 키로 변환해 대조함. 점수가 같은 항목은 합의된 것으로 보고, 다른 항목은 기존 점수를 유지한 채 review에 남김. 팀원 표에 값이 없는 과목은 기존 점수를 유지함. jobs 값만 추천 계산에 쓰인다.",
+  "jobKeyMap": {
+    "ai_ml": "ai",
+    "cloud": "system_network",
+    "embedded": "embedded_iot"
+  },
+  "jobs": {
+    "backend": {
+      "cs2026-2-1-01": 3,
+      "cs2026-2-1-04": 2,
+      "cs2026-2-1-06": 3,
+      "cs2026-2-2-01": 2,
+      "cs2026-2-2-02": 3,
+      "cs2026-2-2-04": 2,
+      "cs2026-2-2-05": 2,
+      "cs2026-2-2-06": 3,
+      "cs2026-2-2-07": 2,
+      "cs2026-3-1-04": 3,
+      "cs2026-3-1-05": 2,
+      "cs2026-3-1-06": 3,
+      "cs2026-3-2-05": 3,
+      "cs2026-3-2-06": 3,
+      "cs2026-4-1-07": 2,
+      "cs2026-4-2-01": 2,
+      "cs2026-4-2-05": 2,
+      "cs2026-4-2-07": 2
+    },
+    "frontend": {
+      "cs2026-2-1-01": 2,
+      "cs2026-2-1-06": 2,
+      "cs2026-2-2-05": 2,
+      "cs2026-2-2-06": 3,
+      "cs2026-3-2-02": 2,
+      "cs2026-3-2-05": 2,
+      "cs2026-3-2-06": 3,
+      "cs2026-3-2-07": 2,
+      "cs2026-4-1-07": 2,
+      "cs2026-4-2-05": 2,
+      "cs2026-4-2-07": 2
+    },
+    "mobile": {
+      "cs2026-2-1-01": 2,
+      "cs2026-2-1-06": 3,
+      "cs2026-2-2-02": 2,
+      "cs2026-2-2-06": 2,
+      "cs2026-3-1-06": 2,
+      "cs2026-3-2-05": 2,
+      "cs2026-3-2-07": 3,
+      "cs2026-4-1-05": 2,
+      "cs2026-4-1-07": 2,
+      "cs2026-4-2-07": 2
+    },
+    "ai": {
+      "cs2026-1-2-01": 3,
+      "cs2026-2-1-01": 2,
+      "cs2026-2-1-02": 3,
+      "cs2026-2-2-01": 2,
+      "cs2026-2-2-03": 3,
+      "cs2026-3-1-01": 2,
+      "cs2026-3-1-02": 3,
+      "cs2026-3-2-01": 3,
+      "cs2026-4-1-01": 3,
+      "cs2026-4-1-02": 3,
+      "cs2026-4-1-07": 2,
+      "cs2026-4-2-01": 2,
+      "cs2026-4-2-02": 2,
+      "cs2026-4-2-07": 2
+    },
+    "data": {
+      "cs2026-1-2-01": 2,
+      "cs2026-2-1-02": 3,
+      "cs2026-2-2-02": 3,
+      "cs2026-2-2-03": 2,
+      "cs2026-3-1-01": 3,
+      "cs2026-3-2-01": 2,
+      "cs2026-4-1-01": 2,
+      "cs2026-4-1-07": 2,
+      "cs2026-4-2-01": 3,
+      "cs2026-4-2-02": 3,
+      "cs2026-4-2-07": 2
+    },
+    "security": {
+      "cs2026-2-1-04": 2,
+      "cs2026-2-1-05": 2,
+      "cs2026-2-2-04": 2,
+      "cs2026-3-1-03": 3,
+      "cs2026-3-1-04": 3,
+      "cs2026-3-1-05": 3,
+      "cs2026-3-1-06": 3,
+      "cs2026-3-2-03": 3,
+      "cs2026-3-2-04": 2,
+      "cs2026-4-1-03": 3,
+      "cs2026-4-1-07": 2,
+      "cs2026-4-2-03": 2,
+      "cs2026-4-2-04": 3,
+      "cs2026-4-2-07": 2
+    },
+    "system_network": {
+      "cs2026-2-1-03": 2,
+      "cs2026-2-1-04": 3,
+      "cs2026-2-2-04": 3,
+      "cs2026-2-2-07": 2,
+      "cs2026-3-1-04": 3,
+      "cs2026-3-1-05": 3,
+      "cs2026-3-1-06": 3,
+      "cs2026-3-2-04": 3,
+      "cs2026-4-1-05": 2,
+      "cs2026-4-1-07": 2,
+      "cs2026-4-2-01": 2,
+      "cs2026-4-2-07": 2
+    },
+    "embedded_iot": {
+      "cs2026-2-1-03": 3,
+      "cs2026-2-1-04": 2,
+      "cs2026-2-2-04": 2,
+      "cs2026-3-1-04": 3,
+      "cs2026-3-1-05": 3,
+      "cs2026-3-1-06": 2,
+      "cs2026-3-2-04": 3,
+      "cs2026-4-1-04": 3,
+      "cs2026-4-1-05": 3,
+      "cs2026-4-1-07": 2,
+      "cs2026-4-2-07": 2
+    },
+    "game": {
+      "cs2026-1-2-01": 2,
+      "cs2026-2-1-01": 2,
+      "cs2026-2-1-06": 3,
+      "cs2026-2-2-01": 2,
+      "cs2026-3-1-02": 2,
+      "cs2026-3-2-02": 3,
+      "cs2026-3-2-05": 2,
+      "cs2026-3-2-08": 3,
+      "cs2026-4-1-02": 2,
+      "cs2026-4-1-07": 2,
+      "cs2026-4-2-07": 2
+    },
+    "uiux": {
+      "cs2026-2-2-06": 3,
+      "cs2026-3-1-01": 2,
+      "cs2026-3-2-02": 2,
+      "cs2026-3-2-05": 2,
+      "cs2026-3-2-06": 2,
+      "cs2026-3-2-07": 2,
+      "cs2026-4-1-07": 2,
+      "cs2026-4-2-07": 2
+    }
+  },
+  "stages": {
+    "s1": "기초",
+    "s2": "핵심",
+    "s3": "심화"
+  },
+  "courseNotes": {
+    "backend": {
+      "cs2026-1-1-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-1-2-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-1-01": {
+        "stageId": "s1",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-2-01": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-2-02": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-2-06": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-1-04": {
+        "stageId": "s2",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-1-06": {
+        "stageId": "s2",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-2-07": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-1-05": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-2-05": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-2-06": {
+        "stageId": "s3",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      }
+    },
+    "frontend": {
+      "cs2026-1-1-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-1-2-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-1-01": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-2-06": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-2-01": {
+        "stageId": "s2",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-2-05": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-2-06": {
+        "stageId": "s3",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-2-02": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-2-05": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      }
+    },
+    "mobile": {
+      "cs2026-1-1-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-1-2-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-1-01": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-2-01": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-2-02": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-2-07": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-2-05": {
+        "stageId": "s2",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-2-06": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-1-06": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-2-03": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      }
+    },
+    "ai": {
+      "cs2026-1-1-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-1-2-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-1-2-01": {
+        "stageId": "s1",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-1-02": {
+        "stageId": "s1",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-1-01": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-2-01": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-2-03": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-2-01": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-2-02": {
+        "stageId": "s2",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-1-02": {
+        "stageId": "s3",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-1-01": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-4-2-01": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-4-2-02": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      }
+    },
+    "data": {
+      "cs2026-1-1-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-1-2-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-1-02": {
+        "stageId": "s1",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-1-2-01": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-1-01": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-2-02": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-2-01": {
+        "stageId": "s2",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-1-01": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-2-01": {
+        "stageId": "s2",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-4-2-02": {
+        "stageId": "s3",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-4-2-01": {
+        "stageId": "s3",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-2-07": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-2-05": {
+        "stageId": "s3",
+        "reason": "직무 역량 확장에 도움이 되는 보조 과목",
+        "teamScore": 1
+      }
+    },
+    "security": {
+      "cs2026-1-1-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-1-2-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-1-01": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-1-04": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-1-06": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-2-07": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-2-04": {
+        "stageId": "s2",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-2-03": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-4-2-04": {
+        "stageId": "s3",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-1-05": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-4-2-03": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      }
+    },
+    "system_network": {
+      "cs2026-1-1-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-1-2-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-1-01": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-1-04": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-1-06": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-2-04": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-2-07": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-2-04": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-1-05": {
+        "stageId": "s3",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-2-03": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-2-05": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-2-05": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      }
+    },
+    "embedded_iot": {
+      "cs2026-1-1-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-1-2-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-1-01": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-2-04": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-1-04": {
+        "stageId": "s2",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-2-04": {
+        "stageId": "s2",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-1-05": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-4-1-04": {
+        "stageId": "s3",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-4-1-05": {
+        "stageId": "s3",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-1-06": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-2-03": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      }
+    },
+    "game": {
+      "cs2026-1-1-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-1-2-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-1-01": {
+        "stageId": "s1",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-2-01": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-2-02": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-2-08": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-1-2-01": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-1-04": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-1-06": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-2-05": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-2-07": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      }
+    },
+    "uiux": {
+      "cs2026-1-1-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-1-2-02": {
+        "stageId": "s1",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-2-06": {
+        "stageId": "s1",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-2-05": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-2-01": {
+        "stageId": "s2",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-3-2-06": {
+        "stageId": "s2",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-3-2-07": {
+        "stageId": "s3",
+        "reason": "직무 핵심 역량과 직접 연결되는 과목",
+        "teamScore": 3
+      },
+      "cs2026-2-2-02": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      },
+      "cs2026-2-2-05": {
+        "stageId": "s3",
+        "reason": "직무 수행에 직접적으로 관련된 과목",
+        "teamScore": 2
+      }
+    }
+  },
+  "review": [
+    {
+      "job": "frontend",
+      "courseKey": "cs2026-2-2-01",
+      "title": "알고리즘",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "frontend",
+      "courseKey": "cs2026-2-2-02",
+      "title": "데이터베이스",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "mobile",
+      "courseKey": "cs2026-2-2-01",
+      "title": "알고리즘",
+      "currentScore": 0,
+      "teamScore": 3,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "mobile",
+      "courseKey": "cs2026-3-2-03",
+      "title": "컴퓨터보안",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "ai",
+      "courseKey": "cs2026-2-2-02",
+      "title": "데이터베이스",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "data",
+      "courseKey": "cs2026-2-1-01",
+      "title": "자료구조",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "data",
+      "courseKey": "cs2026-2-2-01",
+      "title": "알고리즘",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "data",
+      "courseKey": "cs2026-2-2-07",
+      "title": "유닉스프로그래밍",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "security",
+      "courseKey": "cs2026-2-1-01",
+      "title": "자료구조",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "security",
+      "courseKey": "cs2026-2-2-07",
+      "title": "유닉스프로그래밍",
+      "currentScore": 0,
+      "teamScore": 3,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "system_network",
+      "courseKey": "cs2026-2-1-01",
+      "title": "자료구조",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "system_network",
+      "courseKey": "cs2026-2-2-05",
+      "title": "오픈소스소프트웨어",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "system_network",
+      "courseKey": "cs2026-3-2-03",
+      "title": "컴퓨터보안",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "system_network",
+      "courseKey": "cs2026-3-2-05",
+      "title": "소프트웨어공학",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "embedded_iot",
+      "courseKey": "cs2026-2-1-01",
+      "title": "자료구조",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "embedded_iot",
+      "courseKey": "cs2026-3-2-03",
+      "title": "컴퓨터보안",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "game",
+      "courseKey": "cs2026-3-1-04",
+      "title": "운영체제",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "game",
+      "courseKey": "cs2026-3-1-06",
+      "title": "컴퓨터네트워크",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "game",
+      "courseKey": "cs2026-3-2-07",
+      "title": "모바일프로그래밍",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "uiux",
+      "courseKey": "cs2026-2-2-01",
+      "title": "알고리즘",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "uiux",
+      "courseKey": "cs2026-2-2-02",
+      "title": "데이터베이스",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "uiux",
+      "courseKey": "cs2026-2-2-05",
+      "title": "오픈소스소프트웨어",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "팀원 점수 적용 시 추천에 추가"
+    },
+    {
+      "job": "backend",
+      "courseKey": "cs2026-1-1-02",
+      "title": "프로그래밍입문(1)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "backend",
+      "courseKey": "cs2026-1-2-02",
+      "title": "프로그래밍입문(2)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "frontend",
+      "courseKey": "cs2026-1-1-02",
+      "title": "프로그래밍입문(1)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "frontend",
+      "courseKey": "cs2026-1-2-02",
+      "title": "프로그래밍입문(2)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "mobile",
+      "courseKey": "cs2026-1-1-02",
+      "title": "프로그래밍입문(1)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "mobile",
+      "courseKey": "cs2026-1-2-02",
+      "title": "프로그래밍입문(2)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "ai",
+      "courseKey": "cs2026-1-1-02",
+      "title": "프로그래밍입문(1)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "ai",
+      "courseKey": "cs2026-1-2-02",
+      "title": "프로그래밍입문(2)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "data",
+      "courseKey": "cs2026-1-1-02",
+      "title": "프로그래밍입문(1)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "data",
+      "courseKey": "cs2026-1-2-02",
+      "title": "프로그래밍입문(2)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "security",
+      "courseKey": "cs2026-1-1-02",
+      "title": "프로그래밍입문(1)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "security",
+      "courseKey": "cs2026-1-2-02",
+      "title": "프로그래밍입문(2)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "system_network",
+      "courseKey": "cs2026-1-1-02",
+      "title": "프로그래밍입문(1)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "system_network",
+      "courseKey": "cs2026-1-2-02",
+      "title": "프로그래밍입문(2)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "embedded_iot",
+      "courseKey": "cs2026-1-1-02",
+      "title": "프로그래밍입문(1)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "embedded_iot",
+      "courseKey": "cs2026-1-2-02",
+      "title": "프로그래밍입문(2)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "game",
+      "courseKey": "cs2026-1-1-02",
+      "title": "프로그래밍입문(1)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "game",
+      "courseKey": "cs2026-1-2-02",
+      "title": "프로그래밍입문(2)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "uiux",
+      "courseKey": "cs2026-1-1-02",
+      "title": "프로그래밍입문(1)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "uiux",
+      "courseKey": "cs2026-1-2-02",
+      "title": "프로그래밍입문(2)",
+      "currentScore": 0,
+      "teamScore": 2,
+      "effect": "변화 없음 (1학년 과목은 미래 학년 추천 대상이 아님)"
+    },
+    {
+      "job": "backend",
+      "courseKey": "cs2026-2-2-01",
+      "title": "알고리즘",
+      "currentScore": 2,
+      "teamScore": 3,
+      "effect": "추천 여부 같음 (점수만 다름)"
+    },
+    {
+      "job": "backend",
+      "courseKey": "cs2026-3-1-04",
+      "title": "운영체제",
+      "currentScore": 3,
+      "teamScore": 2,
+      "effect": "추천 여부 같음 (점수만 다름)"
+    },
+    {
+      "job": "backend",
+      "courseKey": "cs2026-3-1-06",
+      "title": "컴퓨터네트워크",
+      "currentScore": 3,
+      "teamScore": 2,
+      "effect": "추천 여부 같음 (점수만 다름)"
+    },
+    {
+      "job": "backend",
+      "courseKey": "cs2026-3-2-05",
+      "title": "소프트웨어공학",
+      "currentScore": 3,
+      "teamScore": 2,
+      "effect": "추천 여부 같음 (점수만 다름)"
+    },
+    {
+      "job": "frontend",
+      "courseKey": "cs2026-3-2-05",
+      "title": "소프트웨어공학",
+      "currentScore": 2,
+      "teamScore": 3,
+      "effect": "추천 여부 같음 (점수만 다름)"
+    },
+    {
+      "job": "mobile",
+      "courseKey": "cs2026-2-2-02",
+      "title": "데이터베이스",
+      "currentScore": 2,
+      "teamScore": 3,
+      "effect": "추천 여부 같음 (점수만 다름)"
+    },
+    {
+      "job": "ai",
+      "courseKey": "cs2026-2-2-01",
+      "title": "알고리즘",
+      "currentScore": 2,
+      "teamScore": 3,
+      "effect": "추천 여부 같음 (점수만 다름)"
+    },
+    {
+      "job": "data",
+      "courseKey": "cs2026-3-2-05",
+      "title": "소프트웨어공학",
+      "currentScore": 0,
+      "teamScore": 1,
+      "effect": "추천 여부 같음 (점수만 다름)"
+    },
+    {
+      "job": "security",
+      "courseKey": "cs2026-3-1-05",
+      "title": "시스템프로그래밍",
+      "currentScore": 3,
+      "teamScore": 2,
+      "effect": "추천 여부 같음 (점수만 다름)"
+    },
+    {
+      "job": "system_network",
+      "courseKey": "cs2026-2-2-07",
+      "title": "유닉스프로그래밍",
+      "currentScore": 2,
+      "teamScore": 3,
+      "effect": "추천 여부 같음 (점수만 다름)"
+    },
+    {
+      "job": "embedded_iot",
+      "courseKey": "cs2026-3-1-04",
+      "title": "운영체제",
+      "currentScore": 3,
+      "teamScore": 2,
+      "effect": "추천 여부 같음 (점수만 다름)"
+    },
+    {
+      "job": "game",
+      "courseKey": "cs2026-1-2-01",
+      "title": "선형대수학",
+      "currentScore": 2,
+      "teamScore": 3,
+      "effect": "추천 여부 같음 (점수만 다름)"
+    },
+    {
+      "job": "game",
+      "courseKey": "cs2026-2-1-01",
+      "title": "자료구조",
+      "currentScore": 2,
+      "teamScore": 3,
+      "effect": "추천 여부 같음 (점수만 다름)"
+    },
+    {
+      "job": "game",
+      "courseKey": "cs2026-2-2-01",
+      "title": "알고리즘",
+      "currentScore": 2,
+      "teamScore": 3,
+      "effect": "추천 여부 같음 (점수만 다름)"
+    },
+    {
+      "job": "uiux",
+      "courseKey": "cs2026-3-2-05",
+      "title": "소프트웨어공학",
+      "currentScore": 2,
+      "teamScore": 3,
+      "effect": "추천 여부 같음 (점수만 다름)"
+    },
+    {
+      "job": "uiux",
+      "courseKey": "cs2026-3-2-06",
+      "title": "고급웹프로그래밍",
+      "currentScore": 2,
+      "teamScore": 3,
+      "effect": "추천 여부 같음 (점수만 다름)"
+    },
+    {
+      "job": "uiux",
+      "courseKey": "cs2026-3-2-07",
+      "title": "모바일프로그래밍",
+      "currentScore": 2,
+      "teamScore": 3,
+      "effect": "추천 여부 같음 (점수만 다름)"
+    }
+  ],
+  "unlinkedTeamScores": [
+    {
+      "job": "backend",
+      "catalogId": "oop",
+      "name": "객체지향프로그래밍",
+      "teamScore": 3,
+      "stageId": "s1",
+      "reason": "직무 핵심 역량과 직접 연결되는 과목"
+    },
+    {
+      "job": "frontend",
+      "catalogId": "oop",
+      "name": "객체지향프로그래밍",
+      "teamScore": 2,
+      "stageId": "s1",
+      "reason": "직무 수행에 직접적으로 관련된 과목"
+    },
+    {
+      "job": "mobile",
+      "catalogId": "oop",
+      "name": "객체지향프로그래밍",
+      "teamScore": 3,
+      "stageId": "s1",
+      "reason": "직무 핵심 역량과 직접 연결되는 과목"
+    },
+    {
+      "job": "security",
+      "catalogId": "oop",
+      "name": "객체지향프로그래밍",
+      "teamScore": 1,
+      "stageId": "s1",
+      "reason": "직무 역량 확장에 도움이 되는 보조 과목"
+    },
+    {
+      "job": "system_network",
+      "catalogId": "digital",
+      "name": "디지털논리회로",
+      "teamScore": 2,
+      "stageId": "s1",
+      "reason": "직무 수행에 직접적으로 관련된 과목"
+    },
+    {
+      "job": "embedded_iot",
+      "catalogId": "digital",
+      "name": "디지털논리회로",
+      "teamScore": 3,
+      "stageId": "s1",
+      "reason": "직무 핵심 역량과 직접 연결되는 과목"
+    },
+    {
+      "job": "game",
+      "catalogId": "oop",
+      "name": "객체지향프로그래밍",
+      "teamScore": 3,
+      "stageId": "s1",
+      "reason": "직무 핵심 역량과 직접 연결되는 과목"
+    },
+    {
+      "job": "uiux",
+      "catalogId": "oop",
+      "name": "객체지향프로그래밍",
+      "teamScore": 2,
+      "stageId": "s1",
+      "reason": "직무 수행에 직접적으로 관련된 과목"
+    }
+  ],
+  "teamJobPlans": {
+    "backend": {
+      "name": "백엔드 개발자",
+      "description": "서버, API, 데이터베이스 및 서비스 안정성 개발",
+      "skills": [
+        "Java 또는 Python",
+        "Spring Boot 또는 FastAPI",
+        "SQL",
+        "REST API",
+        "Docker"
+      ],
+      "recommendedActivities": [
+        "API 팀 프로젝트",
+        "오픈소스 기여",
+        "백엔드 인턴십"
+      ],
+      "portfolioProject": "인증·게시판·검색 기능이 있는 API 서비스"
+    },
+    "frontend": {
+      "name": "프론트엔드 개발자",
+      "description": "웹 UI와 사용자 경험을 구현하는 개발",
+      "skills": [
+        "HTML/CSS",
+        "JavaScript/TypeScript",
+        "React",
+        "접근성",
+        "웹 성능"
+      ],
+      "recommendedActivities": [
+        "웹 UI 클론 프로젝트",
+        "디자인 협업",
+        "프론트엔드 인턴십"
+      ],
+      "portfolioProject": "반응형 대시보드 웹앱"
+    },
+    "mobile": {
+      "name": "모바일 앱 개발자",
+      "description": "Android/iOS 모바일 앱 개발",
+      "skills": [
+        "Kotlin 또는 Swift",
+        "앱 상태 관리",
+        "API 연동",
+        "로컬 저장소",
+        "앱 배포"
+      ],
+      "recommendedActivities": [
+        "앱 출시",
+        "모바일 해커톤",
+        "사용자 테스트"
+      ],
+      "portfolioProject": "위치 기반 캠퍼스 생활 앱"
+    },
+    "ai": {
+      "name": "AI·머신러닝 엔지니어",
+      "description": "데이터 기반 예측·학습 모델 개발 및 배포",
+      "skills": [
+        "Python",
+        "NumPy/Pandas",
+        "PyTorch",
+        "모델 평가",
+        "MLOps 기초"
+      ],
+      "recommendedActivities": [
+        "Kaggle 또는 DACON",
+        "모델 재현 프로젝트",
+        "학부연구생"
+      ],
+      "portfolioProject": "교내 수요 예측 또는 이미지 분류 모델"
+    },
+    "data": {
+      "name": "데이터 분석가·엔지니어",
+      "description": "데이터 수집·정제·분석 및 파이프라인 구축",
+      "skills": [
+        "SQL",
+        "Python",
+        "통계 분석",
+        "ETL",
+        "시각화"
+      ],
+      "recommendedActivities": [
+        "공공데이터 분석",
+        "데이터 경진대회",
+        "데이터 파이프라인 프로젝트"
+      ],
+      "portfolioProject": "교내 이용 패턴 분석 대시보드"
+    },
+    "security": {
+      "name": "정보보안 엔지니어",
+      "description": "시스템 및 서비스의 취약점 예방·탐지·대응",
+      "skills": [
+        "Linux",
+        "TCP/IP",
+        "웹 보안",
+        "암호학 기초",
+        "보안 로그 분석"
+      ],
+      "recommendedActivities": [
+        "CTF",
+        "보안 동아리",
+        "모의 침투 실습(허가된 환경)"
+      ],
+      "portfolioProject": "취약점 진단과 탐지 보고서"
+    },
+    "system_network": {
+      "name": "시스템·네트워크·클라우드 엔지니어",
+      "description": "인프라 구축, 운영 자동화 및 서비스 신뢰성 개선",
+      "skills": [
+        "Linux",
+        "Docker",
+        "Kubernetes 기초",
+        "CI/CD",
+        "모니터링"
+      ],
+      "recommendedActivities": [
+        "클라우드 실습",
+        "서버 운영 프로젝트",
+        "인프라 자동화 실습"
+      ],
+      "portfolioProject": "컨테이너 기반 배포 및 관측 시스템"
+    },
+    "embedded_iot": {
+      "name": "임베디드·IoT 개발자",
+      "description": "하드웨어와 센서를 제어하는 펌웨어·연결 서비스 개발",
+      "skills": [
+        "C/C++",
+        "마이크로컨트롤러",
+        "UART/I2C/SPI",
+        "RTOS 기초",
+        "센서 통신"
+      ],
+      "recommendedActivities": [
+        "아두이노/ESP32 제작",
+        "임베디드 경진대회",
+        "HW/SW 협업"
+      ],
+      "portfolioProject": "환경 센서 측정·전송 장치"
+    },
+    "game": {
+      "name": "게임 개발자",
+      "description": "게임 플레이 시스템과 실시간 콘텐츠 구현",
+      "skills": [
+        "C# 또는 C++",
+        "Unity 또는 Unreal",
+        "벡터/행렬",
+        "게임 물리",
+        "성능 최적화"
+      ],
+      "recommendedActivities": [
+        "게임잼",
+        "플레이테스트",
+        "게임 포트폴리오"
+      ],
+      "portfolioProject": "작동 가능한 2D/3D 게임 데모"
+    },
+    "uiux": {
+      "name": "UI/UX 엔지니어",
+      "description": "사용자 조사·인터랙션 설계·프로토타입 구현",
+      "skills": [
+        "Figma",
+        "사용자 인터뷰",
+        "프로토타이핑",
+        "접근성",
+        "사용성 평가"
+      ],
+      "recommendedActivities": [
+        "사용성 테스트",
+        "디자인 시스템 제작",
+        "프로덕트 협업"
+      ],
+      "portfolioProject": "사용자 검증을 거친 캠퍼스 서비스 프로토타입"
+    }
+  },
+  "teamNotes": [
+    "추천 임계값은 2점이며, 여러 직무 선택 시 교과목별 최고 점수를 사용함.",
+    "관련도 점수는 교육적 추천 가설이며 학교 또는 채용기관의 공식 평가가 아님.",
+    "needsCheck=true 과목은 curriculum-2026.json에서 학수번호 및 개설 확인이 필요함.",
+    "직무별 추천 목록의 순서는 curriculum-2026.json stages 순서를 따름."
+  ]
+}
