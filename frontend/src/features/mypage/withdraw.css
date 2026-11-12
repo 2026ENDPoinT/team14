@@ -1,0 +1,110 @@
+/* 회원 탈퇴 확인 창 */
+.wd-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40; /* 화면 팝업 층 (공통 메뉴 35보다 위) */
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+.wd-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.32);
+}
+.wd-modal__card {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 26px 24px 22px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.18);
+  color: #222;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.wd-title {
+  margin: 0 0 8px;
+  font-size: 19px;
+  font-weight: 800;
+}
+.wd-lead {
+  margin: 0 0 10px;
+}
+.wd-lead strong {
+  color: #c0392b;
+}
+.wd-list {
+  margin: 0 0 12px;
+  padding: 12px 14px 12px 30px;
+  border-radius: 14px;
+  background: #f7f6f3;
+}
+.wd-list li + li {
+  margin-top: 3px;
+}
+.wd-note {
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: #888;
+}
+.wd-agree {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.wd-agree input {
+  margin-top: 4px;
+}
+.wd-error {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff1f0;
+  color: #c0392b;
+  font-size: 13px;
+}
+.wd-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.wd-btn {
+  height: 40px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 20px;
+  background: #f0eee9;
+  color: #333;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.wd-btn--danger {
+  background: #d93a3f;
+  color: #fff;
+}
+.wd-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.wd-done {
+  padding: 18px 4px;
+  text-align: center;
+}
+.wd-done strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 18px;
+}
+.wd-done p {
+  margin: 0;
+  color: #666;
+}

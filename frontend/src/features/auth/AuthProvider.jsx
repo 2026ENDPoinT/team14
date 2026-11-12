@@ -1,5 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { getMyProfile, isSupabaseConfigured, signOut, subscribeAuthChange } from '../../services/api.js'
+import { checkIn } from '../../services/rewards.js'
+import { reloadPet, setPetFromServer } from '../pet/petStore.js'
+import { getTodayKST } from '../diary/dateUtils.js'
 
 // 로그인·온보딩 상태를 앱 전체에서 한 곳에서 관리한다.
 //
@@ -26,6 +29,10 @@ export function AuthProvider({ children }) {
   const [justCompleted, setJustCompleted] = useState(false)
   const userIdRef = useRef(undefined) // 지금 프로필을 불러온(또는 불러오는 중인) 사용자
   const loadSeqRef = useRef(0) // 확인 요청 번호. 여러 번 겹치면 가장 마지막 요청의 결과만 쓴다
+  // 자동 출석: 로그인한 사용자가 (KST) 그날 처음 앱을 쓰면 서버 check_in을 부른다.
+  // 지급 여부(하루 1회, 여러 탭·재로그인 포함)는 서버가 판단한다. 여기서는 같은 탭에서 같은 날 반복 호출만 줄인다.
+  const [attendance, setAttendance] = useState(null) // { userId, date, rewarded, energy }
+  const checkedRef = useRef('') // 이 탭에서 마지막으로 출석을 확인한 '사용자:날짜'
 
   // 로그인 상태와 프로필을 다시 확인한다. 결과 상태를 돌려준다.
   const reload = useCallback(async () => {
@@ -42,6 +49,35 @@ export function AuthProvider({ children }) {
     return next
   }, [])
 
+  const runAttendance = useCallback(async (userId) => {
+    const key = `${userId}:${getTodayKST()}`
+    if (!userId || checkedRef.current === key) return
+    checkedRef.current = key
+    const result = await checkIn()
+    if (result.error) {
+      checkedRef.current = '' // 실패하면 다음 기회(탭 다시 보기·새로고침)에 다시 시도
+      return
+    }
+    setPetFromServer(result.data.pet)
+    setAttendance({ userId, date: result.data.date, rewarded: result.data.reward.rewarded, energy: result.data.reward.energy ?? 0 })
+  }, [])
+
+  // 로그인·프로필 확인이 끝나면 출석 (온보딩 전 계정도 지급 → 펫이 생기면 그대로 남는다)
+  const readyUserId = state.status === 'ready' ? state.profile?.id : null
+  useEffect(() => {
+    if (readyUserId) runAttendance(readyUserId)
+  }, [readyUserId, runAttendance])
+
+  // 탭을 열어 둔 채 KST 날짜가 바뀐 뒤 다시 보면 그날 출석을 확인한다
+  useEffect(() => {
+    if (!readyUserId) return undefined
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') runAttendance(readyUserId)
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [readyUserId, runAttendance])
+
   useEffect(() => {
     if (!isSupabaseConfigured) return undefined
     let alive = true
@@ -51,6 +87,8 @@ export function AuthProvider({ children }) {
       if (event === 'PASSWORD_RECOVERY') setRecovery(true)
       if (event === 'SIGNED_OUT') {
         userIdRef.current = null
+        checkedRef.current = ''
+        setAttendance(null)
         setRecovery(false)
         setJustCompleted(false)
         setState({ status: 'signedOut' })
@@ -69,9 +107,13 @@ export function AuthProvider({ children }) {
     }
   }, [reload])
 
-  // 온보딩 저장 성공: 프로필의 완료 상태를 바로 반영하고, 완료 화면에 머물게 한다
-  const markOnboardingCompleted = useCallback(() => {
-    setState((prev) => (prev.status === 'ready' ? { ...prev, profile: { ...prev.profile, onboardingCompleted: true } } : prev))
+  // 온보딩 저장 성공: 서버가 돌려준 최신 프로필(닉네임·학년·희망 직무)을 바로 반영하고, 완료 화면에 머물게 한다
+  // (예전에는 완료 표시만 바꿔서 홈의 펫 종류가 재로그인 전까지 '미정'으로 보였다)
+  const markOnboardingCompleted = useCallback((latestProfile) => {
+    setState((prev) => (prev.status === 'ready'
+      ? { ...prev, profile: { ...prev.profile, ...(latestProfile ?? {}), onboardingCompleted: true } }
+      : prev))
+    reloadPet() // 온보딩이 펫을 만들었거나(출석 전) 이미 있는 펫을 그대로 쓴다 → 서버 값으로 다시 읽기
     setJustCompleted(true)
   }, [])
 
@@ -89,8 +131,8 @@ export function AuthProvider({ children }) {
   }, [])
 
   const value = useMemo(
-    () => ({ ...state, recovery, justCompleted, reload, markOnboardingCompleted, finishOnboarding, logout }),
-    [state, recovery, justCompleted, reload, markOnboardingCompleted, finishOnboarding, logout],
+    () => ({ ...state, recovery, justCompleted, attendance, reload, markOnboardingCompleted, finishOnboarding, logout }),
+    [state, recovery, justCompleted, attendance, reload, markOnboardingCompleted, finishOnboarding, logout],
   )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

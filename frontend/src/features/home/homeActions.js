@@ -1,5 +1,9 @@
+import { checkIn as checkInService } from '../../services/rewards.js'
+import { setPetFromServer } from '../pet/petStore.js'
+
 // HOME 서버 요청 자리 (출석·펫 이름 변경)
-// 아직 서버 RPC가 없다 → 항상 NOT_READY를 돌려준다. 화면에서 성공한 것처럼 처리하지 않는다.
+// - 출석: 서버 RPC check_in (services/rewards.js). 로그인할 때 자동으로도 부른다(AuthProvider).
+// - 펫 이름 변경: 아직 서버 RPC가 없다 → NOT_READY. 화면에서 성공한 것처럼 처리하지 않는다.
 // (가짜 지급·가짜 저장·가짜 차감 금지. 온기 증가·차감은 서버 RPC만 한다)
 // 서버가 준비되면 frontend/src/services/ 의 함수(3번 담당)로 바꾼다. 결과 모양은 아래 주석과 같게.
 
@@ -14,7 +18,10 @@ const notReady = (what) => ({
 // 출석: 서버 RPC check_in (서버 KST 날짜 기준 하루 1회 +100P)
 // 성공 결과: { reward: { rewarded: true, energy: 100 }, pet } / 이미 출석: { reward: { rewarded: false }, pet }
 export async function checkIn() {
-  return notReady('출석')
+  const result = await checkInService()
+  if (result.error) return { error: result.error }
+  setPetFromServer(result.data.pet)
+  return { reward: result.data.reward, pet: result.data.pet }
 }
 
 // 펫 이름 변경: 서버 RPC (이름 저장 + 온기 차감을 한 트랜잭션으로)

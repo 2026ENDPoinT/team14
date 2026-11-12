@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../features/auth/AuthProvider.jsx'
-import { getPet } from '../features/pet/petMock.js'
+import { EMPTY_PET, usePet } from '../features/pet/petStore.js'
 import PetImage from '../features/pet/PetImage.jsx'
 import { getEnergyToNextStage, getStageInfo, getStageProgress, MAX_STAGE } from '../features/pet/petStages.js'
 import { PET_CHARACTERS, petAssetUrl, resolvePetCharacter } from '../features/home/petCharacter.js'
@@ -11,12 +11,12 @@ import CareerEntryButton from '../features/career/CareerEntryButton.jsx'
 import '../features/home/Home.css'
 
 // 펫 HOME (/) — Figma HOME 화면: 은은한 크림 배경, 위쪽 가운데 펫 이름, 가운데 펫, 아래 점선 성장 표시
-// - 펫 데이터는 아직 Mock(petMock.js). 서버 연결(2-9) 때 services 함수로 바꾼다.
+// - 펫·온기는 서버 값(petStore → services/rewards.js). 출석은 로그인할 때 자동으로 한다(AuthProvider).
 // - 성장 단계는 누적 온기(pet.energy)로 정한다. 온기를 써도 단계는 내려가지 않는다.
 // - 출석·이름 변경은 서버 RPC가 없어 "준비 중" 안내만 한다 (가짜 지급·저장·차감 없음)
 export default function HomePage() {
-  const { profile } = useAuth()
-  const [pet, setPet] = useState(() => getPet())
+  const { profile, attendance } = useAuth()
+  const pet = usePet().pet ?? EMPTY_PET
   const [toast, setToast] = useState('')
   const [burst, setBurst] = useState(null) // 서버가 지급을 확인한 온기 (연출 중일 때만)
   const [editing, setEditing] = useState(false)
@@ -26,6 +26,14 @@ export default function HomePage() {
   const inputRef = useRef(null)
   const hopRef = useRef(null)
   const endBurst = useCallback(() => setBurst(null), [])
+
+  // 오늘 자동 출석으로 온기를 받았으면 한 번만 연출한다 (잔액은 서버가 이미 올려 둠)
+  useEffect(() => {
+    if (attendance?.rewarded && !attendance.celebrated) {
+      attendance.celebrated = true
+      setBurst(attendance.energy)
+    }
+  }, [attendance])
 
   // 펫 클릭 반응: 살짝 통통 튀고 0.5초 안에 제자리로 (포인트·성장 변화 없음)
   // Web Animations API라 React 다시 그리기가 없고, 연속 클릭하면 이전 동작을 멈추고 처음부터 다시 재생한다.
@@ -53,8 +61,8 @@ export default function HomePage() {
   const progress = getStageProgress(pet.energy)
   const imageUrl = petAssetUrl(character, stage)
   const petName = pet.name ?? (character ? PET_CHARACTERS[character].name : '내 펫')
-  // 온기 잔액: 서버에 잔액 칸이 생기기 전까지는 누적 온기와 같다 (아직 온기를 쓰는 기능이 없음)
-  const balance = pet.warmth ?? pet.energy ?? 0
+  // 온기 잔액: 서버 pets.warmth_balance (누적 온기 energy와 별개 — 온기를 쓰면 잔액만 줄어든다)
+  const balance = pet.warmth ?? 0
   const growthLabel = maxed
     ? `${stage}단계 · 최대 성장`
     : `${stage}단계 · 다음 단계까지 누적 온기 ${(nextMin - pet.energy).toLocaleString()} (${progress}%)`
@@ -79,7 +87,6 @@ export default function HomePage() {
       setToast(`${result.error.message} 온기는 지급되지 않았어요.`)
       return
     }
-    if (result.pet) setPet(result.pet)
     if (result.reward?.rewarded) setBurst(result.reward.energy)
     else setToast('오늘은 이미 출석했어요.')
   }
@@ -106,14 +113,12 @@ export default function HomePage() {
       setToast(`${result.error.message} 이름이 바뀌지 않았어요.`)
       return
     }
-    if (result.pet) setPet(result.pet)
     setEditing(false)
   }
 
   return (
     <div className="home-page">
-      {/* 보유 온기 (오른쪽 위): 햇살 아이콘 + "온기" + 잔액
-          ※ 서버에 잔액 칸(warmth_balance)이 생기기 전까지는 Mock 누적 온기(energy)를 그대로 보여 준다 */}
+      {/* 보유 온기 (오른쪽 위): 햇살 아이콘 + "온기" + 서버에 저장된 잔액(warmth_balance) */}
       <div className="hm-warmth" role="group" aria-label={`보유 온기 ${balance.toLocaleString()}`}>
         <svg className="hm-warmth__icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
           <circle cx="12" cy="12" r="4" />

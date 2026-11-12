@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { getPet } from '../features/pet/petMock.js'
+import { EMPTY_PET, usePet } from '../features/pet/petStore.js'
 import { mockProfile, mockSettings } from '../features/mypage/myPageMock.js'
 import { Icon } from '../features/mypage/ui.jsx'
 import {
@@ -50,7 +50,7 @@ export default function MyPage() {
   const [profile, setProfile] = useState(mockProfile)
   const [settings, setSettings] = useState(mockSettings)
   const [toast, setToast] = useState('')
-  const pet = getPet()
+  const pet = usePet().pet ?? EMPTY_PET // 서버의 내 펫 (누적 온기·잔액)
 
   useEffect(() => {
     if (!toast) return

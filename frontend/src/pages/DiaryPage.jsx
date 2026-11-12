@@ -3,9 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import DiaryCalendar from '../features/diary/DiaryCalendar.jsx'
 import DiaryModal from '../features/diary/DiaryModal.jsx'
 import MonthPicker from '../features/diary/MonthPicker.jsx'
-import { listDiaries } from '../features/diary/diaryMock.js'
-import { getPet } from '../features/pet/petMock.js'
-import { getStageByNumber, PET_STAGES } from '../features/pet/petStages.js'
+import { listDiaries, useDiaries } from '../features/diary/diaryStore.js'
+import { EMPTY_PET, usePet } from '../features/pet/petStore.js'
+import { getStageByNumber, getStageInfo, PET_STAGES } from '../features/pet/petStages.js'
 
 const MAX_WARMTH = PET_STAGES[PET_STAGES.length - 1].minEnergy // 최종 단계 기준 (5,000)
 import { getTodayKST, isValidDateString, toDateString } from '../features/diary/dateUtils.js'
@@ -63,6 +63,10 @@ export default function DiaryPage() {
   const [prompt, setPrompt] = useState(() => pickPrompt(null)) // 들어올 때마다 무작위 질문
   const closePicker = useCallback(() => setPickerOpen(false), [])
 
+  // 내 일기·펫 (서버). 불러오거나 저장하면 다시 그려진다
+  const diaryData = useDiaries()
+  const { pet: loadedPet } = usePet()
+
   // 보고 있는 달의 일기 목록
   const lastDay = new Date(view.year, view.month, 0).getDate()
   const monthDiaries = listDiaries(
@@ -70,8 +74,9 @@ export default function DiaryPage() {
     toDateString(view.year, view.month, lastDay),
   )
   const isCurrentMonth = view.year === todayYear && view.month === todayMonth
-  const pet = getPet() // 일기를 저장해 온기를 받으면 다시 그릴 때 늘어난 값이 보인다
-  const stage = getStageByNumber(pet.stage)
+  const pet = loadedPet ?? EMPTY_PET // 일기로 온기를 받으면 서버가 돌려준 값으로 바로 바뀐다
+  // 성장 단계: 누적 온기 기준 (서버 stage가 더 높으면 그 값 — 단계는 내려가지 않음, HOME과 같은 규칙)
+  const stage = getStageByNumber(Math.max(pet.stage ?? 1, getStageInfo(pet.energy).stage))
 
   function moveMonth(step) {
     setView(({ year, month }) => {
@@ -111,6 +116,12 @@ export default function DiaryPage() {
             )}
             <h1 className="dp-title">내 일기</h1>
             <p className="dp-lead">날짜를 눌러 오늘의 마음을 남겨보세요.</p>
+            {diaryData.status === 'error' && (
+              <p className="dp-save-error" role="alert">
+                {diaryData.error.message}{' '}
+                <button type="button" className="dp-text-btn" onClick={diaryData.reload}>다시 불러오기</button>
+              </p>
+            )}
           </div>
 
           <ul className="dp-legend">
@@ -220,7 +231,10 @@ export default function DiaryPage() {
       </main>
 
       {/* key: 다른 날짜를 열면 팝업을 새로 그린다 */}
-      {openDate && <DiaryModal key={openDate} date={openDate} onClose={closeModal} onChanged={refresh} />}
+      {/* 일기 목록을 다 불러온 뒤에 연다 (먼저 열면 이미 쓴 일기가 빈 일기로 시작한다) */}
+      {openDate && diaryData.status === 'ready' && (
+        <DiaryModal key={openDate} date={openDate} onClose={closeModal} onChanged={refresh} />
+      )}
     </div>
   )
 }

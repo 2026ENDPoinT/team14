@@ -213,7 +213,7 @@ export default function OnboardingPage() {
     }
     setSaving(false)
     // 실제 저장에 성공했을 때만: 프로필의 완료 상태를 바로 반영하고(이후 HOME 진입 허용) 완료 화면을 보여준다
-    markOnboardingCompleted()
+    markOnboardingCompleted(result.data.user) // 최신 프로필(희망 직무 포함)을 바로 반영
     setDone(true)
   }
 

@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import MemoryCalendar from '../features/diary/MemoryCalendar.jsx'
 import MonthPicker from '../features/diary/MonthPicker.jsx'
-import { listDiaries } from '../features/diary/diaryMock.js'
+import { listDiaries, useDiaries } from '../features/diary/diaryStore.js'
 import { getTodayKST, toDateString } from '../features/diary/dateUtils.js'
 // 일기 화면과 같은 디자인 (로드맵 rm-* 스타일 + 일기 페이지 틀)
 import '../features/roadmap/roadmap.css'
@@ -45,6 +45,8 @@ export default function MemoriesPage() {
   const [pickerOpen, setPickerOpen] = useState(false) // 연·월 빠른 선택 휠
   const [hover, setHover] = useState(null) // { date, x, y } 마우스를 올린 날짜와 커서 위치
   const closePicker = useCallback(() => setPickerOpen(false), [])
+
+  useDiaries() // 내 일기를 서버에서 불러온다 (불러오면 다시 그려진다)
 
   // 보고 있는 달의 일기 목록
   const lastDay = new Date(view.year, view.month, 0).getDate()

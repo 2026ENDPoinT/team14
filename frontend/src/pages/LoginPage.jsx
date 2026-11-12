@@ -52,7 +52,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [notice, setNotice] = useState(passwordChanged ? PASSWORD_CHANGED_NOTICE : null)
+  const [notice, setNotice] = useState(
+    passwordChanged ? PASSWORD_CHANGED_NOTICE : location.state?.withdrawn ? '탈퇴가 완료되었어요. 그동안 이용해 주셔서 고마워요.' : null,
+  )
+  // 탈퇴 직후 로그인 화면으로 왔을 때 (이미 열려 있던 경우에도) 완료 안내
+  const withdrawn = Boolean(location.state?.withdrawn)
+  useEffect(() => {
+    if (withdrawn) setNotice('탈퇴가 완료되었어요. 그동안 이용해 주셔서 고마워요.')
+  }, [withdrawn])
   const [error, setError] = useState(readErrorFromUrl() ?? (auth.status === 'unconfigured' ? NO_CONFIG_MESSAGE : null))
 
   const checking = auth.status === 'loading'
