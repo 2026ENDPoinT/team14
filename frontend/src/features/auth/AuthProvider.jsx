@@ -1,8 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { getMyProfile, isSupabaseConfigured, signOut, subscribeAuthChange } from '../../services/api.js'
-import { checkIn } from '../../services/rewards.js'
-import { reloadPet, setPetFromServer } from '../pet/petStore.js'
-import { getTodayKST } from '../diary/dateUtils.js'
+import { autoCheckIn } from '../home/homeActions.js'
+import { reloadPet } from '../pet/petStore.js'
 
 // 로그인·온보딩 상태를 앱 전체에서 한 곳에서 관리한다.
 //
@@ -29,10 +28,6 @@ export function AuthProvider({ children }) {
   const [justCompleted, setJustCompleted] = useState(false)
   const userIdRef = useRef(undefined) // 지금 프로필을 불러온(또는 불러오는 중인) 사용자
   const loadSeqRef = useRef(0) // 확인 요청 번호. 여러 번 겹치면 가장 마지막 요청의 결과만 쓴다
-  // 자동 출석: 로그인한 사용자가 (KST) 그날 처음 앱을 쓰면 서버 check_in을 부른다.
-  // 지급 여부(하루 1회, 여러 탭·재로그인 포함)는 서버가 판단한다. 여기서는 같은 탭에서 같은 날 반복 호출만 줄인다.
-  const [attendance, setAttendance] = useState(null) // { userId, date, rewarded, energy }
-  const checkedRef = useRef('') // 이 탭에서 마지막으로 출석을 확인한 '사용자:날짜'
 
   // 로그인 상태와 프로필을 다시 확인한다. 결과 상태를 돌려준다.
   const reload = useCallback(async () => {
@@ -49,17 +44,11 @@ export function AuthProvider({ children }) {
     return next
   }, [])
 
-  const runAttendance = useCallback(async (userId) => {
-    const key = `${userId}:${getTodayKST()}`
-    if (!userId || checkedRef.current === key) return
-    checkedRef.current = key
-    const result = await checkIn()
-    if (result.error) {
-      checkedRef.current = '' // 실패하면 다음 기회(탭 다시 보기·새로고침)에 다시 시도
-      return
-    }
-    setPetFromServer(result.data.pet)
-    setAttendance({ userId, date: result.data.date, rewarded: result.data.reward.rewarded, energy: result.data.reward.energy ?? 0 })
+  // 자동 출석: 로그인한 사용자가 (KST) 그날 처음 앱을 쓰면 서버 check_in을 부른다.
+  // HOME과 같은 요청(homeActions.autoCheckIn, 사용자·날짜별 1개)을 같이 쓰므로 요청이 겹치지 않는다.
+  // 지급 여부(하루 1회, 여러 탭·재로그인 포함)는 서버가 판단한다. 온보딩 전 첫 로그인도 여기서 지급된다.
+  const runAttendance = useCallback((userId) => {
+    if (userId) autoCheckIn(userId)
   }, [])
 
   // 로그인·프로필 확인이 끝나면 출석 (온보딩 전 계정도 지급 → 펫이 생기면 그대로 남는다)
@@ -87,8 +76,6 @@ export function AuthProvider({ children }) {
       if (event === 'PASSWORD_RECOVERY') setRecovery(true)
       if (event === 'SIGNED_OUT') {
         userIdRef.current = null
-        checkedRef.current = ''
-        setAttendance(null)
         setRecovery(false)
         setJustCompleted(false)
         setState({ status: 'signedOut' })
@@ -117,6 +104,11 @@ export function AuthProvider({ children }) {
     setJustCompleted(true)
   }, [])
 
+  // 서버에 저장한 프로필 변경(예: 희망 직무)을 바로 반영한다. 로딩 화면 없이 다른 화면(HOME 등)도 새 값을 쓴다.
+  const applyProfile = useCallback((profile) => {
+    setState((prev) => (prev.status === 'ready' ? { ...prev, profile: { ...prev.profile, ...profile } } : prev))
+  }, [])
+
   // 완료 화면의 [시작하기]: 이후 /onboarding으로 오면 HOME으로 보낸다
   const finishOnboarding = useCallback(() => setJustCompleted(false), [])
 
@@ -131,8 +123,8 @@ export function AuthProvider({ children }) {
   }, [])
 
   const value = useMemo(
-    () => ({ ...state, recovery, justCompleted, attendance, reload, markOnboardingCompleted, finishOnboarding, logout }),
-    [state, recovery, justCompleted, attendance, reload, markOnboardingCompleted, finishOnboarding, logout],
+    () => ({ ...state, recovery, justCompleted, reload, markOnboardingCompleted, applyProfile, finishOnboarding, logout }),
+    [state, recovery, justCompleted, reload, markOnboardingCompleted, applyProfile, finishOnboarding, logout],
   )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

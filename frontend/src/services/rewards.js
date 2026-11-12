@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient.js'
 
 // 펫·온기 서비스 (docs/backend-pet-home.md)
-// - 온기 지급·잔액 변경은 서버 RPC(check_in, save_diary)만 한다. 여기서는 부르고 결과를 바꿔 줄 뿐이다.
+// - 온기 지급·잔액 변경은 서버 RPC(check_in, save_diary)만 한다. 여기서는 펫을 읽고 화면용으로 바꿀 뿐이다.
 // - pet.energy: 누적 획득 온기 (펫 성장 단계용, 줄지 않음) / pet.warmth: 사용할 수 있는 온기 잔액
 
 const SERVER_CODES = ['UNAUTHENTICATED', 'VALIDATION_ERROR', 'NOT_FOUND', 'CONFLICT', 'FORBIDDEN']
@@ -42,11 +42,4 @@ export async function getMyPet() {
   return { data: toPet(data) }
 }
 
-// 출석: 서버 KST 날짜 기준 하루 1회 +100 (같은 날 여러 번·여러 탭에서 불러도 1번만 지급)
-// 결과: { data: { date, reward: { rewarded, energy?, reason? }, pet } } 또는 { error }
-export async function checkIn() {
-  if (!(await hasSession())) return { error: { code: 'UNAUTHENTICATED', message: '로그인이 필요합니다.' } }
-  const { data, error } = await supabase.rpc('check_in')
-  if (error) return { error: toServiceError(error, '출석을 확인하지 못했어요.') }
-  return { data: { date: data.date, reward: data.reward, pet: toPet(data.pet) } }
-}
+// 출석(check_in)은 services/api.js checkInToday → features/home/homeActions.js autoCheckIn 한 곳에서 부른다.

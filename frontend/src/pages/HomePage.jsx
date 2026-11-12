@@ -4,36 +4,54 @@ import { EMPTY_PET, usePet } from '../features/pet/petStore.js'
 import PetImage from '../features/pet/PetImage.jsx'
 import { getEnergyToNextStage, getStageInfo, getStageProgress, MAX_STAGE } from '../features/pet/petStages.js'
 import { PET_CHARACTERS, petAssetUrl, resolvePetCharacter } from '../features/home/petCharacter.js'
-import { checkIn, checkPetName, PET_NAME_MAX, renamePet, RENAME_COST } from '../features/home/homeActions.js'
+import { autoCheckIn, checkPetName, PET_NAME_MAX, renamePet, RENAME_COST } from '../features/home/homeActions.js'
 import GrowthDots from '../features/home/GrowthDots.jsx'
 import RewardBurst from '../features/home/RewardBurst.jsx'
+import HomeQuote from '../features/home/HomeQuote.jsx'
 import CareerEntryButton from '../features/career/CareerEntryButton.jsx'
 import '../features/home/Home.css'
 
 // 펫 HOME (/) — Figma HOME 화면: 은은한 크림 배경, 위쪽 가운데 펫 이름, 가운데 펫, 아래 점선 성장 표시
-// - 펫·온기는 서버 값(petStore → services/rewards.js). 출석은 로그인할 때 자동으로 한다(AuthProvider).
+// - 펫·온기는 서버 값(petStore → pets 테이블). 출석·일기 보상 결과로 바로 갱신된다.
 // - 성장 단계는 누적 온기(pet.energy)로 정한다. 온기를 써도 단계는 내려가지 않는다.
-// - 출석·이름 변경은 서버 RPC가 없어 "준비 중" 안내만 한다 (가짜 지급·저장·차감 없음)
+// - 출석은 버튼 없이 로그인할 때(AuthProvider)·HOME에 들어올 때 자동으로 서버(check_in)에 요청한다.
+//   같은 사용자·날짜에는 요청 하나를 같이 쓴다. 서버가 지급을 확인했을 때만 연출
+// - 이름 변경은 서버 RPC가 없어 "준비 중" 안내만 한다 (가짜 저장·차감 없음)
 export default function HomePage() {
-  const { profile, attendance } = useAuth()
-  const pet = usePet().pet ?? EMPTY_PET
+  const { profile, status } = useAuth()
+  const userId = status === 'ready' ? profile?.id : null
+  const pet = usePet().pet ?? EMPTY_PET // 서버의 내 펫 (누적 온기·잔액). 출석·일기 보상 결과로 바로 갱신된다
   const [toast, setToast] = useState('')
-  const [burst, setBurst] = useState(null) // 서버가 지급을 확인한 온기 (연출 중일 때만)
+  // 서버가 지급을 확인한 보상 연출 대기열 [{ id, amount }] — 보상이 겹쳐도 하나씩 차례로 보여 준다
+  const [bursts, setBursts] = useState([])
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [nameError, setNameError] = useState('')
   const [busy, setBusy] = useState(false)
   const inputRef = useRef(null)
   const hopRef = useRef(null)
-  const endBurst = useCallback(() => setBurst(null), [])
+  const endBurst = useCallback(() => setBursts((queue) => queue.slice(1)), [])
 
-  // 오늘 자동 출석으로 온기를 받았으면 한 번만 연출한다 (잔액은 서버가 이미 올려 둠)
+  // 자동 출석: 로그인·프로필 확인이 끝난 뒤 한 번. 같은 날 같은 사용자는 요청 하나를 같이 쓴다 (homeActions.autoCheckIn)
+  // 서버 미준비·오류는 조용히 넘어간다 (HOME에 들어올 때마다 오류 안내가 뜨지 않게, 온기도 그대로)
   useEffect(() => {
-    if (attendance?.rewarded && !attendance.celebrated) {
-      attendance.celebrated = true
-      setBurst(attendance.energy)
+    if (!userId) return undefined
+    let alive = true
+    const entry = autoCheckIn(userId)
+    entry.promise.then((result) => {
+      if (!alive || result.error) return
+      const { rewarded, energy, date } = result.data
+      // 누적 온기·보유 온기는 autoCheckIn이 펫 저장소에 이미 반영했다 (petStore)
+      if (rewarded && !entry.celebrated) {
+        entry.celebrated = true
+        const id = `attendance:${date ?? 'today'}`
+        setBursts((queue) => (queue.some((b) => b.id === id) ? queue : [...queue, { id, amount: energy }]))
+      }
+    })
+    return () => {
+      alive = false
     }
-  }, [attendance])
+  }, [userId])
 
   // 펫 클릭 반응: 살짝 통통 튀고 0.5초 안에 제자리로 (포인트·성장 변화 없음)
   // Web Animations API라 React 다시 그리기가 없고, 연속 클릭하면 이전 동작을 멈추고 처음부터 다시 재생한다.
@@ -78,19 +96,6 @@ export default function HomePage() {
     if (editing) inputRef.current?.focus()
   }, [editing])
 
-  async function handleCheckIn() {
-    if (busy) return
-    setBusy(true)
-    const result = await checkIn()
-    setBusy(false)
-    if (result.error) {
-      setToast(`${result.error.message} 온기는 지급되지 않았어요.`)
-      return
-    }
-    if (result.reward?.rewarded) setBurst(result.reward.energy)
-    else setToast('오늘은 이미 출석했어요.')
-  }
-
   function startEdit() {
     setDraft(petName)
     setNameError('')
@@ -126,7 +131,7 @@ export default function HomePage() {
         </svg>
         <span className="hm-warmth__label" aria-hidden="true">온기</span>
         <span className="hm-warmth__num" aria-hidden="true">{balance.toLocaleString()}</span>
-        {burst !== null && <RewardBurst amount={burst} onDone={endBurst} />}
+        {bursts[0] && <RewardBurst key={bursts[0].id} amount={bursts[0].amount} onDone={endBurst} />}
       </div>
 
       {/* AI 진로 추천 (왼쪽 위, 온기와 대칭): 누르면 추천 화면을 전체 화면 팝업으로 연다 */}
@@ -189,12 +194,10 @@ export default function HomePage() {
         </button>
       </div>
 
-      {/* 점선 성장 표시 + 출석 */}
+      {/* 점선 성장 표시 + 랜덤 한마디 (출석은 자동이라 버튼 없음) */}
       <div className="hm-bottom">
         <GrowthDots progress={progress} maxed={maxed} label={growthLabel} />
-        <button type="button" className="hm-attend" onClick={handleCheckIn} disabled={busy}>
-          출석하기
-        </button>
+        <HomeQuote />
       </div>
 
       <div className={`hm-toast ${toast ? 'is-visible' : ''}`} role="status">{toast}</div>

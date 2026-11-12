@@ -7,6 +7,7 @@ import { getTodayKST } from '../diary/dateUtils.js'
 import { Group, LinkRow, PanelTitle, Row, Segment, Toggle } from './ui.jsx'
 import JobPicker from './JobPicker.jsx'
 import { jobTitle } from './jobGroups.js'
+import { JOB_TO_PET, PET_CHARACTERS } from '../home/petCharacter.js'
 import { useAuth } from '../auth/AuthProvider.jsx'
 import WithdrawDialog from './WithdrawDialog.jsx'
 
@@ -122,8 +123,8 @@ function ChevronOnly() {
 // ── 프로필 편집: 닉네임·학년·희망 직무 ──
 // 희망 직무를 고르면 바로 확인 창이 뜬다. (기획 피드백 순서)
 //  1) 현재 학기 이후 과목을 새 직무에 맞게 재설정할지 (예/아니오)
-//  2) 펫을 새로 시작할지, 지금 펫으로 계속할지
-//  → 두 가지를 고르면 희망 직무가 바뀐다. 중간에 취소하면 아무것도 바뀌지 않는다.
+//  2) 새 직무에 맞는 펫 안내 (펫은 직무에 따라 자동으로 바뀌고 온기·성장 단계는 유지)
+//  → 확인하면 희망 직무가 바뀐다. 중간에 취소하면 아무것도 바뀌지 않는다.
 // 닉네임·학년은 '저장' 버튼으로 저장한다.
 export function ProfilePanel({ profile, pet, onSave }) {
   const [draft, setDraft] = useState(profile)
@@ -180,12 +181,14 @@ export function ProfilePanel({ profile, pet, onSave }) {
   )
 }
 
-// 희망 직무 변경 확인 창 (2단계: 과목 → 펫, 다 고르면 직무 변경)
-// ※ 과목 재설정·펫 재시작은 서버(3번)·로드맵(1번)·과목 선정(4번) 기능이 필요해 지금은 선택만 받는다.
+// 희망 직무 변경 확인 창 (2단계: 과목 → 펫 안내, 확인하면 직무 변경)
+// ※ 과목 재설정은 서버(3번)·로드맵(1번)·과목 선정(4번) 기능이 필요해 지금은 선택만 받는다.
 function JobChangeDialog({ profile, newJob, onCancel, onConfirm }) {
   const [resetCourses, setResetCourses] = useState(null) // null: 아직 안 고름 / true: 재설정 / false: 그대로
   const step = resetCourses === null ? 1 : 2
   const term = `${profile.grade}학년 ${profile.semester}학기`
+  const oldPet = JOB_TO_PET[profile.desiredJob]
+  const newPet = JOB_TO_PET[newJob]
 
   return (
     <div className="dp-modal" role="dialog" aria-modal="true" aria-label="희망 직무 변경">
@@ -211,17 +214,17 @@ function JobChangeDialog({ profile, newJob, onCancel, onConfirm }) {
 
         {step === 2 && (
           <>
-            <h3 className="dp-photo__title">펫을 새로 시작할까요, 지금 펫으로 계속할까요?</h3>
-            <p className="rm-muted dp-photo__sub">새로 시작하면 지금까지 모은 온기와 성장 단계가 처음으로 돌아가요.</p>
-            <div className="mp-dialog__options">
-              <button type="button" className="mp-option" onClick={() => onConfirm({ resetCourses, resetPet: false })}>
-                <strong>지금 펫으로 계속하기</strong>
-                <span>온기·성장 단계를 그대로 유지해요</span>
-              </button>
-              <button type="button" className="mp-option" onClick={() => onConfirm({ resetCourses, resetPet: true })}>
-                <strong>펫 새로 시작하기</strong>
-                <span>새 직무에 맞는 펫을 알부터 다시 키워요</span>
-              </button>
+            {/* 펫은 희망 직무에 맞게 자동으로 바뀌고, 온기·성장 단계는 초기화하지 않는다 */}
+            <h3 className="dp-photo__title">
+              {!newPet
+                ? '이 직무는 아직 펫을 정할 수 없어요'
+                : oldPet === newPet
+                  ? `펫은 그대로 ${PET_CHARACTERS[newPet].name}예요`
+                  : `펫이 ${PET_CHARACTERS[newPet].name}(${PET_CHARACTERS[newPet].label})로 바뀌어요`}
+            </h3>
+            <p className="rm-muted dp-photo__sub">모은 온기와 성장 단계는 그대로 이어져요.</p>
+            <div className="mp-dialog__choices">
+              <button type="button" className="dp-btn dp-btn--accent" onClick={() => onConfirm({ resetCourses })}>직무 바꾸기</button>
             </div>
             <button type="button" className="dp-text-btn mp-dialog__prev" onClick={() => setResetCourses(null)}>
               ← 과목 선택 다시 하기
