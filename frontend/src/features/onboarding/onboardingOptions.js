@@ -44,7 +44,7 @@ export const ROADMAP_MODES = [
 // 최종 기획(Figma) 화면용 선택지
 // 위의 기존 목록·키는 저장 계약이므로 바꾸지 않고, 화면 선택지만 아래에 따로 둔다.
 // dbKey: 현재 DB·추천 데이터가 받는 키. null이면 아직 저장할 수 없어 완료 전에 안내한다.
-// id: 화면 안에서만 쓰는 고유 값 (DB 키가 추가될 때 제안하는 이름과 같다). 저장 요청에 보내지 않는다.
+// id: 화면 안에서 쓰는 고유 값.
 // ─────────────────────────────────────────────────────────────
 
 // 현재 학년·학기 (1-1 ~ 4-2). 지금 DB에는 학년(grade)만 저장된다.
@@ -53,7 +53,9 @@ export const TERMS = GRADES.flatMap((grade) =>
 )
 
 // 기존 경험: 8개 대분류 × 세부 6개
-const exp = (id, title, dbKey = null) => ({ id, title, dbKey })
+// dbKey는 화면 id와 같다. 48개 키 모두 DB onboarding_experience_types에 있어야 한다.
+//   (00500 migration: 기존 6개 / 20261112001700 migration: 나머지 42개)
+const exp = (id, title) => ({ id, title, dbKey: id })
 export const EXPERIENCE_GROUPS = [
   {
     id: 'project', title: '프로젝트', items: [
@@ -67,7 +69,7 @@ export const EXPERIENCE_GROUPS = [
   },
   {
     id: 'contest', title: '공모전·대회', items: [
-      exp('hackathon', '해커톤', 'hackathon'),
+      exp('hackathon', '해커톤'),
       exp('programming_contest', '프로그래밍 경진대회'),
       exp('ai_data_contest', 'AI·데이터 경진대회'),
       exp('idea_contest', '아이디어 공모전'),
@@ -97,7 +99,7 @@ export const EXPERIENCE_GROUPS = [
   },
   {
     id: 'career', title: '연구·진로', items: [
-      exp('undergrad_research', '학부연구생', 'undergrad_research'),
+      exp('undergrad_research', '학부연구생'),
       exp('lab_intern', '연구실 인턴'),
       exp('company_intern', '기업 인턴'),
       exp('field_practice', '현장실습'),
@@ -107,7 +109,7 @@ export const EXPERIENCE_GROUPS = [
   },
   {
     id: 'study', title: '학업·자기계발', items: [
-      exp('certificate', '자격증', 'certificate'),
+      exp('certificate', '자격증'),
       exp('language_study', '어학 공부'),
       exp('online_course', '온라인 강의'),
       exp('bootcamp', '부트캠프'),
@@ -127,10 +129,10 @@ export const EXPERIENCE_GROUPS = [
   },
   {
     id: 'life', title: '대학생활 이벤트', items: [
-      exp('leave', '휴학', 'leave'),
+      exp('leave', '휴학'),
       exp('return_to_school', '복학'),
-      exp('military', '군 복무', 'military'),
-      exp('exchange', '교환학생', 'exchange'),
+      exp('military', '군 복무'),
+      exp('exchange', '교환학생'),
       exp('overseas_training', '해외연수'),
       exp('double_major', '복수전공·전과'),
     ],
