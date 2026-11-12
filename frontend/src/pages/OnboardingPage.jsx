@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { completeOnboarding } from '../services/api.js'
+import { completeOnboarding, moveNodes } from '../services/api.js'
 import { useAuth } from '../features/auth/AuthProvider.jsx'
 import { CAREERS, EXPERIENCE_GROUPS, TERMS } from '../features/onboarding/onboardingOptions.js'
 import {
@@ -8,6 +8,7 @@ import {
   jobRelevance,
   selectCourses,
 } from '../features/onboarding/courseRecommendationSlot.js'
+import { placeCourseNodes } from '../features/onboarding/placeCourseNodes.js'
 import { ProgressHeader } from '../features/onboarding/OnboardingParts.jsx'
 import {
   CareerStep,
@@ -59,13 +60,16 @@ export default function OnboardingPage() {
   const [setupMode, setSetupMode] = useState('auto') // 'auto' | 'manual'
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null) // { messages, fixes }
+  // 과목 위치 저장 결과 (온보딩 저장 후 따로 실행): null | { moves, status: 'failed' | 'retrying' | 'saved' }
+  const [placement, setPlacement] = useState(null)
 
   const term = TERMS.find((t) => t.id === termId) ?? null
   const grade = term?.grade ?? null // 지금 DB에는 학년만 저장된다 (학기는 백엔드 변경 후)
   const career = CAREERS.find((c) => c.id === careerId) ?? null
   // 선정 함수에 넘길 직무 키 목록 (저장 가능한 키만, 대표 1개)
   const jobs = career?.dbKey ? [career.dbKey] : []
-  const hasCurriculum = curriculum.courses.length > 0
+  // 미래 학년 추천(직무 관련도)이 연결됐는지. 지금은 비어 있어 이수 과목만 저장된다.
+  const hasRecommendation = Object.keys(jobRelevance.jobs).length > 0
 
   const pickedExperiences = EXPERIENCE_ITEMS.filter((item) => experienceIds.includes(item.id))
   const unsupportedExperiences = pickedExperiences.filter((item) => !item.dbKey)
@@ -158,20 +162,37 @@ export default function OnboardingPage() {
       courseNodes,
     })
 
-    setSaving(false)
     if (result.error) {
+      setSaving(false)
       setError({ messages: [result.error.message] }) // 입력값은 그대로 둔다
       return
     }
+    // 학기에 들어간 과목 노드를 타임라인 선 위에 겹치지 않게 놓는다 (RPC는 위치를 (0, 0)으로 저장)
+    // 실패해도 온보딩·과목은 이미 저장됐으므로 완료로 진행하고, 완료 화면에서 위치 저장만 다시 시도하게 한다.
+    const moves = placeCourseNodes(result.data)
+    if (moves.length > 0) {
+      const moved = await moveNodes(moves)
+      setPlacement({ moves, status: moved.error ? 'failed' : 'saved' })
+    }
+    setSaving(false)
     // 실제 저장에 성공했을 때만: 프로필의 완료 상태를 바로 반영하고(이후 HOME 진입 허용) 완료 화면을 보여준다
     markOnboardingCompleted()
     setDone(true)
+  }
+
+  // 위치 저장만 다시 시도 (온보딩은 다시 제출하지 않는다. 같은 위치를 다시 보내므로 여러 번 눌러도 결과가 같다)
+  async function retryPlacement() {
+    setPlacement((prev) => ({ ...prev, status: 'retrying', retried: true }))
+    const moved = await moveNodes(placement.moves)
+    setPlacement((prev) => ({ ...prev, status: moved.error ? 'failed' : 'saved' }))
   }
 
   if (done) {
     return (
       <main className="onboarding">
         <WelcomeStep
+          placement={placement}
+          onRetryPlacement={retryPlacement}
           onStart={() => {
             finishOnboarding() // 이제부터 /onboarding에 오면 HOME으로 보낸다
             navigate('/', { replace: true })
@@ -248,7 +269,7 @@ export default function OnboardingPage() {
           <SetupStep
             mode={setupMode}
             onSelect={setSetupMode}
-            hasCurriculum={hasCurriculum}
+            hasRecommendation={hasRecommendation}
             saving={saving}
             error={error}
             onFix={goTo}

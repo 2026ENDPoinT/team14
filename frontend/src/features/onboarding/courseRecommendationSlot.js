@@ -1,20 +1,14 @@
 // 과목 추천 데이터·함수가 연결될 자리 (docs/API.md 4.4)
 //
-// 4번 담당이 아래를 만들면, 이 파일에서 import로 바꿔 연결한다.
-//   - frontend/src/data/curriculum-2026.json   (연계도 과목 목록)
+// - 교과과정 목록: frontend/src/data/curriculum-2026.json (2026 연계도의 공식 정보만, 48과목)
+// - 아직 비어 있는 것 (4번 담당이 만들면 여기서 import로 바꾼다)
 //   - frontend/src/data/job-relevance.json     (직무 관련도, 팀 판단)
-//   - frontend/src/features/onboarding/selectCourses.js (선정 함수)
-// 예)
-//   import curriculum from '../../data/curriculum-2026.json'
-//   import jobRelevance from '../../data/job-relevance.json'
-//   export { selectCourses } from './selectCourses.js'
-//
-// 지금은 데이터가 비어 있어 화면에 "교과과정 데이터 준비 중"이 표시된다.
+//   - frontend/src/features/onboarding/selectCourses.js (미래 학년 추천 선정 함수)
 
-export const curriculum = {
-  source: null,
-  courses: [], // { key, title, year, semester, category, area, needsCheck }
-}
+import curriculumData from '../../data/curriculum-2026.json'
+
+// courses: [{ key, title, year, semester, category, area, needsCheck }]
+export const curriculum = curriculumData
 
 export const jobRelevance = {
   basis: 'team',

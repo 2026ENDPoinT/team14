@@ -146,12 +146,14 @@ export function ExperienceStep({ selectedIds, onToggle, hasUnsupported, onNext, 
 }
 
 // ───── 3. 수강 과목: 학년·학기별 (복수 선택) ─────
+// 실제로 이수한 과목을 직접 고른다. 선택은 페이지(OnboardingPage)에 모아 두어 단계를 오가도 유지된다.
 export function CourseStep({ courses, selectedKeys, onToggle, onNext, onSkip }) {
   // 교과과정 데이터의 권장 학년·학기로 묶는다
   const groups = TERMS.map((t) => ({
     ...t,
     courses: courses.filter((c) => c.year === t.grade && c.semester === t.semester),
   })).filter((g) => g.courses.length > 0)
+  const selectedCourses = courses.filter((c) => selectedKeys.includes(c.key))
 
   return (
     <>
@@ -164,19 +166,34 @@ export function CourseStep({ courses, selectedKeys, onToggle, onNext, onSkip }) 
           </div>
         ) : (
           groups.map((g) => (
-            <section key={g.id} className="ob-section" aria-label={`${g.id} 과목`}>
-              <h2 className="ob-section__title">{g.id}</h2>
+            <section key={g.id} className="ob-section" aria-label={`${g.grade}학년 ${g.semester}학기 과목`}>
+              <h2 className="ob-section__title">{g.grade}학년 {g.semester}학기</h2>
               <div className="ob-chips">
                 {g.courses.map((course) => (
                   <Chip key={course.key} selected={selectedKeys.includes(course.key)} onClick={() => onToggle(course.key)}>
                     {course.title}
+                    {course.category === '전공필수' && <span className="ob-chip__tag">전공필수</span>}
                   </Chip>
                 ))}
               </div>
             </section>
           ))
         )}
-        <Hint>실제 이수 학기는 로드맵에서 나중에 수정할 수 있습니다.</Hint>
+
+        {selectedCourses.length > 0 && (
+          <div className="ob-picked">
+            <span className="ob-picked__label">이수한 과목 {selectedCourses.length}개</span>
+            <div className="ob-picked__list">
+              {selectedCourses.map((course) => (
+                <button key={course.key} type="button" className="ob-picked__item" onClick={() => onToggle(course.key)} aria-label={`${course.title} 선택 해제`}>
+                  {course.title}
+                  <span aria-hidden="true">×</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <Hint>고른 과목은 연계도의 권장 학기에 ‘이수 완료’로 배치돼요. 실제 이수 학기는 로드맵에서 나중에 수정할 수 있습니다.</Hint>
       </div>
       <ActionBar onConfirm={onNext} onSkip={onSkip} />
     </>
@@ -214,7 +231,7 @@ export function CareerStep({ selectedId, onSelect, onNext }) {
 }
 
 // ───── 5. 로드맵 구성 방식 ─────
-export function SetupStep({ mode, onSelect, hasCurriculum, saving, error, onFix, onConfirm }) {
+export function SetupStep({ mode, onSelect, hasRecommendation, saving, error, onFix, onConfirm }) {
   return (
     <>
       <StepTitle>당신의 로드맵을 어떻게 시작할까요?</StepTitle>
@@ -234,8 +251,8 @@ export function SetupStep({ mode, onSelect, hasCurriculum, saving, error, onFix,
             </button>
           ))}
         </div>
-        {mode === 'auto' && !hasCurriculum && (
-          <Hint>교과과정 데이터가 연결되기 전이라 지금은 추천 과목이 추가되지 않아요.</Hint>
+        {mode === 'auto' && !hasRecommendation && (
+          <Hint>과목 추천 기능이 연결되기 전이라 지금은 추천 과목이 추가되지 않아요. 고른 이수 과목만 반영돼요.</Hint>
         )}
 
         {error && (
@@ -262,11 +279,29 @@ export function SetupStep({ mode, onSelect, hasCurriculum, saving, error, onFix,
 }
 
 // ───── 완료 ─────
-export function WelcomeStep({ onStart }) {
+// placement: 과목 위치 저장 결과. 실패하면 과목은 저장됐다고 알리고 위치 저장만 다시 시도하게 한다.
+export function WelcomeStep({ onStart, placement, onRetryPlacement }) {
+  const failed = placement?.status === 'failed' || placement?.status === 'retrying'
+  const retrying = placement?.status === 'retrying'
   return (
     <div className="ob-welcome">
       <p className="ob-welcome__text">이제 당신만의 여정을 시작할 시간입니다!</p>
-      <button type="button" className="ob-primary" onClick={onStart}>
+      {failed && (
+        <div className="ob-error ob-placement" role="alert">
+          <strong>과목 위치를 저장하지 못했어요</strong>
+          <p>
+            선택한 이수 과목 {placement.moves.length}개는 로드맵에 저장됐어요. 다만 학기 안 위치를 정하지 못해
+            과목이 겹쳐 보일 수 있어요.
+          </p>
+          <div className="ob-error__fixes">
+            <button type="button" onClick={onRetryPlacement} disabled={retrying}>
+              {retrying ? '저장 중…' : '위치 다시 저장하기'}
+            </button>
+          </div>
+        </div>
+      )}
+      {placement?.status === 'saved' && placement.retried && <Hint>과목 위치를 저장했어요.</Hint>}
+      <button type="button" className="ob-primary" onClick={onStart} disabled={retrying}>
         시작하기
       </button>
     </div>
