@@ -302,6 +302,19 @@
   padding: 0;
   font-size: 18px;
 }
+/* 과목 칩 안의 '전공필수' 표시 (연계도의 빨간 글씨 과목) */
+.ob-chip__tag {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(214, 48, 49, 0.12);
+  color: #c0392b;
+  font-size: 11px;
+  font-weight: 800;
+}
+.ob-chip.is-selected .ob-chip__tag {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
 .ob-chip__count {
   display: inline-grid;
   place-items: center;
@@ -570,6 +583,12 @@
   font-size: 20px;
   font-weight: 800;
   line-height: 1.5;
+}
+
+/* 완료 화면: 과목 위치 저장 실패 안내 */
+.ob-placement {
+  max-width: 420px;
+  text-align: left;
 }
 
 /* 개발용 안내 */
