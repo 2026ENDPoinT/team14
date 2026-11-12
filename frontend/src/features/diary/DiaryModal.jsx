@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { TrashIcon } from '../roadmap/icons.jsx'
 import { countChars, REWARD_MIN_CHARS } from './countChars.js'
-import { deleteDiary, getDiaryByDate, saveDiary } from './diaryMock.js'
+import { deleteDiary, getDiaryByDate, hasDiaryRewardToday, saveDiary } from './diaryMock.js'
 import { getTodayKST } from './dateUtils.js'
 import PhotoModal from './PhotoModal.jsx'
 import WarmthEffect from './WarmthEffect.jsx'
@@ -12,6 +12,7 @@ const WEEKDAYS = ['일요일', '월요일', '화요일', '수요일', '목요일
 const NO_REWARD_NOTE = {
   NOT_TODAY: ' 지난 날짜 일기는 온기를 받지 않아요.',
   ALREADY_REWARDED: ' 오늘 일기 온기는 이미 받았어요.',
+  TOO_SHORT: ' 20자 이상이 되면 오늘 온기를 받을 수 있어요.',
 }
 
 // '2026-11-01' → '11월 1일 일요일'
@@ -142,8 +143,8 @@ export default function DiaryModal({ date, onClose, onChanged }) {
         </div>
 
         {/* 쓰거나 고칠 때만 글자 수 게이지를 보여 준다 (보상 판단은 서버가 다시 함) */}
-        {/* 게이지는 처음 쓸 때만 (수정은 온기가 없으므로 숨김) */}
-        {!isExisting && (
+        {/* 새로 쓸 때, 그리고 오늘 일기를 고칠 때 (오늘 일기는 수정으로 20자를 채워도 온기를 받음) */}
+        {!readOnly && (!isExisting || isToday) && (
           <div className="rm-field">
             <div className="dy-count">
               <span className="rm-eyebrow">글자 수</span>
@@ -157,9 +158,11 @@ export default function DiaryModal({ date, onClose, onChanged }) {
             <p className="rm-muted dy-hint">
               {!isToday
                 ? '지난 날짜의 일기는 온기 없이 저장돼요. 온기는 오늘 일기에만 받을 수 있어요.'
-                : meetsLength
-                  ? '저장하면 온기를 받을 수 있어요.'
-                  : `${REWARD_MIN_CHARS - charCount}자 더 쓰면 온기를 받을 수 있어요.`}
+                : hasDiaryRewardToday()
+                  ? '오늘 일기 온기는 이미 받았어요. 고친 내용은 그대로 저장돼요.'
+                  : meetsLength
+                    ? '저장하면 온기를 받을 수 있어요.'
+                    : `${REWARD_MIN_CHARS - charCount}자 더 쓰면 온기를 받을 수 있어요.`}
             </p>
           </div>
         )}

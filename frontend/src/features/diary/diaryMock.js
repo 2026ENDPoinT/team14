@@ -12,12 +12,19 @@ import { mockServerAddWarmth } from '../pet/petMock.js'
 export const DIARY_REWARD = 200
 // 일기 온기를 이미 받은 날 (보상 이력 reward_events의 ref_id = 지급한 KST 날짜를 흉내)
 // 샘플 일기는 그 날짜에 이미 받은 것으로 친다.
-// ※ 규칙: '오늘(KST) 날짜' 일기를 처음 작성할 때만, 하루 1회 지급.
-//   과거·미래 날짜 일기, 수정·재저장, 삭제 후 다시 쓰기는 지급 없음.
+// ※ 규칙(최종): '오늘(KST) 날짜' 일기가 공백 포함 20자 이상이면 +200, 하루 1회.
+//   - 20자 미만으로 저장한 뒤 같은 날 수정해서 20자 이상이 되면 그때 1회 지급
+//   - 오늘 이미 받았으면 수정·삭제 후 재작성해도 추가 지급 없음
+//   - 과거 날짜 일기는 저장만, 미래 날짜는 작성 불가
 //   실제 판정은 서버 save_diary RPC가 서버 시각(Asia/Seoul)으로 해야 한다 (아직 RPC 없음).
 const rewardedDays = new Set(mockDiaries.map((d) => d.date))
 
-// 서버 판정 흉내. 결과의 reason으로 지급하지 않은 이유를 알려 준다.
+// 오늘 일기 온기를 이미 받았는지 (화면 안내용. 서버에서는 오늘 reward_events 조회)
+export function hasDiaryRewardToday() {
+  return rewardedDays.has(getTodayKST())
+}
+
+// 서버 판정 흉내 (새로 쓸 때와 수정할 때 모두). 결과의 reason으로 지급하지 않은 이유를 알려 준다.
 function judgeReward(date, content) {
   const today = getTodayKST()
   if (date !== today) return { rewarded: false, reason: 'NOT_TODAY' }
@@ -70,7 +77,8 @@ export function saveDiary({ date, content, linkedNodeId = null }) {
     existing.content = content
     existing.linkedNodeId = linkedNodeId
     existing.updatedAt = now
-    return { diary: { ...existing }, reward: { rewarded: false, reason: 'EDIT' } } // 수정·재저장은 온기 없음
+    // 수정도 같은 판정: 오늘 날짜이고 처음 20자 이상이 되면 1회 지급 (이미 받았으면 없음)
+    return { diary: { ...existing }, reward: judgeReward(date, content) }
   }
 
   const diary = {
