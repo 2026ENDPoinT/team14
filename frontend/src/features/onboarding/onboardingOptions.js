@@ -141,17 +141,18 @@ export const EXPERIENCE_GROUPS = [
 
 // 희망 직무 (대표 1개). dbKey는 위 JOBS 키와 같다.
 // 시스템·네트워크·클라우드는 기존 system_network 키를 쓴다. (supabase/functions/_shared/interest-tags.ts와 같은 범위)
-// 모바일 앱·임베디드·IoT는 직무 키·관련도 데이터가 아직 없어 저장할 수 없다.
+// 10개 직무 모두 관련도 데이터(frontend/src/data/job-relevance.json)가 있어 저장할 수 있다.
+// 직무 키·이름을 바꾸면 AI 진로 추천 함수(supabase/functions/recommend-career/index.ts JOBS)도 같이 바꾼다.
 const career = (id, title, dbKey = id) => ({ id, title, dbKey })
 export const CAREERS = [
   career('backend', '백엔드 개발자'),
   career('frontend', '프론트엔드 개발자'),
-  career('mobile', '모바일 앱 개발자', null),
+  career('mobile', '모바일 앱 개발자'),
   career('ai', 'AI·머신러닝 엔지니어'),
   career('data', '데이터 분석'),
   career('security', '정보보안'),
   career('system_network', '시스템·네트워크·클라우드'),
-  career('embedded_iot', '임베디드·IoT', null),
+  career('embedded_iot', '임베디드·IoT'),
   career('game', '게임 개발자'),
   career('uiux', 'UI/UX 엔지니어'),
   career(UNDECIDED_JOB, '아직 정하지 않음'),

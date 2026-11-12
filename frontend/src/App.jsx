@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import HomePage from './pages/HomePage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
@@ -11,6 +12,10 @@ import MyPage from './pages/MyPage.jsx'
 import GlobalNav from './components/GlobalNav.jsx'
 import { AuthProvider, useAuth } from './features/auth/AuthProvider.jsx'
 import { RequireOnboarded, RequireOnboardingPending } from './features/auth/RouteGuards.jsx'
+
+// 개발용 미리보기 화면: 로컬 개발 서버(npm run dev)에서만 쓴다.
+// 배포 빌드에서는 import.meta.env.DEV가 false라 이 코드와 라우트가 통째로 빠진다 → 주소가 열리지 않는다.
+const AiCareerPreview = import.meta.env.DEV ? lazy(() => import('./dev/AiCareerPreview.jsx')) : null
 
 // 주소(URL)와 페이지 연결. 경로는 SPEC.md 2장 기준
 // 접근 규칙: 비로그인 → /login, 온보딩 미완료 → /onboarding, 완료 → 내부 화면
@@ -30,6 +35,9 @@ export default function App() {
         <Route path="/roadmap" element={<RequireOnboarded><RoadmapPage /></RequireOnboarded>} />
         <Route path="/explore" element={<RequireOnboarded><ExplorePage /></RequireOnboarded>} />
         <Route path="/mypage" element={<RequireOnboarded><MyPage /></RequireOnboarded>} />
+        {AiCareerPreview && (
+          <Route path="/dev/preview/ai-career" element={<Suspense fallback={null}><AiCareerPreview /></Suspense>} />
+        )}
         <Route path="*" element={<p>페이지를 찾을 수 없습니다.</p>} />
       </Routes>
     </AuthProvider>

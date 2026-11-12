@@ -7,6 +7,7 @@ import { PET_CHARACTERS, petAssetUrl, resolvePetCharacter } from '../features/ho
 import { checkIn, checkPetName, PET_NAME_MAX, renamePet, RENAME_COST } from '../features/home/homeActions.js'
 import GrowthDots from '../features/home/GrowthDots.jsx'
 import RewardBurst from '../features/home/RewardBurst.jsx'
+import CareerEntryButton from '../features/career/CareerEntryButton.jsx'
 import '../features/home/Home.css'
 
 // 펫 HOME (/) — Figma HOME 화면: 은은한 크림 배경, 위쪽 가운데 펫 이름, 가운데 펫, 아래 점선 성장 표시
@@ -122,6 +123,9 @@ export default function HomePage() {
         <span className="hm-warmth__num" aria-hidden="true">{balance.toLocaleString()}</span>
         {burst !== null && <RewardBurst amount={burst} onDone={endBurst} />}
       </div>
+
+      {/* AI 진로 추천 (왼쪽 위, 온기와 대칭): 누르면 추천 화면을 전체 화면 팝업으로 연다 */}
+      <CareerEntryButton />
 
       {/* 펫 이름 (Figma 위치) */}
       <div className="hm-name">
