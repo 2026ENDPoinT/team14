@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useAuth } from '../features/auth/AuthProvider.jsx'
 import { mockDocuments, mockEdges, mockNodes, mockPeriods } from '../data/roadmapMock.js'
 import RoadmapCanvas from '../features/roadmap/RoadmapCanvas.jsx'
+import CareerGoalModal from '../features/roadmap/CareerGoalModal.jsx'
+import { careerGoalInfo } from '../features/roadmap/careerGoalInfo.js'
 import FabMenu from '../features/roadmap/FabMenu.jsx'
 import InboxPanel from '../features/roadmap/InboxPanel.jsx'
 import AddNodeModal from '../features/roadmap/AddNodeModal.jsx'
@@ -72,6 +75,11 @@ function changedPeriodIds(prev, next) {
 //         로그인 전이거나 Supabase 설정(.env)이 없으면 예시(Mock Data)를 보여 준다. (예시는 DB에 넣지 않는다)
 //         학기 가지선 표시 설정은 아직 화면에서만 바뀐다 (DB 컬럼 없음)
 export default function RoadmapPage() {
+  const { profile } = useAuth()
+  const navigate = useNavigate()
+  const goalJob = profile?.interests?.find((job) => job && job !== 'undecided') ?? ''
+  const goalJobLabel = careerGoalInfo(goalJob)?.title ?? ''
+  const [goalDetailOpen, setGoalDetailOpen] = useState(false)
   const [mode, setMode] = useState(isSupabaseConfigured ? 'loading' : 'mock') // 'loading' | 'db' | 'mock' | 'error'
   const [loadError, setLoadError] = useState('')
   const [periods, setPeriods] = useState(isSupabaseConfigured ? [] : mockPeriods)
@@ -646,7 +654,16 @@ export default function RoadmapPage() {
           dropPeriodId={dropPeriodId}
           onDropTargetChange={setDropPeriodId}
           visibleIds={visibleIds}
+          goalJob={goalJobLabel}
+          onGoalClick={() => setGoalDetailOpen(true)}
         />
+        {goalDetailOpen && (
+          <CareerGoalModal
+            job={goalJob}
+            onClose={() => setGoalDetailOpen(false)}
+            onEdit={() => navigate('/mypage')}
+          />
+        )}
 
 
         <NodeFilter

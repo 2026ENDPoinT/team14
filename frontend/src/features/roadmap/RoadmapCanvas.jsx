@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Controls, ReactFlow, ViewportPortal, applyNodeChanges } from '@xyflow/react'
 import '@xyflow/react/dist/base.css' // React Flow 동작에 필요한 최소 스타일 (디자인은 roadmap.css)
 import TimelineNode from './TimelineNode.jsx'
+import GoalNode from './GoalNode.jsx'
 import CardNode from './CardNode.jsx'
 import RoadmapEdge from './RoadmapEdge.jsx'
 import { DropTargetContext } from './dropTarget.js'
@@ -12,10 +13,10 @@ import useWheelZoom from './useWheelZoom.js'
 import { TrashIcon } from './icons.jsx'
 import { routeBetween, routeEdges, routeToPoint } from './edgeRouting.js'
 import { linkProblem } from './edgeRules.js'
-import { CANVAS_HEIGHT, cardSize, dropPeriodFor, findSwapTarget, initialViewport, nodeBox, planDrop } from './layout.js'
+import { CANVAS_HEIGHT, TIMELINE_Y, cardSize, dropPeriodFor, findSwapTarget, initialViewport, nodeBox, planDrop } from './layout.js'
 
 // React Flow에 등록할 노드·연결선 종류 (컴포넌트 밖에 두어야 매번 새로 만들지 않는다)
-const nodeTypes = { timeline: TimelineNode, card: CardNode }
+const nodeTypes = { timeline: TimelineNode, card: CardNode, goal: GoalNode }
 const edgeTypes = { roadmap: RoadmapEdge }
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 1.6
@@ -60,8 +61,9 @@ export default function RoadmapCanvas({
   dropPeriodId, onDropTargetChange, // 드래그 중 강조할 학기 (보관함 드래그와 함께 쓰려고 페이지에서 관리)
   connectMode, onEdgeCreate, onEdgeReconnect, onLinkReject, // 관계선 만들기·끝점 옮기기
   visibleIds = null, // 종류 필터로 보이는 노드 id (Set). null이면 전체
+  goalJob = '', onGoalClick, // 프로필 희망 직무. 일반 학기/활동 노드와 분리된 고정형 종착점
 }) {
-  const width = layout.width + 200
+  const width = layout.width + 330
 
   const [startViewport] = useState(() => initialViewport(window.innerWidth, window.innerHeight, layout, nodes)) // 첫 진입 화면 위치
   const [resetKey, setResetKey] = useState(0) // 원래 위치로 되돌리기용
@@ -91,7 +93,7 @@ export default function RoadmapCanvas({
       id: 'timeline',
       type: 'timeline',
       position: { x: 0, y: 0 },
-      data: { layout, width },
+      data: { layout, width, timelineEnd: layout.periods.length ? layout.width + 10 : width },
       draggable: false,
       selectable: false,
       focusable: false,
@@ -114,8 +116,19 @@ export default function RoadmapCanvas({
       })
       .filter(Boolean)
 
-    return [background, ...cards]
-  }, [nodes, layout, width, getSubtitle, handleCardClick, onToggleComplete, visibleIds])
+    // 마지막 학기 뒤에 항상 표시한다. 서버 노드 데이터에는 추가하지 않는다.
+    const goal = layout.periods.length > 0 ? [{
+      id: '__career_goal__',
+      type: 'goal',
+      position: { x: layout.width + 24, y: TIMELINE_Y - 60 },
+      data: { job: goalJob, onClick: onGoalClick },
+      draggable: false,
+      selectable: false,
+      focusable: true,
+      zIndex: 3,
+    }] : []
+    return [background, ...cards, ...goal]
+  }, [nodes, layout, width, getSubtitle, handleCardClick, onToggleComplete, visibleIds, goalJob, onGoalClick])
 
   // React Flow가 드래그 위치·크기 측정값을 기록할 수 있도록 노드를 상태로 관리한다.
   // 데이터가 바뀌면 다시 만들되, 이미 측정한 크기(measured)는 이어서 쓴다.
@@ -349,6 +362,12 @@ export default function RoadmapCanvas({
           nodes={flowNodes}
           edges={flowEdges}
           onNodesChange={onNodesChange}
+          onNodeClick={(event, node) => {
+            if (node.id === '__career_goal__') {
+              event.stopPropagation()
+              onGoalClick?.()
+            }
+          }}
           onNodeDragStart={onNodeDragStart}
           onNodeDrag={onNodeDrag}
           onNodeDragStop={onNodeDragStop}
