@@ -20,7 +20,12 @@ export default function TimelineNode({ data }) {
           style={{ left: layout.cols[period.id].x, width: layout.cols[period.id].width }}
         >
           <div className="rm-column__line" style={{ top: TIMELINE_Y }} />
-          <div className="rm-column__badge" style={{ top: TIMELINE_Y }}>
+          {/* 휴학·군휴학·교환학생·기타 같은 학기 외 칸은 이름이 길어 글자를 작게 (5자 이상은 두 줄) */}
+          <div
+            className={`rm-column__badge ${period.type !== 'semester' ? 'is-text' : ''} ${[...periodLabel(period)].length > 4 ? 'is-long' : ''}`}
+            style={{ top: TIMELINE_Y }}
+            title={period.name}
+          >
             {periodLabel(period)}
           </div>
         </div>

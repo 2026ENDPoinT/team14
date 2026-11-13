@@ -1,21 +1,27 @@
 import { useEffect, useState } from 'react'
 import Modal from './Modal.jsx'
-import { ClipIcon, CloseIcon, TrashIcon } from './icons.jsx'
+import { CloseIcon, TrashIcon } from './icons.jsx'
 import { BASE_CATEGORIES, courseOptions, nodeCategoryId, nodeCourseKey, nodeDetailId } from './nodeCategories.js'
 import { isCourse } from './layout.js'
 import CategoryPicker from './CategoryPicker.jsx'
 import { ddayInfo } from './dday.js'
 import DeadlineBadge from '../explore/DeadlineBadge.jsx'
 import { contestKindLabel, sourceName } from '../explore/contestInfo.js'
+import PhotoField from '../photos/PhotoField.jsx'
+import usePhotoDraft from '../photos/usePhotoDraft.js'
+import AttachmentField from '../attachments/AttachmentField.jsx'
+import useAttachmentDraft from '../attachments/useAttachmentDraft.js'
 
 // 노드 상세 창. 노드를 클릭했을 때만 열린다.
 // node가 null이 되어도 닫힘 애니메이션 동안 마지막 노드를 보여 준다.
 // 학기 가지선은 자동 규칙으로만 그린다 (설정 UI 없음, branchLines.js)
+// 첨부: 로그인(DB)일 때만 (photosEnabled). 새 첨부는 링크 추가·파일 첨부. 이미 저장된 노드 사진은 그대로 보여 주고 지울 수 있다.
+//   저장 버튼을 누르면 이름·기록을 저장한 뒤 링크·파일(과 지운 사진)을 반영한다.
 // DUE DATE: 실제 교과목 노드(originKey 'course:...')에는 보이지 않는다
 // NODE TYPE: 현재 종류를 누르면 ADD NODE와 같은 카테고리·세부 활동 칩이 펼쳐진다. 저장 버튼을 누르면 반영.
 //   종류를 바꿔도 제목은 바꾸지 않는다. 직접 추가한 종류는 customCategories (페이지 공용)
 export default function NodeDetailModal({
-  node, body, connections, onClose, onSave, onDelete, onOpenNode, customCategories, onAddCustomCategory,
+  node, body, connections, onClose, onSave, onDelete, onOpenNode, customCategories, onAddCustomCategory, photosEnabled = false,
 }) {
   const [shown, setShown] = useState(node)
   const [title, setTitle] = useState('')
@@ -23,12 +29,15 @@ export default function NodeDetailModal({
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false) // 서버에 저장하는 중 (연속 클릭 방지)
   const [saveError, setSaveError] = useState('')
+  const [photoError, setPhotoError] = useState('') // 첨부(사진·링크·파일) 저장 실패 안내 (첨부 칸 아래)
   const [categoryId, setCategoryId] = useState(null)
   const [detailId, setDetailId] = useState(null)
   const [typeOpen, setTypeOpen] = useState(false) // 종류 선택 칩 펼침
   const [typeChanged, setTypeChanged] = useState(false) // 사용자가 종류를 바꿨는지 (안 바꾸면 theme 그대로)
   const [dueDate, setDueDate] = useState('') // 목표일·마감일 'YYYY-MM-DD' (빈 값 = 없음)
   const [courseKey, setCourseKey] = useState(null) // 전공·학업에서 연결한 교과목 키
+  const photos = usePhotoDraft(shown ? { nodeId: shown.id } : null, photosEnabled)
+  const attachments = useAttachmentDraft(shown?.id ?? null, photosEnabled)
 
   const categories = [...BASE_CATEGORIES, ...customCategories]
   const category = categories.find((c) => c.id === categoryId) ?? categories[0]
@@ -46,6 +55,7 @@ export default function NodeDetailModal({
     setRecord(body)
     setSaved(false)
     setSaveError('')
+    setPhotoError('')
     setCategoryId(nodeCategoryId(node, categories))
     setDetailId(nodeDetailId(node))
     setTypeOpen(false)
@@ -101,10 +111,24 @@ export default function NodeDetailModal({
     const due = noDueDate ? undefined : dueDate || null
     setSaving(true)
     setSaveError('')
+    setPhotoError('')
     const result = await onSave(shown.id, { title: title.trim(), body: record, type, dueDate: due })
-    setSaving(false)
-    if (!result?.ok) return setSaveError(result?.message ?? '저장하지 못했어요.') // 입력값·바꾼 종류·날짜는 그대로 둔다
+    if (!result?.ok) {
+      setSaving(false)
+      return setSaveError(result?.message ?? '저장하지 못했어요.') // 입력값·바꾼 종류·날짜·고른 사진은 그대로 둔다
+    }
     setTypeChanged(false)
+    // 첨부: 지운 사진 삭제, 새 링크·파일 저장·지운 첨부 삭제. 실패한 항목은 남겨 두고 저장을 다시 누르면 그것만 다시 한다
+    const results = []
+    if (photos.dirty) results.push(await photos.commit({ nodeId: shown.id }))
+    if (attachments.dirty) results.push(await attachments.commit(shown.id))
+    const failed = results.reduce((sum, r) => sum + r.failed, 0)
+    if (failed > 0) {
+      setSaving(false)
+      setSaveError('첨부 저장 실패')
+      return setPhotoError(`이름·기록은 저장했어요. 첨부 ${failed}개를 처리하지 못했어요(빨간 테두리). 저장을 다시 누르면 그것만 다시 시도해요. ${results.map((r) => r.message).filter(Boolean).join(' ')}`)
+    }
+    setSaving(false)
     setSaved(true)
   }
 
@@ -124,7 +148,7 @@ export default function NodeDetailModal({
               {saving && <span className="rm-saved">저장 중…</span>}
               {saved && !saving && <span className="rm-saved">저장됨</span>}
               {saveError && <span className="rm-saved rm-save-error" role="alert">{saveError}</span>}
-              <button type="button" className="rm-save-btn" onClick={handleSave} disabled={saving} title="이름·종류·기록·마감일 변경 내용을 저장해요">
+              <button type="button" className="rm-save-btn" onClick={handleSave} disabled={saving} title="이름·종류·기록·마감일·첨부 변경 내용을 저장해요">
                 저장
               </button>
               <button type="button" className="rm-icon-btn" aria-label="삭제" onClick={handleDelete}>
@@ -271,12 +295,20 @@ export default function NodeDetailModal({
             />
           </label>
 
-          {/* 첨부 기능은 P1 (SPEC 6.5 [미확정]) — 화면만 표시 */}
+          {/* 첨부: 새로 추가는 링크·파일. 예전에 올린 노드 사진은 그대로 보여 준다 (보기·삭제) */}
           <div className="rm-field">
-            <span className="rm-eyebrow">첨부 (준비 중)</span>
-            <div className="rm-input rm-attach" aria-disabled="true">
-              <ClipIcon width="18" height="18" /> 파일 · 이미지 · 링크 추가 (준비 중)
-            </div>
+            <span className="rm-eyebrow">첨부</span>
+            {photosEnabled ? (
+              <>
+                {(photos.items.length > 0 || photos.loading || photos.loadError) && (
+                  <PhotoField draft={photos} allowAdd={false} onChange={() => setSaved(false)} />
+                )}
+                <AttachmentField draft={attachments} onChange={() => setSaved(false)} />
+              </>
+            ) : (
+              <p className="rm-field-note">로그인하면 링크·파일을 첨부할 수 있어요.</p>
+            )}
+            {photoError && <p className="rm-field-note is-error" role="alert">{photoError}</p>}
           </div>
 
           <div className="rm-field">

@@ -9,14 +9,17 @@ import { careerGoalInfo } from '../features/roadmap/careerGoalInfo.js'
 import FabMenu from '../features/roadmap/FabMenu.jsx'
 import InboxPanel from '../features/roadmap/InboxPanel.jsx'
 import AddNodeModal from '../features/roadmap/AddNodeModal.jsx'
+import AddPeriodModal from '../features/roadmap/AddPeriodModal.jsx'
 import NodeDetailModal from '../features/roadmap/NodeDetailModal.jsx'
 import NodeFilter from '../features/roadmap/NodeFilter.jsx'
+import CourseGuidePanel from '../features/courses/CourseGuidePanel.jsx'
 import AiGuideButton from '../features/career/guide/AiGuideButton.jsx'
 import AiGuidePanel from '../features/career/guide/AiGuidePanel.jsx'
 import { hasSameTitle } from '../features/career/guide/guideData.js'
 import { BASE_CATEGORIES, nodeCategoryId } from '../features/roadmap/nodeCategories.js'
 import RoadmapTutorial from '../features/roadmap/tutorial/RoadmapTutorial.jsx'
 import { hasSeenRoadmapTutorial, markRoadmapTutorialSeen } from '../features/roadmap/tutorial/tutorialStorage.js'
+import { useOptionalAuth } from '../features/auth/AuthProvider.jsx'
 import { linkProblem } from '../features/roadmap/edgeRules.js'
 import { computeLayout, nextPosition, placeNode } from '../features/roadmap/layout.js'
 import {
@@ -33,7 +36,14 @@ import {
   setNodeCompleted,
   updateEdge,
 } from '../services/api.js'
+import { insertPeriod } from '../services/periods.js'
+import { deleteWithPhotos } from '../services/photos.js'
+import { deleteWithAttachments } from '../services/attachments.js'
 import '../features/roadmap/roadmap.css'
+
+// 노드 삭제 + 그 노드의 사진·첨부 파일 정리 (연결 행은 DB에서 함께 지워진다)
+const deleteNodeAndPhotos = (nodeId) =>
+  deleteWithAttachments(nodeId, () => deleteWithPhotos({ nodeId }, () => deleteNode(nodeId)))
 
 const UNDO_MS = 5000 // 실행 취소 안내가 보이는 시간. 이 시간이 지나면 삭제를 DB에 저장한다
 
@@ -91,6 +101,7 @@ export default function RoadmapPage() {
   const [fabOpen, setFabOpen] = useState(false) // + 메뉴
   const [inboxOpen, setInboxOpen] = useState(false) // 노드 보관함
   const [addOpen, setAddOpen] = useState(false) // 노드 생성 창
+  const [periodOpen, setPeriodOpen] = useState(false) // 학기 추가 창
   const [detailId, setDetailId] = useState(null) // 상세 창에 열린 노드 id
   const [toast, setToast] = useState('') // 안내 문구, 또는 { text, undo } (실행 취소 버튼이 있는 삭제 안내)
   const [dropPeriodId, setDropPeriodId] = useState(null) // 노드를 끄는 동안 강조할 학기
@@ -214,18 +225,40 @@ export default function RoadmapPage() {
   const closeFilter = useCallback(() => setFilterOpen(false), [])
   const HIDDEN_NOTE = ' (지금 필터로 숨긴 종류라 화면에는 보이지 않아요)'
 
-  // 처음 접속했을 때만 튜토리얼 자동 표시 (캔버스가 자리 잡을 시간을 조금 준다)
+  // 처음 접속했을 때만 튜토리얼 자동 표시 (계정별 기록: 같은 브라우저의 다른 계정도 처음이면 나온다)
+  // - 로드맵을 다 불러와 캔버스(학기·카드)가 그려진 뒤에 시작한다 (불러오는 중·오류 화면에서는 시작하지 않음)
+  // - 로그인했으면 계정 id가 확인된 뒤에 판단한다 (로그인 전 예시 로드맵은 예전 공용 기록)
+  const auth = useOptionalAuth()
+  const tutorialUserId = mode === 'db' ? auth?.profile?.id ?? null : null
+  const tutorialReady = (mode === 'db' && Boolean(tutorialUserId)) || mode === 'mock'
+  const autoTried = useRef(false)
   useEffect(() => {
-    if (hasSeenRoadmapTutorial()) return undefined
-    const timer = setTimeout(() => setTutorialOpen(true), 500)
+    if (!tutorialReady || autoTried.current) return undefined
+    if (hasSeenRoadmapTutorial(tutorialUserId)) {
+      autoTried.current = true
+      return undefined
+    }
+    let tries = 0
+    let timer
+    const start = () => {
+      // 캔버스가 실제로 그려졌는지 확인하고 시작 (아직이면 잠시 뒤 다시, 최대 약 5초)
+      if (document.querySelector('.react-flow__viewport') || tries > 20) {
+        autoTried.current = true
+        setTutorialOpen(true)
+        return
+      }
+      tries += 1
+      timer = setTimeout(start, 250)
+    }
+    timer = setTimeout(start, 500) // 캔버스가 자리 잡을 시간을 조금 준다
     return () => clearTimeout(timer)
-  }, [])
+  }, [tutorialReady, tutorialUserId])
 
-  // 건너뛰거나 완료하면 기록해서 다시 자동으로 나타나지 않게 한다
+  // 건너뛰거나 완료하면 기록해서 다시 자동으로 나타나지 않게 한다 (계정별)
   const closeTutorial = useCallback(() => {
-    markRoadmapTutorialSeen()
+    markRoadmapTutorialSeen(tutorialUserId)
     setTutorialOpen(false)
-  }, [])
+  }, [tutorialUserId])
 
   // 학기 컬럼 배치 (가로 자동 확장): 노드 배치로부터 학기별 x·너비를 매번 다시 계산한다
   // - 노드를 오른쪽에 놓으면 그 학기가 넓어지고 뒤 학기는 밀린다. 노드를 빼거나 지우면 필요한 만큼으로 줄어든다
@@ -380,6 +413,11 @@ export default function RoadmapPage() {
 
   const handleLinkReject = useCallback((message) => setToast(message), [])
 
+  // '수강 필요'에서 추가한 과목 노드를 화면에 반영 (이미 있던 노드면 그 노드를 최신 값으로)
+  const handleCourseAdded = useCallback((node) => {
+    setNodes((prev) => (prev.some((n) => n.id === node.id) ? prev.map((n) => (n.id === node.id ? { ...n, ...node } : n)) : [...prev, node]))
+  }, [])
+
 
   const openAdd = () => {
     setDetailId(null)
@@ -394,8 +432,21 @@ export default function RoadmapPage() {
       setConnectMode(true)
       return
     }
-    // SEMESTER는 다음 작업(TASKS 1-10)에서 구현
-    setToast('학기 추가는 준비 중이에요.')
+    // 학기 추가: 로그인한 내 로드맵(DB)에서만
+    if (!isDb) return setToast('로그인하면 학기를 추가할 수 있어요.')
+    setDetailId(null)
+    setPeriodOpen(true)
+  }
+
+  // 학기 추가 저장: 서버가 끼워 넣기·순서 변경을 한 번에 하고 내 학기 전체를 돌려준다
+  // 노드는 학기 id로 붙어 있어 그대로 따라 움직인다. 반환: 성공 null / 실패 오류 문구
+  const handleAddPeriod = async (input) => {
+    const result = await insertPeriod(input)
+    if (result.error) return `학기를 추가하지 못했어요. ${result.error.message}`
+    setPeriods(result.data.periods)
+    setPeriodOpen(false)
+    setToast(`${result.data.period.name}을(를) 타임라인에 추가했어요.`)
+    return null
   }
 
   // categoryId·detailId·categoryLabel: ADD NODE에서 고른 카테고리·세부 활동 (상세 창 종류 수정과 같은 값)
@@ -523,7 +574,7 @@ export default function RoadmapPage() {
   // DB면 DB에서 지운 뒤에만 화면에서 없애고 상세 창을 닫는다 (노드 문서·연결선은 DB에서 함께 삭제)
   const handleDeleteNode = async (nodeId) => {
     if (isDb) {
-      const result = await deleteNode(nodeId)
+      const result = await deleteNodeAndPhotos(nodeId)
       if (result.error) return setToast(`삭제하지 못했어요. ${result.error.message}`)
     }
     removeNode(nodeId)
@@ -550,7 +601,7 @@ export default function RoadmapPage() {
   // 실행 취소 시간이 지난 삭제를 DB에 저장한다. 실패하면 지우기 전 상태로 되돌린다.
   const commitDelete = useCallback(async (undo) => {
     pendingDeletes.current.delete(undo.node.id)
-    const result = await deleteNode(undo.node.id)
+    const result = await deleteNodeAndPhotos(undo.node.id)
     if (result.error) {
       restoreDeleted(undo)
       setToast(`삭제하지 못해 되돌렸어요. ${result.error.message}`)
@@ -563,7 +614,7 @@ export default function RoadmapPage() {
   useEffect(() => () => {
     for (const [nodeId, { timer }] of pendingDeletes.current) {
       clearTimeout(timer)
-      deleteNode(nodeId)
+      deleteNodeAndPhotos(nodeId)
     }
     pendingDeletes.current.clear()
   }, [])
@@ -675,7 +726,20 @@ export default function RoadmapPage() {
           onChange={setFilterIds}
         >
           <AiGuideButton open={guideOpen} onClick={() => { setFilterOpen(false); setGuideOpen(true) }} />
+          {/* 튜토리얼 다시 보기 (기록과 상관없이 언제든 열린다) */}
+          <button
+            type="button"
+            className="rm-help"
+            onClick={() => { setFilterOpen(false); setTutorialOpen(true) }}
+            aria-label="로드맵 사용법 다시 보기"
+            title="로드맵 사용법 다시 보기"
+          >
+            ?
+          </button>
         </NodeFilter>
+
+        {/* 수강 필요: 놓친 저학년 필수·핵심 과목 안내, 보관함 추가·학기 배치 (features/courses) */}
+        <CourseGuidePanel nodes={nodes} periods={periods} layout={layout} enabled={isDb} onAdded={handleCourseAdded} onToast={setToast} />
 
         {/* 비어 있는 로드맵 안내 (누를 수 없는 안내 문구) */}
         {(periods.length === 0 || nodes.length === 0) && (
@@ -732,6 +796,13 @@ export default function RoadmapPage() {
           onAddCustomCategory={addCustomCategory}
         />
 
+        <AddPeriodModal
+          open={periodOpen}
+          periods={periods}
+          onClose={() => setPeriodOpen(false)}
+          onSubmit={handleAddPeriod}
+        />
+
         <NodeDetailModal
           node={detailNode}
           body={getBody(detailId)}
@@ -742,6 +813,7 @@ export default function RoadmapPage() {
           onOpenNode={openDetail}
           customCategories={customCategories}
           onAddCustomCategory={addCustomCategory}
+          photosEnabled={isDb}
         />
 
         {guideOpen && (

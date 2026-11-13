@@ -19,11 +19,12 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
   const [title, setTitle] = useState('')
   const [autoTitle, setAutoTitle] = useState('') // 세부 활동으로 자동 입력한 제목 (사용자가 고치지 않았는지 확인용)
   const [destination, setDestination] = useState(INBOX)
-  const [memo, setMemo] = useState('')
   const [saving, setSaving] = useState(false) // 서버에 저장하는 중 (연속 클릭 방지)
   const [saveError, setSaveError] = useState('')
 
-  const categories = [...BASE_CATEGORIES, ...customCategories]
+  // '대학생활 이벤트'(life)는 학기 추가(휴학·군휴학·교환학생)로 옮겨서 새 활동 종류 목록에서만 뺀다.
+  // 이미 있는 이벤트 노드는 상세 창(NodeDetailModal)에서 그대로 보고 고칠 수 있다.
+  const categories = [...BASE_CATEGORIES.filter((c) => c.id !== 'life'), ...customCategories]
   const category = categories.find((c) => c.id === categoryId) ?? categories[0]
   const detail = category.details.find((d) => d.id === detailId) ?? null
   const theme = detail?.theme ?? category.theme
@@ -37,7 +38,6 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
       setTitle('')
       setAutoTitle('')
       setDestination(INBOX)
-      setMemo('')
       setSaving(false)
       setSaveError('')
     }
@@ -100,7 +100,7 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
       theme,
       title: title.trim(),
       periodId: destination === INBOX ? null : destination,
-      memo: memo.trim(),
+      memo: '', // 메모는 노드를 만든 뒤 상세 화면에서 쓴다 (생성 시 입력 칸 없음)
       // 고른 카테고리·세부 활동 (로그인 상태면 노드와 함께 DB에 저장된다)
       categoryId: category.id,
       detailId: detail?.id ?? null,
@@ -162,17 +162,6 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
-        </label>
-
-        <label className="rm-field">
-          <span className="rm-eyebrow">짧은 메모</span>
-          <textarea
-            className="rm-input rm-textarea"
-            placeholder="간단한 메모 (선택)"
-            rows={3}
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-          />
         </label>
 
         {saveError && <p className="rm-field-note is-error" role="alert">{saveError}</p>}

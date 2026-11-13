@@ -94,6 +94,16 @@
   white-space: nowrap;
   animation: wm-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
+/* 배지 위 큰 말 (출석 보상: '출석!') */
+.wm-title {
+  margin: 0 0 12px;
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--dy-ink);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  animation: wm-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
 .wm-badge strong {
   font-size: 24px;
   font-weight: 900;

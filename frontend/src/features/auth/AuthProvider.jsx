@@ -134,3 +134,8 @@ export function useAuth() {
   if (!value) throw new Error('useAuth는 AuthProvider 안에서만 쓸 수 있어요.')
   return value
 }
+
+// AuthProvider 밖에서도 쓸 수 있는 버전 (없으면 null). 예: 로드맵 튜토리얼 기록을 계정별로 나눌 때
+export function useOptionalAuth() {
+  return useContext(AuthContext)
+}
