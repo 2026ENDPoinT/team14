@@ -16,6 +16,7 @@ function toDiary(row) {
     content: row.content,
     photoUrls: row.photo_urls ?? [],
     linkedNodeId: row.linked_node_id,
+    footprint: row.footprint ?? '', // 오늘의 발자취 (공부·활동 기록, 선택)
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -27,14 +28,28 @@ async function requireSession() {
   return data.session ? null : { code: 'UNAUTHENTICATED', message: '로그인이 필요합니다.' }
 }
 
+// 발자취(footprint) 칸이 아직 서버에 없는지 (migration 20261114002600 적용 전)
+// - 42703: 없는 칸을 조회 / PGRST202·42883: p_footprint 인자가 있는 save_diary가 없음
+let footprintReady = true
+const isMissingFootprint = (error) => ['42703', 'PGRST202', '42883'].includes(error?.code)
+const DIARY_COLUMNS = 'id, date, mood, content, photo_urls, linked_node_id, created_at, updated_at'
+
+// 발자취 칸이 준비됐는지 (화면 안내용)
+export function isFootprintReady() {
+  return footprintReady
+}
+
 // 내 일기 전체 (날짜 오름차순)
 export async function listMyDiaries() {
   const sessionError = await requireSession()
   if (sessionError) return { error: sessionError }
-  const { data, error } = await supabase
-    .from('diaries')
-    .select('id, date, mood, content, photo_urls, linked_node_id, created_at, updated_at')
-    .order('date', { ascending: true })
+  const query = (columns) => supabase.from('diaries').select(columns).order('date', { ascending: true })
+  let { data, error } = await query(footprintReady ? `${DIARY_COLUMNS}, footprint` : DIARY_COLUMNS)
+  if (error && isMissingFootprint(error)) {
+    // 서버에 발자취 칸이 아직 없으면 발자취 없이 불러온다 (기존 일기는 그대로 보인다)
+    footprintReady = false
+    ;({ data, error } = await query(DIARY_COLUMNS))
+  }
   if (error) return { error: toServiceError(error, '일기를 불러오지 못했어요.') }
   return { data: data.map(toDiary) }
 }
@@ -52,16 +67,18 @@ export async function hasDiaryRewardOn(date) {
   return { data: count > 0 }
 }
 
-// 작성/수정: { date, content } → { data: { diary, reward: { rewarded, energy?, reason? }, pet } } 또는 { error }
-export async function saveDiary({ date, content, mood = null, linkedNodeId = null }) {
+// 작성/수정: { date, content, footprint?, linkedNodeId? } → { data: { diary, reward: { rewarded, energy?, reason? }, pet } } 또는 { error }
+// footprint: 오늘의 발자취 (보내지 않으면 서버가 기존 값을 유지), linkedNodeId: 발자취에 연결한 내 노드
+export async function saveDiary({ date, content, mood = null, linkedNodeId = null, footprint = null }) {
   const sessionError = await requireSession()
   if (sessionError) return { error: sessionError }
-  const { data, error } = await supabase.rpc('save_diary', {
-    p_date: date,
-    p_content: content,
-    p_mood: mood,
-    p_linked_node_id: linkedNodeId,
-  })
+  const params = { p_date: date, p_content: content, p_mood: mood, p_linked_node_id: linkedNodeId }
+  let { data, error } = await supabase.rpc('save_diary', footprintReady ? { ...params, p_footprint: footprint } : params)
+  if (error && isMissingFootprint(error)) {
+    // 서버에 발자취 저장이 아직 없으면 발자취 없이 저장한다 (일기 글·연결 활동은 저장됨)
+    footprintReady = false
+    ;({ data, error } = await supabase.rpc('save_diary', params))
+  }
   if (error) return { error: toServiceError(error, '일기를 저장하지 못했어요. 다시 시도해 주세요.') }
   return { data: { diary: toDiary(data.diary), reward: data.reward, pet: toPet(data.pet) } }
 }
