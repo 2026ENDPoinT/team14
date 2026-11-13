@@ -1589,15 +1589,3 @@
   white-space: normal;
   word-break: break-all;
 }
-
-/* 로드맵 상단 도구: 수강 필요 → AI 길잡이 → 도움말 (한 줄 정렬) */
-.rm-tools {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 10px;
-}
-.rm-tools > * {
-  flex-shrink: 0;
-}
