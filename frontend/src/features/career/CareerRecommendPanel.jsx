@@ -10,6 +10,9 @@ import { rankKeywords } from '../onboarding/careerKeywords.js'
 import { CAREERS } from '../onboarding/onboardingOptions.js'
 import { CareerAiResult, CareerAiStep } from '../onboarding/OnboardingSteps.jsx'
 import { completedCoursesOf } from './completedCourses.js'
+import { useAuth } from '../auth/AuthProvider.jsx'
+import { updateMyDesiredJob } from '../../services/api.js'
+import { JOB_TO_PET } from '../home/petCharacter.js'
 import '../onboarding/onboarding.css'
 import './career.css'
 
@@ -17,7 +20,7 @@ import './career.css'
 // - 지난 추천이 있으면 결과·이유를 먼저 보여 주고 [다시 추천받기]
 // - 성적은 이 화면 상태에만 두고 저장하지 않는다. 함수에는 역량 키워드만 간다.
 // - 성공한 결과만 함수가 저장한다 → 실패해도 직전 결과가 남는다.
-// - 희망 직무(profiles.interests)와 로드맵은 바꾸지 않는다.
+// - AI 추천 요청만으로는 희망 직무·로드맵을 바꾸지 않는다. 사용자가 선택 후 저장할 때만 희망 직무를 변경한다.
 
 const AI_IDLE = { status: 'idle', result: null, error: null }
 const formatTime = (iso) =>
@@ -25,6 +28,9 @@ const formatTime = (iso) =>
 
 export default function CareerRecommendPanel({ onClose }) {
   const navigate = useNavigate()
+  const auth = useAuth()
+  const [selectedCareerId, setSelectedCareerId] = useState(null)
+  const [saveStatus, setSaveStatus] = useState({ saving: false, message: null, error: false })
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
   const [last, setLast] = useState(null) // { job, reason, recommendedAt, basedOn? }
@@ -70,8 +76,26 @@ export default function CareerRecommendPanel({ onClose }) {
       return
     }
     setLast(response.data)
+    setSelectedCareerId(null)
+    setSaveStatus({ saving: false, message: null, error: false })
     setAi(AI_IDLE)
     setView('last')
+  }
+
+  async function saveSelectedCareer() {
+    if (!selectedCareerId || !JOB_TO_PET[selectedCareerId]) return
+    setSaveStatus({ saving: true, message: null, error: false })
+    try {
+      const response = await updateMyDesiredJob(selectedCareerId)
+      if (response.error) {
+        setSaveStatus({ saving: false, message: `희망 직무를 저장하지 못했어요. ${response.error.message}`, error: true })
+        return
+      }
+      auth.applyProfile({ interests: response.data.interests })
+      setSaveStatus({ saving: false, message: '희망 직무를 변경했어요. 기존 로드맵은 유지돼요.', error: false })
+    } catch (error) {
+      setSaveStatus({ saving: false, message: `저장 중 문제가 생겼어요. ${error.message}`, error: true })
+    }
   }
 
   return (
@@ -90,8 +114,44 @@ export default function CareerRecommendPanel({ onClose }) {
               <div className="ob-body">
                 <CareerAiResult result={last} label="마지막 추천" time={formatTime(last.recommendedAt)} />
                 <p className="career-panel__note">
-                  추천 결과는 참고용이에요. 희망 직무와 로드맵은 바뀌지 않아요.
+                  AI 추천은 참고용이에요. 아래에서 다른 직무도 선택할 수 있어요.
                 </p>
+                <section className="ob-ai-career-section" aria-label="전체 직무 선택">
+                  <h2 className="ob-section__title">전체 직무 선택</h2>
+                  <div className="ob-chips ob-chips--career" role="radiogroup" aria-label="희망 직무 선택">
+                    {CAREERS.filter((c) => JOB_TO_PET[c.id]).map((c) => {
+                      const active = (selectedCareerId ?? auth.profile?.interests?.[0]) === c.id
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={active}
+                          className={`ob-chip ${active ? 'is-selected' : ''}`}
+                          onClick={() => {
+                            setSelectedCareerId(c.id)
+                            setSaveStatus({ saving: false, message: null, error: false })
+                          }}
+                        >
+                          {c.title}
+                          {c.id === last.job && <span className="ob-ai-career__tag">AI 추천</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="career-panel__note">직무를 선택하고 저장하면 내 희망 직무가 바뀌어요. 기존 로드맵은 자동으로 변경되지 않아요.</p>
+                  {saveStatus.message && (
+                    <p className="career-panel__save-message" role={saveStatus.error ? 'alert' : 'status'}>{saveStatus.message}</p>
+                  )}
+                  <button
+                    type="button"
+                    className="ob-primary career-panel__save"
+                    disabled={!selectedCareerId || saveStatus.saving}
+                    onClick={saveSelectedCareer}
+                  >
+                    {saveStatus.saving ? '저장 중…' : '선택한 직무 저장하기'}
+                  </button>
+                </section>
               </div>
               <div className="ob-actions">
                 <button type="button" className="ob-primary" onClick={() => setView('input')}>다시 추천받기</button>
