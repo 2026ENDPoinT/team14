@@ -16,6 +16,7 @@ import { RequireOnboarded, RequireOnboardingPending } from './features/auth/Rout
 import DiaryReminder from './features/diary/DiaryReminder.jsx'
 import { getDisplayTheme, THEME_CHANGED_EVENT } from './features/mypage/settingsStore.js'
 import './styles/theme.css'
+import './styles/ocean.css'
 
 // 개발용 미리보기 화면: 로컬 개발 서버(npm run dev)에서만 쓴다.
 // 배포 빌드에서는 import.meta.env.DEV가 false라 이 코드와 라우트가 통째로 빠진다 → 주소가 열리지 않는다.
@@ -35,11 +36,11 @@ export default function App() {
       window.removeEventListener('storage', refresh)
     }
   }, [])
-  // 화면 모드: data-ct-theme = light | dark | sunset (노을은 라이트 화면 바탕의 따뜻한 노을 테마, styles/theme.css)
+  // 화면 모드: data-ct-theme = light | dark | sunset | ocean (노을·바다는 라이트 화면 바탕의 테마, styles/theme.css · styles/ocean.css)
   useEffect(() => {
     const root = document.documentElement
     root.dataset.ctTheme = theme
-    root.style.colorScheme = theme === 'dark' ? 'dark' : 'light'
+    root.style.colorScheme = theme === 'dark' ? 'dark' : 'light' // 노을·바다 테마는 밝은 화면
     return () => {
       delete root.dataset.ctTheme
       root.style.colorScheme = ''

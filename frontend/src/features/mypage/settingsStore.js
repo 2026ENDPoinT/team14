@@ -6,8 +6,8 @@ import { mockSettings } from './myPageMock.js'
 const KEY = 'campus-roadmap:settings'
 export const THEME_CHANGED_EVENT = 'campustree:theme-changed'
 
-// 화면 모드: 'light' | 'dark' | 'sunset'(노을). 그 밖의 값은 라이트
-export const THEMES = ['light', 'dark', 'sunset']
+// 화면 모드: 'light' | 'dark' | 'sunset'(노을) | 'ocean'(바다, styles/ocean.css). 그 밖의 값은 라이트
+export const THEMES = ['light', 'dark', 'sunset', 'ocean']
 export function getDisplayTheme() {
   const theme = loadSettings().theme
   return THEMES.includes(theme) ? theme : 'light'
