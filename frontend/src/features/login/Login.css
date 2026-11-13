@@ -1,0 +1,320 @@
+/* 로그인 화면 스타일
+   색·그림자·모서리는 로드맵·일기 화면과 같다. (변수는 DiaryEditor.css의 .diary-page) */
+
+/* 배경: 가운데가 살짝 진한 회색 그라데이션 + 떠 있는 입체 원 장식 */
+.lg-page {
+  display: flex;
+  align-items: center;
+  background:
+    radial-gradient(ellipse 65% 70% at 50% 50%,
+      #e6e6e6 0%,
+      #ececec 45%,
+      var(--rm-bg) 100%);
+}
+.lg-page::before,
+.lg-page::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #fafafa, #e2e2e2);
+  box-shadow: 20px 26px 50px rgba(0, 0, 0, 0.08), -16px -16px 40px rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+}
+.lg-page::before {
+  top: -90px;
+  left: -70px;
+  width: 300px;
+  height: 300px;
+}
+.lg-page::after {
+  right: -60px;
+  bottom: -80px;
+  width: 240px;
+  height: 240px;
+  background: linear-gradient(145deg, #fbefc8, #f2d68f); /* 노란 원 하나로 포인트 */
+  box-shadow: 18px 22px 44px rgba(170, 130, 40, 0.18), -14px -14px 36px rgba(255, 255, 255, 0.85);
+}
+
+/* 서비스 이름 + 카드를 세로로 가운데 */
+.lg-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  width: 100%;
+  padding: 28px 16px;
+  box-sizing: border-box;
+}
+
+/* ── 서비스 이름 ── */
+.lg-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.lg-logo {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 12px;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #fbfbfb, #e6e6e6);
+  box-shadow: 8px 10px 20px rgba(0, 0, 0, 0.1), -6px -6px 14px rgba(255, 255, 255, 0.95),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.9);
+}
+.lg-name {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--dy-ink);
+  text-shadow: 1px 1px 0 #fff;
+}
+.lg-name strong {
+  font-weight: 900;
+}
+.lg-tagline {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #999;
+}
+
+/* ── 카드: 바깥으로 볼록 튀어나온 입체감 ── */
+.lg-card {
+  width: min(420px, 100%);
+  box-sizing: border-box;
+  padding: 32px 36px 26px;
+  border-radius: 28px;
+  background: linear-gradient(145deg, #fcfcfc, #ededed);
+  box-shadow:
+    18px 24px 48px rgba(0, 0, 0, 0.12),
+    -14px -14px 34px rgba(255, 255, 255, 0.95),
+    inset 1px 1px 0 rgba(255, 255, 255, 1),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.04);
+  animation: lg-in 0.35s var(--rm-ease);
+}
+@keyframes lg-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+/* 제목 줄 (회원가입이면 왼쪽에 돌아가기 화살표) */
+.lg-title-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 22px;
+}
+/* 글자 옆 작은 꺾쇠 (배경 없이) */
+.lg-back {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-left: -8px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #999;
+  transition: color 0.2s, transform 0.2s var(--rm-ease);
+}
+.lg-back:hover {
+  color: var(--dy-ink);
+  transform: translateX(-2px);
+}
+.lg-back:focus-visible {
+  outline: 2px solid var(--dy-ink);
+  outline-offset: 2px;
+}
+.lg-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--dy-ink);
+}
+.lg-muted {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #999;
+}
+
+.lg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.lg-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lg-field__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #999;
+}
+/* 입력칸: 안으로 살짝 들어간 모양 */
+.lg-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border: none;
+  border-radius: 14px;
+  background: var(--rm-field);
+  box-shadow: inset 3px 4px 8px rgba(0, 0, 0, 0.08), inset -3px -3px 7px rgba(255, 255, 255, 0.9);
+  font: inherit;
+  font-size: 15px;
+  color: var(--rm-text);
+  outline: none;
+  transition: box-shadow 0.2s;
+}
+.lg-input::placeholder {
+  color: var(--rm-muted);
+}
+.lg-input:focus {
+  box-shadow: inset 3px 4px 8px rgba(0, 0, 0, 0.08), inset -3px -3px 7px rgba(255, 255, 255, 0.9),
+    0 0 0 2px var(--rm-accent-dot);
+}
+
+/* 비밀번호 칸 + 눈 아이콘 */
+.lg-pw {
+  position: relative;
+  display: block;
+}
+.lg-pw .lg-input {
+  padding-right: 48px;
+}
+.lg-pw__toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #999;
+  transform: translateY(-50%);
+}
+.lg-pw__toggle:hover {
+  color: var(--dy-ink);
+}
+
+.lg-text-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #999;
+}
+.lg-text-btn:hover {
+  color: var(--dy-ink);
+  text-decoration: underline;
+}
+.lg-text-btn--strong {
+  font-weight: 800;
+  color: var(--dy-ink);
+}
+.lg-forgot {
+  align-self: flex-end;
+  margin-top: -6px;
+}
+
+/* 버튼 (일기 화면 dp-btn과 같은 입체 모양) */
+.lg-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 18px;
+  border: none;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #fdfdfd, #ececec);
+  box-shadow: 6px 8px 16px rgba(0, 0, 0, 0.1), -5px -5px 12px rgba(255, 255, 255, 0.95),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.9);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--rm-text);
+  transition: transform 0.2s var(--rm-ease), box-shadow 0.2s, filter 0.2s;
+}
+.lg-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+.lg-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: inset 3px 4px 8px rgba(0, 0, 0, 0.1), inset -3px -3px 6px rgba(255, 255, 255, 0.7); /* 눌린 느낌 */
+}
+.lg-btn:focus-visible,
+.lg-text-btn:focus-visible,
+.lg-pw__toggle:focus-visible {
+  outline: 2px solid var(--dy-ink);
+  outline-offset: 2px;
+}
+.lg-btn--accent {
+  margin-top: 6px;
+  background: linear-gradient(145deg, #fcefc6, #f2d68f);
+  box-shadow: 6px 8px 16px rgba(170, 130, 40, 0.22), -5px -5px 12px rgba(255, 255, 255, 0.95),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.7);
+}
+.lg-btn--accent:hover:not(:disabled) {
+  filter: brightness(1.03);
+}
+.lg-btn--google {
+  background: linear-gradient(145deg, #ffffff, #f1f1f1);
+}
+
+/* "또는" 구분선 */
+.lg-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rm-muted);
+}
+.lg-or::before,
+.lg-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--rm-dot);
+}
+
+.lg-footer {
+  margin: 20px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: #999;
+}
+
+/* 안내·오류 문구 */
+.lg-msg {
+  margin: 20px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--rm-accent);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--dy-ink);
+}
+.lg-msg--error {
+  background: #f7e1df;
+  color: #a2453d;
+}
+
+/* 좁은 화면 */
+@media (max-width: 860px) {
+  .lg-card {
+    padding: 32px 24px 28px;
+  }
+}

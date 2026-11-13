@@ -1,0 +1,200 @@
+/* 공통 상단 메뉴: 상단 가운데 떠 있는 가로형 캡슐
+   색·그림자·움직임은 예전 로드맵 반원 메뉴(RoadmapNav, roadmap.css '상단 반원 메뉴')의 값을 그대로 쓴다.
+   - 바탕: 반원과 같은 회색 그라데이션(#f2f2f2 → #ececec) + 그림자, 올리면 6px 내려오며 그림자가 짙어짐
+   - 글자: 기본 #b3b3b3, 올리면 #111 + 1.18배, 처음 나타날 때 위에서 순서대로(40ms 간격) 내려옴
+   - 현재 페이지: #F6D878 배경 (기획에서 정한 강조색) */
+.gnav-wrap {
+  --gnav-text: #111; /* 반원 메뉴 --rm-text */
+  --gnav-muted: #b3b3b3; /* 반원 메뉴 --rm-muted */
+  --gnav-accent: #f6d878;
+  --gnav-ease: cubic-bezier(0.22, 1, 0.36, 1); /* 반원 메뉴 --rm-ease */
+
+  position: fixed;
+  top: 18px;
+  left: 0;
+  right: 0;
+  z-index: 35; /* 각 화면의 팝업(40)·튜토리얼(100)보다 아래, 화면 내용·+ 메뉴(30)보다 위 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  pointer-events: none; /* 메뉴 바깥의 빈 영역은 아래 화면을 누를 수 있게 */
+  transition: opacity 0.2s, visibility 0.2s;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+}
+
+/* 팝업·튜토리얼이 열려 있으면 메뉴를 숨긴다
+   (각 화면 컨테이너가 position: fixed라 안쪽 팝업이 메뉴보다 위로 올라올 수 없어서, 메뉴 쪽에서 비켜 준다) */
+body:has([aria-modal="true"]) .gnav-wrap {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* 바탕: 반원 메뉴와 같은 회색 그라데이션·그림자. 살짝 비치게 하고 뒤를 흐린다(유리 질감) */
+.gnav,
+.gnav-sub {
+  pointer-events: auto;
+  background: linear-gradient(180deg, rgba(242, 242, 242, 0.88), rgba(236, 236, 236, 0.88));
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+  transition: transform 0.35s var(--gnav-ease), box-shadow 0.35s var(--gnav-ease);
+}
+/* 흐림을 지원하지 않는 브라우저는 반원 메뉴처럼 불투명하게 */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .gnav,
+  .gnav-sub {
+    background: linear-gradient(180deg, #f2f2f2, #ececec);
+  }
+}
+/* 반원 메뉴처럼: 올리면 6px 내려오고 그림자가 짙어짐 (마우스가 있는 기기에서만) */
+@media (hover: hover) {
+  .gnav:hover {
+    transform: translateY(6px);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.09);
+  }
+}
+
+.gnav {
+  padding: 5px;
+  border-radius: 999px;
+}
+.gnav__list {
+  display: flex;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gnav__item {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  color: var(--gnav-muted);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.2s, background 0.2s var(--gnav-ease);
+}
+.gnav__inner {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  /* 반원 메뉴 글씨처럼 처음 나타날 때 위에서 순서대로 내려온다 */
+  animation: gnav-in 0.3s var(--gnav-ease) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms);
+  transition: transform 0.3s var(--gnav-ease);
+}
+@keyframes gnav-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+.gnav__item svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+.gnav__item:hover {
+  color: var(--gnav-text);
+}
+/* 반원 메뉴처럼 올린 글씨만 커짐 (마우스가 있는 기기에서만) */
+@media (hover: hover) {
+  .gnav__item:hover .gnav__inner {
+    transform: scale(1.18);
+  }
+}
+.gnav__item.is-active {
+  background: var(--gnav-accent);
+  color: var(--gnav-text);
+}
+.gnav__item:focus-visible,
+.gnav-sub__item:focus-visible {
+  outline: 2px solid var(--gnav-text);
+  outline-offset: 2px;
+}
+
+/* 일기 영역 하위 탭: 일기 쓰기 · 추억 보관소 */
+.gnav-sub {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+}
+.gnav-sub__item {
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: var(--gnav-muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.2s, background 0.2s var(--gnav-ease);
+}
+.gnav-sub__item:hover {
+  color: var(--gnav-text);
+}
+.gnav-sub__item.is-active {
+  background: #fff;
+  color: var(--gnav-text);
+}
+
+/* 모바일: 화면 폭에 맞추고 아이콘 위·글자 아래 */
+@media (max-width: 640px) {
+  .gnav-wrap {
+    top: 10px;
+    padding: 0 10px;
+  }
+  .gnav {
+    width: 100%;
+    max-width: 460px;
+    box-sizing: border-box;
+    border-radius: 24px;
+  }
+  .gnav__list {
+    width: 100%;
+  }
+  .gnav__list > li {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .gnav__item {
+    justify-content: center;
+    min-height: 50px;
+    padding: 4px 2px;
+    border-radius: 19px;
+    font-size: 11px;
+    letter-spacing: 0;
+  }
+  .gnav__inner {
+    flex-direction: column;
+    gap: 3px;
+  }
+  .gnav__item svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gnav,
+  .gnav-sub,
+  .gnav__item,
+  .gnav__inner,
+  .gnav-sub__item {
+    animation: none;
+    transition: none;
+  }
+  .gnav:hover {
+    transform: none;
+  }
+}

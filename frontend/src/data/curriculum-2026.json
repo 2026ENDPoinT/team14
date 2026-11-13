@@ -1,820 +1,628 @@
 {
-  "schemaVersion": "1.0.0",
-  "project": "Campus Tree",
-  "academicYear": 2026,
-  "university": "서울과학기술대학교",
-  "department": "컴퓨터공학과",
-  "dataStatus": "draft_partial_verification",
-  "description": "10개 직무군 중심 추천 커리큘럼. 교과목 등록 정보는 공식 교육과정에서 확인한 항목과 추가 검증 항목을 구분함.",
   "source": {
+    "name": "2026 컴퓨터공학과 교과과정 연계도",
+    "year": 2026,
+    "file": "docs/references/curriculum-2026.png"
+  },
+  "teamSource": {
+    "pr": 25,
     "officialCurriculum": "https://computer.seoultech.ac.kr/edu/curri",
     "verificationScope": "공식 페이지에서 조회된 2학기 표의 과목명·학수번호 확인. 다른 학기와 학년 배치는 검증 필요.",
-    "checkedDate": "2026-11-12"
+    "checkedDate": "2026-11-12",
+    "dataStatus": "draft_partial_verification"
   },
-  "courseCatalog": {
-    "intro1": {
-      "name": "프로그래밍입문(1)",
-      "grade": 1,
+  "courses": [
+    {
+      "key": "cs2026-1-1-01",
+      "title": "컴퓨터공학개론",
+      "year": 1,
       "semester": 1,
-      "courseCode": null,
-      "needsCheck": true,
-      "type": "unverified"
-    },
-    "intro2": {
-      "name": "프로그래밍입문(2)",
-      "grade": 1,
-      "semester": 2,
-      "courseCode": "109004",
+      "category": null,
+      "area": "SW·프로그래밍",
       "needsCheck": false,
-      "type": "official_course"
+      "courseCode": null,
+      "codeStatus": null,
+      "catalogId": null
     },
-    "oop": {
+    {
+      "key": "cs2026-1-1-02",
+      "title": "프로그래밍입문(1)",
+      "year": 1,
+      "semester": 1,
+      "category": "전공필수",
+      "area": "SW·프로그래밍",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": "unverified",
+      "catalogId": "intro1"
+    },
+    {
+      "key": "cs2026-1-2-01",
+      "title": "선형대수학",
+      "year": 1,
+      "semester": 2,
+      "category": null,
+      "area": "AI·데이터·멀티미디어",
+      "needsCheck": false,
+      "courseCode": "109073",
+      "codeStatus": "verified",
+      "catalogId": "linear"
+    },
+    {
+      "key": "cs2026-1-2-02",
+      "title": "프로그래밍입문(2)",
+      "year": 1,
+      "semester": 2,
+      "category": "전공필수",
+      "area": "SW·프로그래밍",
+      "needsCheck": false,
+      "courseCode": "109004",
+      "codeStatus": "verified",
+      "catalogId": "intro2"
+    },
+    {
+      "key": "cs2026-2-1-01",
+      "title": "자료구조",
+      "year": 2,
+      "semester": 1,
+      "category": null,
+      "area": "AI·데이터·멀티미디어",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": "unverified",
+      "catalogId": "ds"
+    },
+    {
+      "key": "cs2026-2-1-02",
+      "title": "확률및랜덤변수",
+      "year": 2,
+      "semester": 1,
+      "category": null,
+      "area": "AI·데이터·멀티미디어",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": "unverified",
+      "catalogId": "prob"
+    },
+    {
+      "key": "cs2026-2-1-03",
+      "title": "디지털논리및시스템",
+      "year": 2,
+      "semester": 1,
+      "category": null,
+      "area": "보안·시스템·네트워크",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": null,
+      "catalogId": null
+    },
+    {
+      "key": "cs2026-2-1-04",
+      "title": "유닉스시스템",
+      "year": 2,
+      "semester": 1,
+      "category": null,
+      "area": "보안·시스템·네트워크",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": null,
+      "catalogId": null
+    },
+    {
+      "key": "cs2026-2-1-05",
+      "title": "이산수학",
+      "year": 2,
+      "semester": 1,
+      "category": "전공필수",
+      "area": "SW·프로그래밍",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": null,
+      "catalogId": null
+    },
+    {
+      "key": "cs2026-2-1-06",
+      "title": "객체지향프로그래밍언어",
+      "year": 2,
+      "semester": 1,
+      "category": null,
+      "area": "SW·프로그래밍",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": null,
+      "catalogId": null
+    },
+    {
+      "key": "cs2026-2-2-01",
+      "title": "알고리즘",
+      "year": 2,
+      "semester": 2,
+      "category": null,
+      "area": "AI·데이터·멀티미디어",
+      "needsCheck": false,
+      "courseCode": "109180",
+      "codeStatus": "verified",
+      "catalogId": "algo"
+    },
+    {
+      "key": "cs2026-2-2-02",
+      "title": "데이터베이스",
+      "year": 2,
+      "semester": 2,
+      "category": null,
+      "area": "AI·데이터·멀티미디어",
+      "needsCheck": false,
+      "courseCode": "109341",
+      "codeStatus": "verified",
+      "catalogId": "db"
+    },
+    {
+      "key": "cs2026-2-2-03",
+      "title": "인공지능개론",
+      "year": 2,
+      "semester": 2,
+      "category": null,
+      "area": "AI·데이터·멀티미디어",
+      "needsCheck": false,
+      "courseCode": "109844",
+      "codeStatus": "verified",
+      "catalogId": "aiintro"
+    },
+    {
+      "key": "cs2026-2-2-04",
+      "title": "데이터통신",
+      "year": 2,
+      "semester": 2,
+      "category": null,
+      "area": "보안·시스템·네트워크",
+      "needsCheck": false,
+      "courseCode": "109360",
+      "codeStatus": "verified",
+      "catalogId": "datacomm"
+    },
+    {
+      "key": "cs2026-2-2-05",
+      "title": "오픈소스소프트웨어",
+      "year": 2,
+      "semester": 2,
+      "category": null,
+      "area": "SW·프로그래밍",
+      "needsCheck": false,
+      "courseCode": "109075",
+      "codeStatus": "verified",
+      "catalogId": "opensource"
+    },
+    {
+      "key": "cs2026-2-2-06",
+      "title": "웹프로그래밍",
+      "year": 2,
+      "semester": 2,
+      "category": null,
+      "area": "SW·프로그래밍",
+      "needsCheck": false,
+      "courseCode": "109261",
+      "codeStatus": "verified",
+      "catalogId": "web"
+    },
+    {
+      "key": "cs2026-2-2-07",
+      "title": "유닉스프로그래밍",
+      "year": 2,
+      "semester": 2,
+      "category": null,
+      "area": "SW·프로그래밍",
+      "needsCheck": false,
+      "courseCode": "109482",
+      "codeStatus": "verified",
+      "catalogId": "unix"
+    },
+    {
+      "key": "cs2026-3-1-01",
+      "title": "데이터분석",
+      "year": 3,
+      "semester": 1,
+      "category": null,
+      "area": "AI·데이터·멀티미디어",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": "unverified",
+      "catalogId": "analysis"
+    },
+    {
+      "key": "cs2026-3-1-02",
+      "title": "컴퓨터비전",
+      "year": 3,
+      "semester": 1,
+      "category": null,
+      "area": "AI·데이터·멀티미디어",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": "unverified",
+      "catalogId": "vision"
+    },
+    {
+      "key": "cs2026-3-1-03",
+      "title": "정보보호론",
+      "year": 3,
+      "semester": 1,
+      "category": null,
+      "area": "보안·시스템·네트워크",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": null,
+      "catalogId": null
+    },
+    {
+      "key": "cs2026-3-1-04",
+      "title": "운영체제",
+      "year": 3,
+      "semester": 1,
+      "category": null,
+      "area": "보안·시스템·네트워크",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": "unverified",
+      "catalogId": "os"
+    },
+    {
+      "key": "cs2026-3-1-05",
+      "title": "시스템프로그래밍",
+      "year": 3,
+      "semester": 1,
+      "category": null,
+      "area": "보안·시스템·네트워크",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": "unverified",
+      "catalogId": "sysprog"
+    },
+    {
+      "key": "cs2026-3-1-06",
+      "title": "컴퓨터네트워크",
+      "year": 3,
+      "semester": 1,
+      "category": null,
+      "area": "보안·시스템·네트워크",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": "unverified",
+      "catalogId": "network"
+    },
+    {
+      "key": "cs2026-3-1-07",
+      "title": "형식언어및오토마타",
+      "year": 3,
+      "semester": 1,
+      "category": null,
+      "area": "SW·프로그래밍",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": null,
+      "catalogId": null
+    },
+    {
+      "key": "cs2026-3-2-01",
+      "title": "기계학습",
+      "year": 3,
+      "semester": 2,
+      "category": null,
+      "area": "AI·데이터·멀티미디어",
+      "needsCheck": false,
+      "courseCode": "109078",
+      "codeStatus": "verified",
+      "catalogId": "ml"
+    },
+    {
+      "key": "cs2026-3-2-02",
+      "title": "컴퓨터그래픽스",
+      "year": 3,
+      "semester": 2,
+      "category": null,
+      "area": "AI·데이터·멀티미디어",
+      "needsCheck": false,
+      "courseCode": "109029",
+      "codeStatus": "verified",
+      "catalogId": "graphics"
+    },
+    {
+      "key": "cs2026-3-2-03",
+      "title": "컴퓨터보안",
+      "year": 3,
+      "semester": 2,
+      "category": null,
+      "area": "보안·시스템·네트워크",
+      "needsCheck": false,
+      "courseCode": "109285",
+      "codeStatus": "verified",
+      "catalogId": "security"
+    },
+    {
+      "key": "cs2026-3-2-04",
+      "title": "컴퓨터시스템구조",
+      "year": 3,
+      "semester": 2,
+      "category": null,
+      "area": "보안·시스템·네트워크",
+      "needsCheck": false,
+      "courseCode": "109343",
+      "codeStatus": "verified",
+      "catalogId": "arch"
+    },
+    {
+      "key": "cs2026-3-2-05",
+      "title": "소프트웨어공학",
+      "year": 3,
+      "semester": 2,
+      "category": null,
+      "area": "SW·프로그래밍",
+      "needsCheck": false,
+      "courseCode": "109130",
+      "codeStatus": "verified",
+      "catalogId": "sweng"
+    },
+    {
+      "key": "cs2026-3-2-06",
+      "title": "고급웹프로그래밍",
+      "year": 3,
+      "semester": 2,
+      "category": null,
+      "area": "SW·프로그래밍",
+      "needsCheck": false,
+      "courseCode": "109481",
+      "codeStatus": "verified",
+      "catalogId": "advweb"
+    },
+    {
+      "key": "cs2026-3-2-07",
+      "title": "모바일프로그래밍",
+      "year": 3,
+      "semester": 2,
+      "category": null,
+      "area": "SW·프로그래밍",
+      "needsCheck": false,
+      "courseCode": "109038",
+      "codeStatus": "verified",
+      "catalogId": "mobile"
+    },
+    {
+      "key": "cs2026-3-2-08",
+      "title": "게임프로그래밍",
+      "year": 3,
+      "semester": 2,
+      "category": null,
+      "area": "SW·프로그래밍",
+      "needsCheck": false,
+      "courseCode": "109504",
+      "codeStatus": "verified",
+      "catalogId": "game"
+    },
+    {
+      "key": "cs2026-4-1-01",
+      "title": "자연어처리",
+      "year": 4,
+      "semester": 1,
+      "category": null,
+      "area": "AI·데이터·멀티미디어",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": null,
+      "catalogId": null
+    },
+    {
+      "key": "cs2026-4-1-02",
+      "title": "강화학습",
+      "year": 4,
+      "semester": 1,
+      "category": null,
+      "area": "AI·데이터·멀티미디어",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": null,
+      "catalogId": null
+    },
+    {
+      "key": "cs2026-4-1-03",
+      "title": "차세대암호알고리즘",
+      "year": 4,
+      "semester": 1,
+      "category": null,
+      "area": "보안·시스템·네트워크",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": null,
+      "catalogId": null
+    },
+    {
+      "key": "cs2026-4-1-04",
+      "title": "임베디드소프트웨어",
+      "year": 4,
+      "semester": 1,
+      "category": null,
+      "area": "보안·시스템·네트워크",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": "unverified",
+      "catalogId": "embedded"
+    },
+    {
+      "key": "cs2026-4-1-05",
+      "title": "사물인터넷",
+      "year": 4,
+      "semester": 1,
+      "category": null,
+      "area": "보안·시스템·네트워크",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": "unverified",
+      "catalogId": "iot"
+    },
+    {
+      "key": "cs2026-4-1-06",
+      "title": "프로그래밍언어론",
+      "year": 4,
+      "semester": 1,
+      "category": null,
+      "area": "SW·프로그래밍",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": null,
+      "catalogId": null
+    },
+    {
+      "key": "cs2026-4-1-07",
+      "title": "캡스톤디자인(1)",
+      "year": 4,
+      "semester": 1,
+      "category": "전공필수",
+      "area": "프로젝트",
+      "needsCheck": false,
+      "courseCode": null,
+      "codeStatus": null,
+      "catalogId": null
+    },
+    {
+      "key": "cs2026-4-1-08",
+      "title": "현장실습(1)·코업/코업프로젝트(1)",
+      "year": 4,
+      "semester": 1,
+      "category": null,
+      "area": "프로젝트",
+      "needsCheck": true,
+      "courseCode": null,
+      "codeStatus": null,
+      "catalogId": null
+    },
+    {
+      "key": "cs2026-4-2-01",
+      "title": "빅데이터처리",
+      "year": 4,
+      "semester": 2,
+      "category": null,
+      "area": "AI·데이터·멀티미디어",
+      "needsCheck": false,
+      "courseCode": "109840",
+      "codeStatus": "verified",
+      "catalogId": "bigdata"
+    },
+    {
+      "key": "cs2026-4-2-02",
+      "title": "데이터마이닝",
+      "year": 4,
+      "semester": 2,
+      "category": null,
+      "area": "AI·데이터·멀티미디어",
+      "needsCheck": false,
+      "courseCode": "109507",
+      "codeStatus": "verified",
+      "catalogId": "datamining"
+    },
+    {
+      "key": "cs2026-4-2-03",
+      "title": "블록체인",
+      "year": 4,
+      "semester": 2,
+      "category": null,
+      "area": "보안·시스템·네트워크",
+      "needsCheck": false,
+      "courseCode": "109086",
+      "codeStatus": "verified",
+      "catalogId": "blockchain"
+    },
+    {
+      "key": "cs2026-4-2-04",
+      "title": "사이버보안",
+      "year": 4,
+      "semester": 2,
+      "category": null,
+      "area": "보안·시스템·네트워크",
+      "needsCheck": false,
+      "courseCode": "109512",
+      "codeStatus": "verified",
+      "catalogId": "cyber"
+    },
+    {
+      "key": "cs2026-4-2-05",
+      "title": "고급소프트웨어공학",
+      "year": 4,
+      "semester": 2,
+      "category": null,
+      "area": "SW·프로그래밍",
+      "needsCheck": false,
+      "courseCode": "109506",
+      "codeStatus": "verified",
+      "catalogId": "advsw"
+    },
+    {
+      "key": "cs2026-4-2-06",
+      "title": "컴파일러구조",
+      "year": 4,
+      "semester": 2,
+      "category": null,
+      "area": "SW·프로그래밍",
+      "needsCheck": false,
+      "courseCode": "109270",
+      "codeStatus": "verified",
+      "catalogId": "compiler"
+    },
+    {
+      "key": "cs2026-4-2-07",
+      "title": "캡스톤디자인(2)",
+      "year": 4,
+      "semester": 2,
+      "category": "전공필수",
+      "area": "프로젝트",
+      "needsCheck": false,
+      "courseCode": "109114",
+      "codeStatus": "verified",
+      "catalogId": "cap2"
+    },
+    {
+      "key": "cs2026-4-2-08",
+      "title": "현장실습(3)·코업/코업프로젝트(2)",
+      "year": 4,
+      "semester": 2,
+      "category": null,
+      "area": "프로젝트",
+      "needsCheck": true,
+      "courseCode": null,
+      "codeStatus": null,
+      "catalogId": null
+    }
+  ],
+  "pending": [
+    {
+      "catalogId": "oop",
       "name": "객체지향프로그래밍",
       "grade": 2,
       "semester": 1,
       "courseCode": null,
-      "needsCheck": true,
-      "type": "unverified"
+      "candidateKey": "cs2026-2-1-06",
+      "reason": "연계도 표기 ‘객체지향프로그래밍언어’와 이름이 달라 같은 과목인지 확인 필요"
     },
-    "ds": {
-      "name": "자료구조",
-      "grade": 2,
-      "semester": 1,
-      "courseCode": null,
-      "needsCheck": true,
-      "type": "unverified"
-    },
-    "linear": {
-      "name": "선형대수학",
-      "grade": 1,
-      "semester": 2,
-      "courseCode": "109073",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "prob": {
-      "name": "확률및랜덤변수",
-      "grade": 2,
-      "semester": 1,
-      "courseCode": null,
-      "needsCheck": true,
-      "type": "unverified"
-    },
-    "digital": {
+    {
+      "catalogId": "digital",
       "name": "디지털논리회로",
       "grade": 2,
       "semester": 1,
       "courseCode": null,
-      "needsCheck": true,
-      "type": "unverified"
+      "candidateKey": "cs2026-2-1-03",
+      "reason": "연계도 표기 ‘디지털논리및시스템’과 이름이 달라 같은 과목인지 확인 필요"
     },
-    "algo": {
-      "name": "알고리즘",
-      "grade": 2,
-      "semester": 2,
-      "courseCode": "109180",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "db": {
-      "name": "데이터베이스",
-      "grade": 2,
-      "semester": 2,
-      "courseCode": "109341",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "web": {
-      "name": "웹프로그래밍",
-      "grade": 2,
-      "semester": 2,
-      "courseCode": "109261",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "unix": {
-      "name": "유닉스프로그래밍",
-      "grade": 2,
-      "semester": 2,
-      "courseCode": "109482",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "opensource": {
-      "name": "오픈소스소프트웨어",
-      "grade": 2,
-      "semester": 2,
-      "courseCode": "109075",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "datacomm": {
-      "name": "데이터통신",
-      "grade": 2,
-      "semester": 2,
-      "courseCode": "109360",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "aiintro": {
-      "name": "인공지능개론",
-      "grade": 2,
-      "semester": 2,
-      "courseCode": "109844",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "ml": {
-      "name": "기계학습",
-      "grade": 3,
-      "semester": 2,
-      "courseCode": "109078",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "sweng": {
-      "name": "소프트웨어공학",
-      "grade": 3,
-      "semester": 2,
-      "courseCode": "109130",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "graphics": {
-      "name": "컴퓨터그래픽스",
-      "grade": 3,
-      "semester": 2,
-      "courseCode": "109029",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "mobile": {
-      "name": "모바일프로그래밍",
-      "grade": 3,
-      "semester": 2,
-      "courseCode": "109038",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "security": {
-      "name": "컴퓨터보안",
-      "grade": 3,
-      "semester": 2,
-      "courseCode": "109285",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "arch": {
-      "name": "컴퓨터시스템구조",
-      "grade": 3,
-      "semester": 2,
-      "courseCode": "109343",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "advweb": {
-      "name": "고급웹프로그래밍",
-      "grade": 3,
-      "semester": 2,
-      "courseCode": "109481",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "game": {
-      "name": "게임프로그래밍",
-      "grade": 3,
-      "semester": 2,
-      "courseCode": "109504",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "blockchain": {
-      "name": "블록체인",
-      "grade": 4,
-      "semester": 2,
-      "courseCode": "109086",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "compiler": {
-      "name": "컴파일러구조",
-      "grade": 4,
-      "semester": 2,
-      "courseCode": "109270",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "advsw": {
-      "name": "고급소프트웨어공학",
-      "grade": 4,
-      "semester": 2,
-      "courseCode": "109506",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "datamining": {
-      "name": "데이터마이닝",
-      "grade": 4,
-      "semester": 2,
-      "courseCode": "109507",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "cyber": {
-      "name": "사이버보안",
-      "grade": 4,
-      "semester": 2,
-      "courseCode": "109512",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "bigdata": {
-      "name": "빅데이터처리",
-      "grade": 4,
-      "semester": 2,
-      "courseCode": "109840",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "cap2": {
-      "name": "캡스톤디자인(2)",
-      "grade": 4,
-      "semester": 2,
-      "courseCode": "109114",
-      "needsCheck": false,
-      "type": "official_course"
-    },
-    "os": {
-      "name": "운영체제",
-      "grade": 3,
-      "semester": 1,
-      "courseCode": null,
-      "needsCheck": true,
-      "type": "unverified"
-    },
-    "network": {
-      "name": "컴퓨터네트워크",
-      "grade": 3,
-      "semester": 1,
-      "courseCode": null,
-      "needsCheck": true,
-      "type": "unverified"
-    },
-    "sysprog": {
-      "name": "시스템프로그래밍",
-      "grade": 3,
-      "semester": 1,
-      "courseCode": null,
-      "needsCheck": true,
-      "type": "unverified"
-    },
-    "analysis": {
-      "name": "데이터분석",
-      "grade": 3,
-      "semester": 1,
-      "courseCode": null,
-      "needsCheck": true,
-      "type": "unverified"
-    },
-    "vision": {
-      "name": "컴퓨터비전",
-      "grade": 3,
-      "semester": 1,
-      "courseCode": null,
-      "needsCheck": true,
-      "type": "unverified"
-    },
-    "iot": {
-      "name": "사물인터넷",
-      "grade": 4,
-      "semester": 1,
-      "courseCode": null,
-      "needsCheck": true,
-      "type": "unverified"
-    },
-    "embedded": {
-      "name": "임베디드소프트웨어",
-      "grade": 4,
-      "semester": 1,
-      "courseCode": null,
-      "needsCheck": true,
-      "type": "unverified"
-    },
-    "hci": {
+    {
+      "catalogId": "hci",
       "name": "인간컴퓨터상호작용",
       "grade": null,
       "semester": null,
       "courseCode": null,
-      "needsCheck": true,
-      "type": "unverified"
+      "candidateKey": null,
+      "reason": "연계도에 없고 권장 학년·학기가 확인되지 않음 (확인 후 새 키로 추가)"
+    },
+    {
+      "keys": [
+        "cs2026-4-1-08",
+        "cs2026-4-2-08"
+      ],
+      "reason": "연계도 한 칸에 현장실습·코업/코업프로젝트가 함께 적혀 있어 과목 구분 확인 필요 (현장실습(2)는 연계도에 없음)"
     }
-  },
-  "jobCurricula": [
-    {
-      "id": "backend",
-      "name": "백엔드 개발자",
-      "description": "서버, API, 데이터베이스 및 서비스 안정성 개발",
-      "stages": [
-        {
-          "id": "s1",
-          "title": "기초",
-          "courseIds": [
-            "intro1",
-            "intro2",
-            "oop",
-            "ds"
-          ]
-        },
-        {
-          "id": "s2",
-          "title": "핵심",
-          "courseIds": [
-            "algo",
-            "db",
-            "web",
-            "os",
-            "network"
-          ]
-        },
-        {
-          "id": "s3",
-          "title": "심화",
-          "courseIds": [
-            "unix",
-            "sysprog",
-            "sweng",
-            "advweb"
-          ]
-        }
-      ],
-      "skills": [
-        "Java 또는 Python",
-        "Spring Boot 또는 FastAPI",
-        "SQL",
-        "REST API",
-        "Docker"
-      ],
-      "recommendedActivities": [
-        "API 팀 프로젝트",
-        "오픈소스 기여",
-        "백엔드 인턴십"
-      ],
-      "portfolioProject": "인증·게시판·검색 기능이 있는 API 서비스"
-    },
-    {
-      "id": "frontend",
-      "name": "프론트엔드 개발자",
-      "description": "웹 UI와 사용자 경험을 구현하는 개발",
-      "stages": [
-        {
-          "id": "s1",
-          "title": "기초",
-          "courseIds": [
-            "intro1",
-            "intro2",
-            "oop",
-            "ds"
-          ]
-        },
-        {
-          "id": "s2",
-          "title": "핵심",
-          "courseIds": [
-            "web",
-            "algo",
-            "sweng"
-          ]
-        },
-        {
-          "id": "s3",
-          "title": "심화",
-          "courseIds": [
-            "advweb",
-            "db",
-            "opensource"
-          ]
-        }
-      ],
-      "skills": [
-        "HTML/CSS",
-        "JavaScript/TypeScript",
-        "React",
-        "접근성",
-        "웹 성능"
-      ],
-      "recommendedActivities": [
-        "웹 UI 클론 프로젝트",
-        "디자인 협업",
-        "프론트엔드 인턴십"
-      ],
-      "portfolioProject": "반응형 대시보드 웹앱"
-    },
-    {
-      "id": "mobile",
-      "name": "모바일 앱 개발자",
-      "description": "Android/iOS 모바일 앱 개발",
-      "stages": [
-        {
-          "id": "s1",
-          "title": "기초",
-          "courseIds": [
-            "intro1",
-            "intro2",
-            "oop",
-            "ds"
-          ]
-        },
-        {
-          "id": "s2",
-          "title": "핵심",
-          "courseIds": [
-            "algo",
-            "db",
-            "mobile",
-            "sweng"
-          ]
-        },
-        {
-          "id": "s3",
-          "title": "심화",
-          "courseIds": [
-            "web",
-            "network",
-            "security"
-          ]
-        }
-      ],
-      "skills": [
-        "Kotlin 또는 Swift",
-        "앱 상태 관리",
-        "API 연동",
-        "로컬 저장소",
-        "앱 배포"
-      ],
-      "recommendedActivities": [
-        "앱 출시",
-        "모바일 해커톤",
-        "사용자 테스트"
-      ],
-      "portfolioProject": "위치 기반 캠퍼스 생활 앱"
-    },
-    {
-      "id": "ai_ml",
-      "name": "AI·머신러닝 엔지니어",
-      "description": "데이터 기반 예측·학습 모델 개발 및 배포",
-      "stages": [
-        {
-          "id": "s1",
-          "title": "기초",
-          "courseIds": [
-            "intro1",
-            "intro2",
-            "linear",
-            "prob",
-            "ds"
-          ]
-        },
-        {
-          "id": "s2",
-          "title": "핵심",
-          "courseIds": [
-            "algo",
-            "aiintro",
-            "ml",
-            "db"
-          ]
-        },
-        {
-          "id": "s3",
-          "title": "심화",
-          "courseIds": [
-            "vision",
-            "analysis",
-            "bigdata",
-            "datamining"
-          ]
-        }
-      ],
-      "skills": [
-        "Python",
-        "NumPy/Pandas",
-        "PyTorch",
-        "모델 평가",
-        "MLOps 기초"
-      ],
-      "recommendedActivities": [
-        "Kaggle 또는 DACON",
-        "모델 재현 프로젝트",
-        "학부연구생"
-      ],
-      "portfolioProject": "교내 수요 예측 또는 이미지 분류 모델"
-    },
-    {
-      "id": "data",
-      "name": "데이터 분석가·엔지니어",
-      "description": "데이터 수집·정제·분석 및 파이프라인 구축",
-      "stages": [
-        {
-          "id": "s1",
-          "title": "기초",
-          "courseIds": [
-            "intro1",
-            "intro2",
-            "prob",
-            "linear",
-            "ds"
-          ]
-        },
-        {
-          "id": "s2",
-          "title": "핵심",
-          "courseIds": [
-            "db",
-            "algo",
-            "analysis",
-            "ml"
-          ]
-        },
-        {
-          "id": "s3",
-          "title": "심화",
-          "courseIds": [
-            "datamining",
-            "bigdata",
-            "unix",
-            "sweng"
-          ]
-        }
-      ],
-      "skills": [
-        "SQL",
-        "Python",
-        "통계 분석",
-        "ETL",
-        "시각화"
-      ],
-      "recommendedActivities": [
-        "공공데이터 분석",
-        "데이터 경진대회",
-        "데이터 파이프라인 프로젝트"
-      ],
-      "portfolioProject": "교내 이용 패턴 분석 대시보드"
-    },
-    {
-      "id": "security",
-      "name": "정보보안 엔지니어",
-      "description": "시스템 및 서비스의 취약점 예방·탐지·대응",
-      "stages": [
-        {
-          "id": "s1",
-          "title": "기초",
-          "courseIds": [
-            "intro1",
-            "intro2",
-            "oop",
-            "ds"
-          ]
-        },
-        {
-          "id": "s2",
-          "title": "핵심",
-          "courseIds": [
-            "os",
-            "network",
-            "unix",
-            "datacomm",
-            "security"
-          ]
-        },
-        {
-          "id": "s3",
-          "title": "심화",
-          "courseIds": [
-            "cyber",
-            "sysprog",
-            "blockchain"
-          ]
-        }
-      ],
-      "skills": [
-        "Linux",
-        "TCP/IP",
-        "웹 보안",
-        "암호학 기초",
-        "보안 로그 분석"
-      ],
-      "recommendedActivities": [
-        "CTF",
-        "보안 동아리",
-        "모의 침투 실습(허가된 환경)"
-      ],
-      "portfolioProject": "취약점 진단과 탐지 보고서"
-    },
-    {
-      "id": "cloud",
-      "name": "시스템·네트워크·클라우드 엔지니어",
-      "description": "인프라 구축, 운영 자동화 및 서비스 신뢰성 개선",
-      "stages": [
-        {
-          "id": "s1",
-          "title": "기초",
-          "courseIds": [
-            "intro1",
-            "intro2",
-            "ds",
-            "digital"
-          ]
-        },
-        {
-          "id": "s2",
-          "title": "핵심",
-          "courseIds": [
-            "os",
-            "network",
-            "datacomm",
-            "unix",
-            "arch"
-          ]
-        },
-        {
-          "id": "s3",
-          "title": "심화",
-          "courseIds": [
-            "sysprog",
-            "security",
-            "sweng",
-            "opensource"
-          ]
-        }
-      ],
-      "skills": [
-        "Linux",
-        "Docker",
-        "Kubernetes 기초",
-        "CI/CD",
-        "모니터링"
-      ],
-      "recommendedActivities": [
-        "클라우드 실습",
-        "서버 운영 프로젝트",
-        "인프라 자동화 실습"
-      ],
-      "portfolioProject": "컨테이너 기반 배포 및 관측 시스템"
-    },
-    {
-      "id": "embedded",
-      "name": "임베디드·IoT 개발자",
-      "description": "하드웨어와 센서를 제어하는 펌웨어·연결 서비스 개발",
-      "stages": [
-        {
-          "id": "s1",
-          "title": "기초",
-          "courseIds": [
-            "intro1",
-            "intro2",
-            "digital",
-            "ds"
-          ]
-        },
-        {
-          "id": "s2",
-          "title": "핵심",
-          "courseIds": [
-            "arch",
-            "os",
-            "datacomm",
-            "sysprog"
-          ]
-        },
-        {
-          "id": "s3",
-          "title": "심화",
-          "courseIds": [
-            "embedded",
-            "iot",
-            "network",
-            "security"
-          ]
-        }
-      ],
-      "skills": [
-        "C/C++",
-        "마이크로컨트롤러",
-        "UART/I2C/SPI",
-        "RTOS 기초",
-        "센서 통신"
-      ],
-      "recommendedActivities": [
-        "아두이노/ESP32 제작",
-        "임베디드 경진대회",
-        "HW/SW 협업"
-      ],
-      "portfolioProject": "환경 센서 측정·전송 장치"
-    },
-    {
-      "id": "game",
-      "name": "게임 개발자",
-      "description": "게임 플레이 시스템과 실시간 콘텐츠 구현",
-      "stages": [
-        {
-          "id": "s1",
-          "title": "기초",
-          "courseIds": [
-            "intro1",
-            "intro2",
-            "oop",
-            "ds"
-          ]
-        },
-        {
-          "id": "s2",
-          "title": "핵심",
-          "courseIds": [
-            "algo",
-            "graphics",
-            "game",
-            "linear"
-          ]
-        },
-        {
-          "id": "s3",
-          "title": "심화",
-          "courseIds": [
-            "os",
-            "network",
-            "sweng",
-            "mobile"
-          ]
-        }
-      ],
-      "skills": [
-        "C# 또는 C++",
-        "Unity 또는 Unreal",
-        "벡터/행렬",
-        "게임 물리",
-        "성능 최적화"
-      ],
-      "recommendedActivities": [
-        "게임잼",
-        "플레이테스트",
-        "게임 포트폴리오"
-      ],
-      "portfolioProject": "작동 가능한 2D/3D 게임 데모"
-    },
-    {
-      "id": "uiux",
-      "name": "UI/UX 엔지니어",
-      "description": "사용자 조사·인터랙션 설계·프로토타입 구현",
-      "stages": [
-        {
-          "id": "s1",
-          "title": "기초",
-          "courseIds": [
-            "intro1",
-            "intro2",
-            "oop",
-            "web"
-          ]
-        },
-        {
-          "id": "s2",
-          "title": "핵심",
-          "courseIds": [
-            "sweng",
-            "algo",
-            "advweb"
-          ]
-        },
-        {
-          "id": "s3",
-          "title": "심화",
-          "courseIds": [
-            "mobile",
-            "db",
-            "opensource"
-          ]
-        }
-      ],
-      "skills": [
-        "Figma",
-        "사용자 인터뷰",
-        "프로토타이핑",
-        "접근성",
-        "사용성 평가"
-      ],
-      "recommendedActivities": [
-        "사용성 테스트",
-        "디자인 시스템 제작",
-        "프로덕트 협업"
-      ],
-      "portfolioProject": "사용자 검증을 거친 캠퍼스 서비스 프로토타입"
-    }
-  ],
-  "notes": [
-    "courseIds는 이 파일 courseCatalog의 키를 참조함.",
-    "needsCheck=true인 항목은 정식 학수번호·학년·학기 및 2026 개설 여부 추가 확인 필요.",
-    "교과목 추천은 직무 역량 기준의 기획안으로 학교의 필수 이수요건이 아님.",
-    "UI/UX의 인간컴퓨터상호작용은 후보 과목으로 카탈로그에만 존재하며 현재 추천 단계에는 넣지 않음.",
-    "비교과·기술·포트폴리오는 학교 개설 과목이 아닌 자체 추천 사항임."
   ]
 }

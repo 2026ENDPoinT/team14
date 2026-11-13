@@ -1,0 +1,452 @@
+/* 펫 HOME — Figma HOME(1440×900) 값을 그대로 옮김
+   - 배경: 위 #f8f8f8 → 아래 #fbefd3 세로 그라데이션 (스크린샷 픽셀에서 잰 색)
+   - 세로 위치: 펫 이름 23.6% · 펫 가운데 51.7% · 성장 점선 79.3% (212 / 465 / 713.5 ÷ 900)
+   - 버튼·온기 표시는 로드맵 카드와 같은 부드러운 뉴모피즘 그림자 */
+.home-page {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: linear-gradient(
+    180deg,
+    #f9f9f9 0%,
+    #f8f8f8 13%,
+    #f6f5f3 22%,
+    #f7f4ef 33%,
+    #f8f3e8 50%,
+    #f9f1e1 67%,
+    #f9f0d9 83%,
+    #fbefd3 100%
+  );
+  color: #292929;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  --hm-shadow: 6px 8px 18px rgba(0, 0, 0, 0.07), -5px -5px 12px rgba(255, 255, 255, 0.9);
+  --hm-surface: linear-gradient(135deg, #fbfaf7, #f1ede4);
+  --hm-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 배경 빛: 그라데이션 색은 그대로 두고, 그 위로 옅은 빛 두 개가 천천히 오간다.
+   - 위쪽 흰 빛(22초) · 아래쪽 크림 빛(18초), transform만 움직여 가볍게
+   - .home-page(position: fixed)가 쌓임 맥락이라 z-index -1이면 배경 위·내용 아래에 그려짐 */
+.home-page::before,
+.home-page::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  width: 80vmax;
+  height: 80vmax;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform;
+}
+.home-page::before {
+  top: -45vmax;
+  left: -20vmax;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0));
+  animation: hm-light-top 22s ease-in-out infinite alternate;
+}
+.home-page::after {
+  bottom: -50vmax;
+  right: -25vmax;
+  background: radial-gradient(closest-side, rgba(255, 246, 226, 0.6), rgba(255, 246, 226, 0));
+  animation: hm-light-bottom 18s ease-in-out infinite alternate;
+}
+@keyframes hm-light-top {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(55vw, 6vh, 0); }
+}
+@keyframes hm-light-bottom {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50vw, -5vh, 0); }
+}
+
+/* ───── 펫 이름 ───── */
+.hm-name {
+  position: absolute;
+  top: 23.6%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hm-name__text {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: #000;
+  white-space: nowrap;
+}
+/* 수정 아이콘: 이름 오른쪽에 붙여 두어 이름은 가운데 그대로 */
+.hm-name__edit {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  margin-left: 6px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #8a857c;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: opacity 0.2s, color 0.2s;
+}
+.hm-name:hover .hm-name__edit,
+.hm-name__edit:focus-visible {
+  opacity: 1;
+}
+.hm-name__edit:hover {
+  color: #292929;
+}
+.hm-name__edit:focus-visible {
+  outline: 2px solid #292929;
+  outline-offset: 1px;
+}
+/* 마우스가 없는 기기(모바일)는 항상 보이게 */
+@media (hover: none) {
+  .hm-name__edit {
+    opacity: 1;
+  }
+}
+.hm-name__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 8px;
+  width: 260px;
+}
+.hm-name__input {
+  width: 150px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: var(--hm-surface);
+  box-shadow: inset 2px 3px 6px rgba(0, 0, 0, 0.06), inset -2px -2px 5px rgba(255, 255, 255, 0.9);
+  color: #000;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+}
+.hm-name__input:focus {
+  outline: 2px solid #f6d878;
+}
+.hm-name__count {
+  font-size: 12px;
+  color: #8a857c;
+}
+.hm-name__count.is-over {
+  color: #c4554d;
+}
+.hm-name__actions {
+  display: flex;
+  gap: 4px;
+}
+.hm-name__note {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  color: #8a857c;
+  text-align: center;
+}
+.hm-text-btn {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: #6f6a62;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.hm-text-btn.is-strong {
+  color: #000;
+  font-weight: 700;
+}
+.hm-text-btn:disabled {
+  opacity: 0.5;
+}
+
+/* ───── 펫 캐릭터 ─────
+   이름 아래 ~ 성장 점선 위의 빈 공간 전체를 캐릭터 영역으로 쓴다.
+   - 이미지는 Figma처럼 원본 크기(1배)로 두고, 공간이 모자랄 때만 비율 그대로 줄인다 (자르지 않음)
+   - 위쪽 24px은 숨쉬기·통통 튀는 움직임을 위한 여유 공간 */
+.hm-pet {
+  position: absolute;
+  top: calc(23.6% + 16px); /* 펫 이름 바로 아래 */
+  bottom: calc(20.7% + 34px); /* 성장 점선(79.3%) 위 */
+  left: 50%;
+  width: min(460px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  padding: 24px 0 4px;
+  box-sizing: border-box;
+  display: flex;
+  pointer-events: none; /* 투명한 빈 곳은 클릭되지 않게 — 캐릭터 그림만 클릭 */
+}
+/* 화면 높이가 낮은 노트북(예: 1280×720): 움직임 최고점에서도 이름과 20px 이상, 점선과도 넉넉히 떨어지도록
+   위·아래 여유를 늘린다. 이미지는 남은 공간에 맞춰 비율 그대로 조금 작아진다. 가운데 정렬은 그대로. */
+@media (max-height: 800px) {
+  .hm-pet {
+    bottom: calc(20.7% + 44px);
+    padding-top: 44px;
+  }
+}
+.hm-pet__hop,
+.hm-pet__idle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 100%; /* 발밑 기준으로 움직임 */
+}
+.hm-pet__hop {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hm-pet__hop:focus-visible {
+  outline: 2px solid #292929;
+  outline-offset: 4px;
+  border-radius: 24px;
+}
+/* 숨쉬기: 3.6초마다 5px 위아래 + 1.5% 커졌다 작아짐 */
+.hm-pet__idle {
+  animation: hm-idle 3.6s ease-in-out infinite;
+  will-change: transform;
+}
+.hm-pet__img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+  animation: hm-pet-in 0.5s ease-out both; /* 단계가 바뀌어 새 이미지가 들어올 때 */
+}
+@keyframes hm-idle {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-5px) scale(1.015); }
+}
+@keyframes hm-pet-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+/* 캐릭터 PNG가 아직 없을 때의 대체 상태 (기존 임시 그림 + 안내) */
+.hm-pet__fallback {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: #c4baa8;
+}
+.hm-pet__shape {
+  display: grid;
+  place-items: center;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: var(--hm-surface);
+  box-shadow: var(--hm-shadow);
+}
+.hm-pet__note {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9a9488;
+}
+
+/* ───── 성장 점선 + 출석 ───── */
+.hm-bottom {
+  position: absolute;
+  top: 79.3%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 428px;
+  max-width: calc(100vw - 40px);
+}
+.hm-growth {
+  position: relative;
+  left: -1.4%; /* Figma에서 점선 묶음은 화면 가운데보다 6px 왼쪽 (6 ÷ 428) */
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: -6%; /* 점선 줄(viewBox 안 25.5px)이 기준 높이에 오도록 */
+  overflow: visible;
+}
+.hm-growth .is-off {
+  opacity: 0.28;
+}
+/* 랜덤 한마디: 카드·말풍선 없이 글자만. 높이를 두 줄로 고정해 문구가 바뀌어도 주변이 흔들리지 않게 */
+.hm-quote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(340px, 100%);
+  height: 40px; /* 13px × 1.5 × 2줄 */
+  margin-top: 16px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 12px;
+  background: none;
+  color: #9a8e7f;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  cursor: pointer;
+  transition: color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.hm-quote:hover {
+  color: #6f6255;
+}
+.hm-quote:focus-visible {
+  outline: 2px solid #292929;
+  outline-offset: 2px;
+}
+.hm-quote__text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  animation: hm-quote-in 0.25s ease-out both;
+}
+@keyframes hm-quote-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ───── 보유 온기 (오른쪽 위) ─────
+   햇살 아이콘 + "온기" + 숫자. 크림·살구색 작은 캡슐, 테두리 없이 아주 옅은 그림자만 */
+.hm-warmth {
+  position: absolute;
+  top: 26px;
+  right: 28px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 13px 6px 10px;
+  border-radius: 999px;
+  background: #fff2e4;
+  box-shadow: 0 2px 8px rgba(137, 107, 84, 0.08);
+  color: #896b54;
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.hm-warmth__icon {
+  flex: none;
+  color: #dca36c;
+}
+.hm-warmth__label {
+  font-weight: 600;
+}
+.hm-warmth__num {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+/* 좁은 화면에서는 상단 메뉴 아래로 */
+@media (max-width: 900px) {
+  .hm-warmth {
+    top: 86px;
+    right: 16px;
+  }
+}
+
+/* ───── 온기 지급 연출 (서버 확인 후에만) ───── */
+.hm-burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  pointer-events: none;
+}
+.hm-burst__text {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, 0);
+  font-size: 13px;
+  font-weight: 800;
+  color: #896b54;
+  white-space: nowrap;
+  animation: hm-rise 1.6s var(--hm-ease) forwards;
+}
+.hm-burst__dot {
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #dca36c;
+  animation: hm-spark 1.2s var(--hm-ease) forwards;
+}
+@keyframes hm-rise {
+  0% { opacity: 0; transform: translate(-50%, 6px); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, 34px); }
+}
+@keyframes hm-spark {
+  0% { opacity: 0.9; transform: rotate(var(--a)) translateX(0) scale(1); }
+  100% { opacity: 0; transform: rotate(var(--a)) translateX(26px) scale(0.4); }
+}
+
+/* ───── 안내 메시지 ───── */
+.hm-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 8px);
+  transition: opacity 0.2s, transform 0.2s, visibility 0.2s;
+}
+.hm-toast.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-page::before,
+  .home-page::after,
+  .hm-pet__idle,
+  .hm-pet__img,
+  .hm-quote__text {
+    animation: none;
+  }
+  .hm-burst__text,
+  .hm-burst__dot {
+    animation-duration: 0.01s;
+  }
+  .hm-quote,
+  .hm-name__edit {
+    transition: none;
+  }
+}

@@ -92,9 +92,19 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
   "source": "recommended",
   "originKey": "course:cs2026-2-1-01",
   "completed": false,
+  "categoryKey": "contest",
+  "categoryId": null,
+  "detailKey": "hackathon",
   "createdAt": "2026-11-09T12:00:00+09:00"
 }
 ```
+- **노드 종류(카테고리)** — 화면의 NODE TYPE·DETAIL TYPE 선택값 (migration `20261111001100`)
+  - `categoryKey`: 기본 종류 키. 프론트 `nodeCategories.js`의 `BASE_CATEGORIES` id (`major`, `project`, `contest`, `club`, `external`, `career`, `study`, `campus`, `life`, `free`). 형식: 영문 소문자로 시작하는 `a-z0-9_` 40자 이내
+  - `categoryId`: 사용자 정의 종류 id (`NodeCategory.id`). **본인 종류만** 연결 가능 (DB 복합 외래키로 검증)
+  - `detailKey`: 세부 활동 키. 온보딩 경험 항목 id (예: `hackathon`). `categoryKey`가 있을 때만 쓸 수 있다
+  - `categoryKey`와 `categoryId`는 **동시에 넣을 수 없다**. 둘 다 `null`이면 `theme`으로 대표 종류를 보여 준다 (기존 노드)
+  - `theme`은 그대로 필수다. 종류를 고르면 그 종류의 테마(사용자 정의 종류는 `baseTheme`)를 `theme`에도 저장한다
+  - 사용자 정의 종류를 삭제하면 노드는 남고 `categoryId`만 `null`이 된다 → `theme`으로 표시
 - `periodId`: `null`이면 **보관함**에 있는 노드
 - `status`: `"placed"`(학기에 배치) | `"stored"`(보관함)
 - `theme`: `major` | `project` | `external` | `career` | `research` | `event` | `free` | 사용자 정의 테마 ID
@@ -106,6 +116,14 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 - `completed`: 이수 완료 표시 (`true`/`false`). STEP 3에서 사용자가 직접 고른 수강 과목만 `true`로 생성된다. 사용자가 나중에 바꿀 수 있다. (필드 이름 `(안)`)
   - 이수 완료 노드의 `periodId`는 연계도 **권장 학기** 위치이며, 실제 수강 학기를 뜻하지 않는다.
 - `position`: 학기 영역 내 상대 좌표 `[React Flow 좌표 기준 협의 필요]`
+
+### NodeCategory (사용자 정의 노드 종류, `node_categories`)
+```json
+{ "id": "c_1", "name": "알바", "baseTheme": "free", "createdAt": "2026-11-11T12:00:00+09:00" }
+```
+- `name`: 1~12자 (앞뒤 공백 제외). **사용자별로 중복 불가** (앞뒤 공백·대소문자 무시)
+- `baseTheme`: 기존 테마 7개 중 하나 (`major` | `project` | `external` | `career` | `research` | `event` | `free`). 기본값 `free`
+- 사용자 정의 종류에는 세부 활동(DETAIL TYPE)이 없다
 
 ### Edge (사용자 연결선, `edges`)
 ```json
@@ -148,13 +166,16 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
   "type": "backend",
   "stage": 1,
   "energy": 25,
+  "warmthBalance": 25,
   "energyToNextStage": 50,
   "updatedAt": "2026-11-09T12:00:00+09:00"
 }
 ```
 - 사용자당 1마리. **온보딩 완료 시** 생성한다. (`stage: 1`, `energy: 0`)
+  - 온보딩 전에 출석 보상을 받으면 그때 펫 행이 먼저 생긴다. 온보딩은 이미 있는 펫을 그대로 쓴다. (받은 온기 유지)
 - `type`: 희망 직무(관심 분야)에 따른 외형 키 `[미확정]`
-- `energy`: **누적 에너지**. 성장해도 차감하지 않는다.
+- `energy`: **누적 온기**(받은 온기 합계). 성장 단계에 쓰며 차감하지 않는다.
+- `warmthBalance` (DB `warmth_balance`): **사용할 수 있는 온기 잔액**. 보상을 받으면 `energy`와 함께 늘고, 온기를 쓰면 이것만 줄어든다. 홈에 표시하는 값.
 - `stage`: 1~4. 누적 에너지로 정한다.
 
 | stage | 이름 | 누적 에너지 |
@@ -174,13 +195,13 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
   "id": "r_1",
   "type": "diary_first_of_day",
   "refId": "2026-11-09",
-  "energy": 20,
+  "energy": 200,
   "createdAt": "2026-11-09T12:00:00+09:00"
 }
 ```
 - `type`: `attendance` | `diary_first_of_day` | `node_reflection` | `semester_reflection`
-  - `attendance`: 홈 '출석하기' 버튼 보상
-  - `diary_first_of_day`: 서버 기준 오늘, 처음으로 **공백 제외 본문 30자 이상** 일기를 저장(또는 수정)했을 때의 보상 (이름은 기존 것을 유지, 일기의 `date`와 무관)
+  - `attendance`: 출석 보상 (로그인할 때 자동으로 `check_in` 호출)
+  - `diary_first_of_day`: **오늘(서버 KST) 날짜 일기**를 처음으로 **공백 포함 본문 20자 이상**으로 저장(또는 수정)했을 때의 보상
 - `refId`: 출석·일기는 지급 날짜(서버 KST 날짜), 노드 회고는 nodeId, 학기 회고는 periodId
 - **프론트에서 직접 추가·수정·삭제할 수 없다.** (조회만 가능, 5장)
 
@@ -190,24 +211,24 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 
 | type | refId | 에너지 | 조건 · 한도 |
 | --- | --- | --- | --- |
-| attendance | 지급 날짜(KST) | +10 | '출석하기' 버튼 요청, 사용자·날짜당 1회 |
-| diary_first_of_day | 지급 날짜(KST) | +20 | 공백 제외 본문 30자 이상, 사용자·날짜당 1회 |
+| attendance | 지급 날짜(KST) | +100 | 로그인 시 자동 출석, 사용자·날짜당 1회 |
+| diary_first_of_day | 지급 날짜(KST) | +200 | 오늘 날짜 일기, 공백 포함 본문 20자 이상, 사용자·날짜당 1회 |
 | node_reflection | nodeId | +15 (제안값) | 노드당 1회 (P1) |
 | semester_reflection | periodId | +30 (제안값) | 학기당 1회 (P1) |
 
 **보상 RPC가 반드시 지킬 것 (원자적 지급)**
 1. **인증:** `auth.uid()`로 로그인 사용자를 확인한다. 로그인하지 않았으면 `UNAUTHENTICATED`, 아무것도 바꾸지 않는다.
 2. **날짜 계산:** 지급 날짜는 프론트가 보내는 값이 아니라 **서버가 계산한 현재 날짜(Asia/Seoul)** 를 쓴다.
-3. **조건 확인:** 일기 보상은 본문에서 공백(띄어쓰기·줄바꿈 등)을 뺀 글자 수가 30자 이상인지 서버에서 다시 센다.
+3. **조건 확인:** 일기 보상은 일기 날짜가 서버 오늘인지, 본문 글자 수(공백·줄바꿈 포함)가 20자 이상인지 서버에서 다시 센다.
 4. **중복 확인 + 지급:** `reward_events`에 `(user_id, type, ref_id)` 행 추가를 시도한다. 이미 있으면 지급하지 않는다.
-5. **에너지·단계 갱신:** 새로 추가된 경우에만 `pets.energy`를 늘리고 `stage`를 다시 계산한다. (차감 없음)
+5. **온기 갱신:** 새로 추가된 경우에만 `pets.energy`(누적)와 `pets.warmth_balance`(잔액)를 함께 늘린다. 펫이 아직 없으면 펫 행을 만든다. (`stage`는 화면이 `energy`로 계산)
 - 1~5는 **하나의 트랜잭션**에서 처리한다. 중간에 실패하면 전부 취소된다.
 - 같은 요청이 동시에 여러 번 와도 유일 제약 때문에 보상은 한 번만 들어간다.
 - **하루 1회:** `attendance`, `diary_first_of_day`는 각각 서버 KST 날짜당 1회만 지급한다.
 - 일기 수정·재저장·삭제 후 재작성으로 보상을 다시 받을 수 없다. (삭제해도 RewardEvent는 유지)
-- 30자 미만으로 저장한 일기를 수정해 **처음으로 30자 이상**이 되면, 그날 아직 `diary_first_of_day`가 없을 때만 지급한다.
-- 일기의 `date` 필드는 보상 날짜를 정하지 않는다. 과거 날짜 일기를 작성·수정해도 **소급 지급하지 않는다.**
-- 로그인/접속 자체는 보상 없음. 출석은 '출석하기' 버튼을 눌러야만 지급한다.
+- 20자 미만으로 저장한 오늘 일기를 같은 날 수정해 **처음으로 20자 이상**이 되면, 그날 아직 `diary_first_of_day`가 없을 때만 지급한다.
+- 과거 날짜 일기는 저장만 하고 지급하지 않는다. 미래 날짜 일기는 `VALIDATION_ERROR`로 저장하지 않는다.
+- 출석은 로그인할 때 프론트가 자동으로 `check_in`을 부른다. 같은 날 재로그인·여러 탭에서도 서버가 1회만 지급한다.
 - 미접속 페널티 없음. 에너지를 줄이는 기능은 없다.
 - 이미 지급된 경우 오류가 아니라 `rewarded: false`로 정상 응답한다.
 - 에너지 수치와 단계 기준값의 근거는 SPEC.md 8장.
@@ -297,17 +318,27 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 
 | 작업 | 처리 방식 | 설명 |
 | --- | --- | --- |
-| 로드맵 조회 | 테이블 `timeline_periods`, `nodes`, `edges` 조회 | periods + nodes + edges 한 번에 반환 |
+| 로드맵 조회 | 테이블 `timeline_periods`, `nodes`(+`contests` 공고 정보), `edges`, `node_documents` 조회 | `getRoadmap()` → periods + nodes + edges + documents 한 번에 반환. 탐색에서 추가한 공모전 노드에는 `contest`(출처·마감일·원문 링크)가 붙는다 |
 | 학기/기간 삽입 | RPC `insert_period` (안) | 삽입 위치 지정, 뒤 기간 order 재계산 |
 | 학기/기간 삭제 | RPC `delete_period` (안) | 소속 노드를 보관함으로 이동 후 삭제 |
 | 학기 순서 변경 | RPC `reorder_periods` (안) | 여러 행의 order를 함께 변경 |
 | 학기 이름·타입 수정 | 테이블 `timeline_periods` 수정 | 한 행만 바뀌므로 직접 수정 |
-| 노드 생성 | 테이블 `nodes` 추가 | |
-| 노드 수정 | 테이블 `nodes` 수정 | 제목·테마·위치·periodId |
+| 노드 생성 | 테이블 `nodes` 추가 | `createNode()`. 종류 선택값(`categoryKey`·`categoryId`·`detailKey`) 포함. 짧은 메모는 `node_documents`에 함께 저장 |
+| 노드 이동 | 테이블 `nodes` 수정 | `moveNodes(moves)`. periodId·position·status만. 자리 교환은 두 노드를 함께 |
+| 노드 수정 | 테이블 `nodes` 수정 + `node_documents` upsert | `saveNodeDetail()`. 제목·종류(테마·종류 선택값)·기록 |
+| 완료 상태 변경 | 테이블 `nodes` 수정 | `setNodeCompleted(id, completed)` |
+| 사용자 정의 종류 조회 | 테이블 `node_categories` 조회 | `listNodeCategories()` → `NodeCategory[]` (만든 순서) |
+| 사용자 정의 종류 추가 | 테이블 `node_categories` 추가 | `createNodeCategory(name, baseTheme?)`. `user_id`는 DB가 로그인 사용자로 채움. 이름 중복 → `CONFLICT` |
+| 사용자 정의 종류 이름 변경 | 테이블 `node_categories` 수정 | `renameNodeCategory(id, name)`. 이름 중복 → `CONFLICT` |
+| 사용자 정의 종류 삭제 | 테이블 `node_categories` 삭제 | `deleteNodeCategory(id)`. 연결된 노드는 남고 `categoryId`만 `null` |
 | 노드 복제 | 서비스 함수에서 처리 | 처리 방식(테이블 추가 / RPC) `[미확정]` |
-| 노드 삭제 | 테이블 `nodes` 삭제 | 문서도 함께 삭제 |
-| 연결선 생성 | 테이블 `edges` 추가 | |
-| 연결선 삭제 | 테이블 `edges` 삭제 | |
+| 노드 삭제 | 테이블 `nodes` 삭제 | `deleteNode(id)`. 문서·연결선도 DB에서 함께 삭제(외래키). 보관함 X·휴지통은 5초 실행 취소 뒤 저장 |
+| 연결선 생성 | 테이블 `edges` 추가 | `createEdge(sourceId, targetId)`. 내 노드끼리만(복합 외래키). 자기 자신·중복 연결은 프론트(`edgeRules.js`)가 막음 |
+| 연결선 끝점 변경 | 테이블 `edges` 수정 | `updateEdge(id, { sourceNodeId, targetNodeId })` |
+| 연결선 삭제 | 테이블 `edges` 삭제 | `deleteEdge(id)` |
+
+- 저장 결과: 모든 저장은 DB에 성공한 뒤에만 화면을 완료 상태로 바꾼다. 실패하면 화면을 되돌리고 오류 문구를 보여 준다.
+- 학기 가지선 표시 설정(`branchVisibility`)은 아직 DB 컬럼이 없어 화면에서만 유지된다 `[협의 필요]`.
 
 ```json
 // 로드맵 조회 결과
@@ -449,63 +480,81 @@ selectCourses({
 ```json
 // 작성/수정 요청 (date: "2026-11-09")
 { "date": "2026-11-09", "mood": "happy", "content": "오늘은...", "linkedNodeId": null }
-// 결과 (서버 기준 오늘 처음으로 공백 제외 30자 이상 저장 또는 수정)
+// 결과 (오늘 날짜 일기를 처음으로 공백 포함 20자 이상 저장 또는 수정)
 {
   "diary": { /* Diary */ },
-  "reward": { "rewarded": true, "energy": 20 },
+  "reward": { "rewarded": true, "energy": 200 },
   "pet": { /* Pet (갱신됨) */ }
 }
-// 결과 (오늘 이미 일기 보상을 받음 / 30자 미만)
-{ "diary": { /* Diary */ }, "reward": { "rewarded": false }, "pet": { /* Pet */ } }
+// 결과 (보상 없음: reason = NOT_TODAY 과거 날짜 | TOO_SHORT 20자 미만 | ALREADY_REWARDED 오늘 이미 받음)
+{ "diary": { /* Diary */ }, "reward": { "rewarded": false, "reason": "TOO_SHORT" }, "pet": { /* Pet */ } }
 ```
 - 일기 작성·수정은 테이블에 직접 쓰지 않고 `save_diary`를 통해서만 한다.
-- 일기는 **글자 수와 관계없이 저장된다.** 30자 미만이면 보상만 지급하지 않는다.
-- 나중에 수정해 처음으로 30자 이상이 되면, 그날 아직 일기 보상을 받지 않았을 때 지급한다.
-- 보상 날짜는 요청의 `date`가 아니라 **서버가 계산한 오늘(Asia/Seoul) 날짜**다. 과거 날짜 일기를 작성·수정해도 소급 지급하지 않으며, 여러 개 써도 하루 1회다.
-- 미래 날짜 작성 허용 여부 `[미확정]`
+- 일기는 **글자 수와 관계없이 저장된다.** 20자 미만이면 보상만 지급하지 않는다.
+- 같은 날 수정해 처음으로 20자 이상이 되면, 그날 아직 일기 보상을 받지 않았을 때 지급한다.
+- 보상은 일기 날짜가 **서버가 계산한 오늘(Asia/Seoul)** 일 때만 지급한다. 과거 날짜 일기는 저장만 한다.
+- 미래 날짜 일기는 쓸 수 없다. (`VALIDATION_ERROR`)
+- 본문은 5000자까지 저장한다.
 
 ### 4.7 펫
 
 | 작업 | 처리 방식 | 설명 |
 | --- | --- | --- |
 | 내 펫 조회 | 테이블 `pets` 조회 | |
-| 출석하기 | RPC **`check_in`** | 홈 '출석하기' 버튼. 서버 KST 날짜 기준 하루 1회 +10, 중복 지급은 서버에서 방지 (한 트랜잭션, 3장) |
+| 출석 | RPC **`check_in`** | 로그인할 때 자동 호출. 서버 KST 날짜 기준 하루 1회 +100, 중복 지급은 서버에서 방지 (한 트랜잭션, 3장) |
 | 오늘 출석 여부 조회 | 테이블 `reward_events` 조회 (`type: "attendance"`, 오늘 KST 날짜) | 버튼 완료 상태 표시용 |
 
 ```json
-// 출석하기 요청 (보낼 값 없음. 날짜는 서버가 정함)
+// 출석 요청 (보낼 값 없음. 날짜는 서버가 정함)
 {}
 // 결과 (오늘 첫 출석)
-{ "reward": { "rewarded": true, "energy": 10 }, "pet": { /* Pet (갱신됨) */ } }
+{ "date": "2026-11-13", "reward": { "rewarded": true, "energy": 100 }, "pet": { /* Pet (갱신됨) */ } }
 // 결과 (오늘 이미 출석)
-{ "reward": { "rewarded": false }, "pet": { /* Pet */ } }
+{ "date": "2026-11-13", "reward": { "rewarded": false, "reason": "ALREADY_CHECKED_IN" }, "pet": { /* Pet */ } }
 ```
-- 에너지 증가는 보상 지급 RPC 함수(`check_in`, `save_diary`, 회고 보상)로만 발생한다. (프론트에서 직접 에너지를 수정하는 방법 없음)
-- 로그인만으로는 `check_in`이 호출되지 않는다. 사용자가 버튼을 눌렀을 때만 호출한다.
+- 온기 증가는 보상 지급 RPC 함수(`check_in`, `save_diary`, 회고 보상)로만 발생한다. (프론트에서 직접 온기를 수정하는 방법 없음)
+- 로그인(앱 시작 시 세션 확인 포함)하면 프론트가 `check_in`을 자동으로 부른다. 지급 여부는 서버가 판단한다.
 
 ### 4.8 공고 탐색
 
 | 작업 | 처리 방식 | 설명 |
 | --- | --- | --- |
-| 공고 목록 | `frontend/src/data/`의 정적 샘플 데이터 | MVP는 DB 사용 안 함 |
-| 공고 → 보관함 추가 | 테이블 `nodes` 추가 (`source: "explore"`) | (고려 중) |
+| 대외활동 공고 목록 | RPC `list_open_contests_for_me(p_limit)` | `listOpenContests()`. 한국 날짜 기준 **접수 중**인 공고만(마감일 지남·수집처 '마감' 제외), 내 관심 분야와 맞는 공고 먼저, 그다음 마감 임박순 |
+| 기술 글 목록 (Hacker News) | RPC `list_tech_articles_for_me(p_limit)` | `listTechArticles()`. 내 관심 분야와 맞는 글 먼저, 그다음 최신순 |
+| 내가 추가한 공고 | 테이블 `nodes` 조회 (`contest_id`가 있는 행) | `getMyContestNodeIds()` → `{ [contestId]: nodeId }`. 카드의 '추가됨' 표시용 |
+| 공모전 → 내 로드맵 추가 | RPC `add_contest_to_roadmap(p_contest_id)` | `addContestToRoadmap(contestId)`. `[공모전]` 공고만, 마감 전만. 보관함에 노드 생성 |
+
+데이터 출처 (자동 수집, 사용자는 조회만):
+- `contests`: 서울과기대 취업진로본부 대외활동 게시판. Edge Function `sync-contests`가 매일 06:00(KST) 목록 1~3페이지를 저장
+- `tech_articles`: Hacker News 공식 API. Edge Function `sync-hacker-news`가 매시 10분 새 글 200개를 저장 (제목·출처·원문 URL·게시 시각만, 본문·댓글 없음)
+- 두 테이블의 `tags`는 제목으로 붙인 관심 분야(온보딩 희망 직무 키). 비어 있으면 미분류
 
 ```json
-// 공고 목록
+// listOpenContests() 한 항목
 {
-  "items": [
-    {
-      "id": "x_1",
-      "category": "contest",
-      "title": "○○ 공모전",
-      "organizer": "○○기관",
-      "deadline": "2026-12-15",
-      "url": "https://example.com"
-    }
-  ]
+  "id": "c0a8…",
+  "source": "seoultech_center_program",
+  "title": "[공모전] ○○ 공모전",
+  "sourceTag": "공모전",
+  "sourceStatus": "진행",
+  "deadline": "2026-12-15",
+  "dDay": 7,
+  "url": "https://job.seoultech.ac.kr/center/program?do=view&bnum=57802&bidx=…",
+  "isPinned": false,
+  "tags": ["ai"],
+  "matchesInterest": true
 }
+
+// listTechArticles() 한 항목
+{ "id": "…", "source": "hacker_news", "sourceName": "Hacker News", "title": "…", "url": "https://…",
+  "publishedAt": "2026-11-11T07:03:00Z", "tags": [], "matchesInterest": false }
+
+// addContestToRoadmap() 결과 — 같은 공고를 다시 추가하면 added: false, 기존 노드 id
+{ "added": true, "nodeId": "…" }
 ```
-- MVP: 정적 샘플 데이터. 카테고리: `contest` | `hackathon` | `internship` | `activity` | `notice`
+- **공고 → 노드:** `theme: "external"`, `source: "explore"`, `status: "stored"`(보관함), `originKey: "contest:<source>:<원본 ID>"`, `contestId`. 중복 방지는 기존 `(user_id, origin_key)` 유일 제약으로 처리(연속 클릭·동시 요청에도 1개).
+- **마감 표시 (한국 날짜 기준):** D-8 이상 기본 배지, D-7 ~ D-1 빨간 배지, 당일 빨간 `D-day`, 지난 공고·수집처 '마감'은 노드를 남기고 `마감`. 마감일이 없으면 배지를 표시하지 않는다(추정하지 않음).
+- 주최 기관(`organizer`)은 수집처 목록에 없어 제공하지 않는다. 분류는 원문 태그(`sourceTag`)를 그대로 쓴다.
 
 ## 5. RLS(행 수준 보안) 정책
 
@@ -516,6 +565,9 @@ selectCourses({
 | profiles | 본인 | 가입 시 자동 생성 | 본인 | 불가 |
 | timeline_periods | 본인 | RPC로만 | 본인 (이름·타입) | RPC로만 |
 | nodes | 본인 | 본인 | 본인 | 본인 |
+| node_categories | 본인 | 본인 (이름·baseTheme만) | 본인 (이름·baseTheme만) | 본인 (연결 노드는 유지) |
+| contests | 로그인 사용자 전체 | 불가 (수집 함수만) | 불가 | 불가 |
+| tech_articles | 로그인 사용자 전체 | 불가 (수집 함수만) | 불가 | 불가 |
 | edges | 본인 | 본인 | 본인 | 본인 |
 | node_documents | 본인 | 본인 | 본인 | 본인 (노드 삭제 시 함께) |
 | diaries | 본인 | RPC로만 | RPC로만 | 본인 |

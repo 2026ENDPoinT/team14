@@ -1,0 +1,230 @@
+/* 탐색 화면. 색·글꼴 변수(--rm-*)는 roadmap.css의 .roadmap-page에서 가져온다. */
+.explore-page {
+  overflow-y: auto; /* 로드맵과 달리 목록은 세로로 스크롤 */
+}
+.ex-main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 120px 32px 64px;
+}
+.ex-head {
+  margin-bottom: 32px;
+}
+.ex-title {
+  margin: 4px 0 6px;
+  font-size: 34px;
+  font-weight: 800;
+}
+/* 상단 탭 [대외활동] [기술 뉴스] [채용]: 선택한 탭의 목록만 보인다 */
+.ex-tabs {
+  display: flex;
+  gap: 6px;
+  width: fit-content;
+  margin: 0 0 20px;
+  padding: 5px;
+  border-radius: 22px;
+  background: var(--rm-field);
+}
+.ex-tab {
+  padding: 9px 20px;
+  border: none;
+  border-radius: 18px;
+  background: transparent;
+  color: #555;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.ex-tab[aria-selected='true'] {
+  background: var(--rm-text);
+  color: #fff;
+}
+.ex-tab:focus-visible {
+  outline: 2px solid var(--rm-text);
+  outline-offset: 2px;
+}
+.ex-panel {
+  max-width: 720px;
+}
+.ex-panel__hint {
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rm-muted);
+}
+@media (max-width: 760px) {
+  .ex-tabs {
+    width: 100%;
+  }
+  .ex-tab {
+    flex: 1;
+    padding: 10px 0;
+  }
+}
+/* 기술 뉴스 상세 */
+.ex-news {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 720px;
+}
+.ex-back {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 16px;
+  background: var(--rm-field);
+  color: var(--rm-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.ex-back:focus-visible,
+.ex-news__original-link:focus-visible {
+  outline: 2px solid var(--rm-text);
+  outline-offset: 3px;
+}
+.ex-news__meta {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rm-muted);
+}
+.ex-news__title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.ex-news__original-link {
+  display: inline-block;
+  text-decoration: none;
+}
+/* 제목 앞 [직무 분야] */
+.ex-field {
+  color: #555;
+  font-weight: 800;
+}
+.ex-card__title--plain {
+  margin: 0; /* 링크가 아닌 제목 (채용 카드) */
+}
+.ex-card__title--plain:hover {
+  text-decoration: none;
+}
+.ex-card__note {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--rm-muted);
+}
+.ex-section__title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 16px;
+  font-size: 20px;
+  font-weight: 800;
+}
+.ex-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ex-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 24px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #f8f8f8, #ececec);
+  box-shadow: var(--rm-shadow);
+}
+.ex-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.ex-tag,
+.ex-interest {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--rm-field);
+  font-size: 11px;
+  font-weight: 800;
+  color: #555;
+}
+.ex-interest {
+  background: var(--rm-accent);
+}
+.ex-card__title {
+  color: var(--rm-text);
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.4;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.ex-card__title:hover {
+  text-decoration: underline;
+}
+.ex-card__sub {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rm-muted);
+}
+.ex-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+.ex-add {
+  padding: 9px 16px;
+  border: none;
+  border-radius: 18px;
+  background: var(--rm-text);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+.ex-add:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.ex-added {
+  font-size: 13px;
+  font-weight: 800;
+  color: #555;
+}
+.ex-link {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--rm-text);
+}
+.ex-error {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e5484d;
+}
+.explore-page a:focus-visible,
+.ex-add:focus-visible {
+  outline: 2px solid var(--rm-text);
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .ex-main {
+    padding: 110px 16px 48px;
+  }
+  .ex-sections {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
