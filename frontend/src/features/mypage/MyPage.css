@@ -240,6 +240,10 @@
   box-shadow: 5px 7px 14px rgba(0, 0, 0, 0.14), -4px -4px 10px rgba(255, 255, 255, 0.95);
   color: var(--dy-ink);
 }
+/* 펫 그림: 동그라미 안에 비율 그대로 맞춘다 */
+.mp-avatar__img {
+  object-fit: contain;
+}
 
 /* 프로필 바 */
 .mp-profile {
