@@ -56,6 +56,7 @@ export default function AiGuidePanel({ open, onClose, signedIn, nodes, documents
   const [postings, setPostings] = useState({ status: 'idle', list: [] })
   const [jobAsk, setJobAsk] = useState(null) // 희망 직무 변경 확인 중인 직무 키
   const [jobNote, setJobNote] = useState('')
+  const [savingJob, setSavingJob] = useState(false)
   const alive = useRef(true)
   const lastPayload = useRef(null)
 
@@ -147,10 +148,18 @@ export default function AiGuidePanel({ open, onClose, signedIn, nodes, documents
   }
 
   async function changeJob(job) {
-    const saved = await saveDesiredJob(currentJob, job, { signedIn: true, applyProfile: auth.applyProfile })
-    if (!alive.current) return
-    setJobAsk(null)
-    setJobNote(saved.error ?? `희망 직무를 ${careerTitle(job)}(으)로 바꿨어요. ${saved.petMessage} 온기와 성장 단계는 그대로예요.`)
+    if (savingJob) return
+    setSavingJob(true)
+    try {
+      const saved = await saveDesiredJob(currentJob, job, { signedIn: true, applyProfile: auth.applyProfile })
+      if (!alive.current) return
+      setJobAsk(null)
+      setJobNote(saved.error ?? `희망 직무를 ${careerTitle(job)}(으)로 바꿨어요. ${saved.petMessage} 온기와 성장 단계는 그대로예요.`)
+    } catch (err) {
+      if (alive.current) setJobNote(`저장 중 오류가 발생했어요: ${err instanceof Error ? err.message : '다시 시도해 주세요.'}`)
+    } finally {
+      if (alive.current) setSavingJob(false)
+    }
   }
 
   if (!open) return null
@@ -355,6 +364,42 @@ export default function AiGuidePanel({ open, onClose, signedIn, nodes, documents
               </div>
             </>
           )}
+          {signedIn && view !== 'loading' && (
+            <section className="ag-section ag-manual-careers" aria-label="전체 직무 직접 선택">
+              <h3 className="ag-label">내가 원하는 직무 직접 선택하기</h3>
+              <p className="ag-muted">AI 추천 여부와 상관없이 10개 직무 중 원하는 진로를 선택할 수 있어요. 선택 후 저장해야 희망 직무가 바뀝니다.</p>
+              <div className="ag-manual-careers__grid">
+                {CAREERS.filter((c) => c.id !== 'undecided').map((c) => (
+                  <button
+                    type="button"
+                    key={c.id}
+                    className={`ag-manual-careers__option ${jobAsk === c.id ? 'is-selected' : ''} ${currentJob === c.id ? 'is-current' : ''}`}
+                    aria-pressed={jobAsk === c.id}
+                    onClick={() => { setJobAsk(c.id); setJobNote('') }}
+                  >
+                    <span>{c.title}</span>
+                    {currentJob === c.id && <small>현재 선택</small>}
+                  </button>
+                ))}
+              </div>
+              {jobAsk && (
+                <div className="ag-manual-careers__confirm">
+                  {jobAsk === currentJob ? (
+                    <span>이미 설정된 희망 직무예요.</span>
+                  ) : (
+                    <span>{careerTitle(jobAsk)}(으)로 변경할까요? {petChangeOf(currentJob, jobAsk)?.preview ?? ''} 온기와 성장 단계는 유지돼요.</span>
+                  )}
+                  <div className="ag-row">
+                    <button type="button" className="ag-primary ag-small" disabled={savingJob || jobAsk === currentJob} onClick={() => changeJob(jobAsk)}>
+                      {savingJob ? '저장 중…' : '이 직무로 저장'}
+                    </button>
+                    <button type="button" className="ag-ghost ag-small" disabled={savingJob} onClick={() => setJobAsk(null)}>취소</button>
+                  </div>
+                </div>
+              )}
+              {jobNote && <p className="ag-note" role="status">{jobNote}</p>}
+            </section>
+          )}
         </div>
       </aside>
     </div>
@@ -380,7 +425,6 @@ function GuideResult({
       {result.careers.length > 0 && (
         <section className="ag-section" aria-label="추천 직무">
           <h3 className="ag-label">어울리는 직무</h3>
-          {jobNote && <p className="ag-note" role="status">{jobNote}</p>}
           {result.careers.map((c) => {
             const preview = petChangeOf(currentJob, c.job)
             return (
