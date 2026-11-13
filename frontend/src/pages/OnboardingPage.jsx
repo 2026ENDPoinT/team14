@@ -91,7 +91,7 @@ export default function OnboardingPage() {
   const coursePreview = useMemo(() => {
     if (!grade) return { completed: [], recommended: [], missed: [] }
     // courseNodes: 이수 완료 + 남은 학년 추천 (저장 요청에 넣는다)
-    // missedCourses: 놓친 저학년 과목 (저장하지 않는다. 로드맵이 같은 함수로 다시 계산해 '수강 필요'로 안내)
+    // missedCourses: 현재 학년까지 아직 안 들은 필수·핵심 과목 (저장하지 않는다. 로드맵이 같은 함수로 다시 계산해 '수강 필요'로 안내)
     const { courseNodes, missedCourses } = selectCourses({
       grade,
       completedCourseKeys,

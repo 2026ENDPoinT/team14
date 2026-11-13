@@ -67,18 +67,26 @@ test('다중 직무: 과목별 최고 점수 기준, 이유는 해당 직무마�
   assert.ok(titles(future(r)).includes('정보보호론'))
 })
 
-test('4학년: 미래 학년 추천이 비어도 놓친 저학년 과목은 안내한다', () => {
+test('4학년: 미래 학년 추천이 비어도 현재 학년까지의 미이수 핵심 과목은 안내한다', () => {
   const r = run(4, ['ai'])
   assert.equal(future(r).length, 0)
   assert.ok(missedTitles(r).includes('기계학습')) // 3학년 AI 핵심
   assert.ok(missedTitles(r).includes('선형대수학')) // 1학년 AI 핵심
-  assert.ok(!missedTitles(r).includes('자연어처리')) // 4학년 = 현재 학년 → 놓친 과목 아님
+  assert.ok(missedTitles(r).includes('자연어처리')) // 4학년 = 현재 학년 → 자동 배치는 안 하고 수강 필요로 안내
+  assert.ok(!r.courseNodes.some((n) => n.title === '자연어처리'))
 })
 
-test('현재 학년 미이수 과목은 미래 추천도 수강 필요도 아니다', () => {
-  const r = run(2, ['backend'])
-  const all = [...r.courseNodes, ...r.missedCourses]
-  assert.ok(!all.some((n) => n.year === 2 && !n.completed))
+test('현재 학년 미이수 과목: 자동 배치(미래 추천)는 하지 않고, 필수·핵심이면 수강 필요에 한 번만', () => {
+  const r = run(2, ['embedded_iot'])
+  assert.ok(!r.courseNodes.some((n) => n.year === 2 && !n.completed), '현재 학년 과목은 자동 배치 대상이 아님')
+  const dl = r.missedCourses.filter((c) => c.courseKey === 'cs2026-2-1-03')
+  assert.equal(dl.length, 1, '디지털논리및시스템 한 번만')
+  assert.deepEqual(dl[0].reasons.map((x) => x.label), ['임베디드·IoT 핵심 과목'])
+  // 관련도 2점 과목은 현재 학년이어도 수강 필요가 아니다
+  assert.ok(r.missedCourses.every((c) => c.reasons.every((x) => x.type !== 'related')))
+  // 이수 완료하면 빠진다
+  const done = run(2, ['embedded_iot'], ['디지털논리및시스템'])
+  assert.ok(!done.missedCourses.some((c) => c.courseKey === 'cs2026-2-1-03'))
 })
 
 test('학년이 앞서 있어도 이수했다고 고른 과목은 완료로 처리한다', () => {
@@ -95,7 +103,8 @@ test('확인된 선수과목(데이터의 prerequisites)만 쓴다. 없으면 �
   // 픽스처: 미래 추천 과목(운영체제)에 선수과목(유닉스시스템, 2학년·백엔드 2점)이 있다고 하면 그때만 안내
   const withPre = { ...curriculum, courses: curriculum.courses.map((c) => (c.title === '운영체제' ? { ...c, prerequisites: [keyOf('유닉스시스템')] } : c)) }
   const r2 = selectCourses({ grade: 2, jobs: ['backend'], completedCourseKeys: [], curriculum: withPre, jobRelevance })
-  assert.ok(!missedTitles(r2).includes('유닉스시스템')) // 2학년이면 유닉스시스템(2학년)은 현재 학년 → 안내 안 함
+  // 2학년이면 유닉스시스템(2학년)은 현재 학년 → 확인된 선수과목이므로 수강 필요로 안내
+  assert.deepEqual(r2.missedCourses.find((c) => c.title === '유닉스시스템')?.reasons.map((x) => x.label), ['운영체제 선수과목'])
   const r3 = selectCourses({ grade: 3, jobs: ['backend'], completedCourseKeys: [], curriculum: withPre, jobRelevance })
   const unix = r3.missedCourses.find((c) => c.title === '유닉스시스템')
   // 3학년이면 운영체제(3학년)는 미래가 아니라 추천 대상이 아니다 → 선수과목 안내도 없음
@@ -113,4 +122,30 @@ test('결과 형식: courseNodes는 RPC 형식(courseKey·title·year·semester�
     assert.equal(typeof n.completed, 'boolean')
     if (!n.completed) assert.ok(n.year > 2) // complete_onboarding 검증: 추천은 year > grade
   }
+})
+
+// 로드맵 '수강 필요' 패널과 같은 계산: 완료 표시된 노드 → completedCoursesOf(과목 키) → selectCourses
+test('수강 필요: 완료 표시한 과목 노드는 과목 키로 바로 빠지고, 남은 과목은 필수·핵심·선수과목만 한 번씩', async () => {
+  const { completedCoursesOf } = await import('../career/completedCourses.js')
+  const ds = keyOf('자료구조'), db = keyOf('데이터베이스'), intro = keyOf('컴퓨터공학개론')
+  const nodes = [
+    { originKey: `course:${intro}`, title: '컴퓨터공학개론', completed: true }, // 이미 들은 과목
+    { originKey: `course:${ds}`, title: '자료구조', completed: false }, // 수강 필요에서 로드맵에 추가한 카드
+    { title: '내가 붙인 이름', theme: 'major', courseKey: db, completed: false }, // 상세 창에서 과목을 연결한 카드
+  ]
+  const missedOf = (list) => {
+    const completedCourseKeys = completedCoursesOf(list.filter((n) => n.completed), curriculum).map((c) => c.key)
+    return selectCourses({ grade: 3, completedCourseKeys, jobs: ['backend'], curriculum, jobRelevance }).missedCourses
+  }
+  let missed = missedOf(nodes)
+  assert.ok(!missed.some((c) => c.courseKey === intro), '이수 완료 과목은 없음')
+  assert.ok(missed.some((c) => c.courseKey === ds) && missed.some((c) => c.courseKey === db), '아직 안 들은 과목은 있음')
+  assert.equal(new Set(missed.map((c) => c.courseKey)).size, missed.length, '과목 키 중복 없음')
+  assert.ok(missed.every((c) => c.reasons.length > 0 && c.reasons.every((r) => ['required', 'core', 'prerequisite'].includes(r.type))), '이유는 필수·핵심·선수과목만')
+  // 완료로 바꾸면 바로 빠진다 (originKey 카드, courseKey 카드 모두)
+  missed = missedOf(nodes.map((n) => ({ ...n, completed: true })))
+  assert.ok(!missed.some((c) => [ds, db, intro].includes(c.courseKey)))
+  // 노드 목록은 바뀌지 않는다 (계산만 함)
+  assert.equal(nodes[0].completed, true)
+  assert.equal(nodes[1].completed, false)
 })

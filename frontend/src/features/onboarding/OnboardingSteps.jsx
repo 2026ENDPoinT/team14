@@ -414,7 +414,7 @@ export function SetupStep({ mode, onSelect, hasRecommendation, preview, saving, 
             {mode === 'auto' && preview.recommended > 0 && `남은 학년 추천 과목 ${preview.recommended}개를 권장 학기에 넣어요. `}
             {mode === 'inbox' && preview.recommended > 0 && `남은 학년 추천 과목 ${preview.recommended}개를 보관함에 넣어요. `}
             {preview.missed > 0
-              ? `저학년에 아직 듣지 않은 필수·핵심 과목 ${preview.missed}개는 로드맵의 '수강 필요'에서 알려 드려요.`
+              ? `지금 학년까지 아직 듣지 않은 필수·핵심 과목 ${preview.missed}개는 로드맵의 '수강 필요'에서 알려 드려요.`
               : ''}
           </Hint>
         )}

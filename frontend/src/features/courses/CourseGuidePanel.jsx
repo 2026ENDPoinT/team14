@@ -9,7 +9,7 @@ import { moveNodes } from '../../services/api.js'
 import './courseGuide.css'
 
 // 로드맵 '수강 필요' 안내 (작업표 4-9)
-// - 놓친 저학년 과목: 프로필(학년·희망 직무)과 지금 로드맵의 이수 완료 과목으로 selectCourses를 다시 계산한다.
+// - 수강 필요(현재 학년까지 안 들은 필수·핵심 과목): 프로필(학년·희망 직무)과 지금 로드맵의 이수 완료 과목으로 selectCourses를 다시 계산한다.
 //   → 저장하지 않으므로 새로고침·직무 변경 뒤에도 항상 최신 기준으로 보인다.
 // - 과거 학기에 자동으로 넣지 않는다. 사용자가 [보관함에 추가] 또는 앞으로 들을 학기를 고르면 그때 만든다.
 //   과목 키(origin_key)로 같은 과목은 한 개만 (add_course_to_roadmap RPC). 이미 있으면 위치만 알려 준다.
@@ -80,7 +80,7 @@ export default function CourseGuidePanel({ nodes, periods, layout, enabled, onAd
           </div>
           {missed.length > 0 ? (
             <>
-              <p className="cg__lead">{grade}학년 이전 권장 과목 중 아직 듣지 않은 필수·핵심 과목이에요. 지난 학기에 자동으로 넣지 않아요.</p>
+              <p className="cg__lead">{grade}학년까지의 권장 과목 중 아직 듣지 않은 필수·핵심 과목이에요. 지난 학기에 자동으로 넣지 않아요.</p>
               <ul className="cg__list">
                 {missed.map((c) => (
                   <li key={c.courseKey} className="cg__item" data-course={c.courseKey}>

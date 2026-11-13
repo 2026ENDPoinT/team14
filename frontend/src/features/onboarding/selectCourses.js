@@ -1,14 +1,15 @@
 // 교과목 선정 함수 (docs/API.md 4.4, 작업표 4-14). 화면·DB에 접근하지 않는 순수 함수.
 //
 // 입력: { grade, completedCourseKeys, jobs, curriculum, jobRelevance }
-//   grade: 현재 학년(1~4). 학기 정보는 없다 → 현재 학년 과목은 '미래'도 '놓친 과목'도 아니다.
+//   grade: 현재 학년(1~4). 학기 정보는 없다 → 현재 학년 과목은 미래 추천(자동 배치)에 넣지 않고,
+//          아직 안 들은 필수·핵심 과목이면 '수강 필요'로 안내한다.
 //   jobs: 희망 직무 키 목록 (앱 직무 키: backend, frontend, mobile, ai, data, security, system_network,
 //         embedded_iot, game, uiux). 'undecided'·'other'·관련도 표에 없는 키는 '직무 없음'으로 본다.
 //
 // 1. 이수 완료 (completed: true): 사용자가 고른 과목만. 학년과 무관하게 권장 학기에 둔다.
 // 2. 미래 추천 (completed: false, year > grade, 미이수): 전공필수 또는 고른 직무 관련도(직무 여럿이면 최고 점수)가
 //    minScore(2) 이상인 과목. 직무가 없으면 전공필수만.
-// 3. 놓친 저학년 과목 (missedCourses, year < grade, 미이수): 전공필수, 고른 직무의 핵심 과목(관련도 3),
+// 3. 수강 필요 (missedCourses, year <= grade, 미이수): 전공필수, 고른 직무의 핵심 과목(관련도 3),
 //    또는 미래 추천 과목의 '확인된' 선수과목. 직무가 없으면 전공필수만.
 //    - 선수과목은 교과과정 데이터의 course.prerequisites(과목 키 목록)만 쓴다. 과목명·학기 순서로 추정하지 않는다.
 //      (지금 데이터에는 공식 선수관계가 없다 — docs/API.md 4.4. 데이터가 생기면 이 규칙이 자동으로 적용된다)
@@ -62,17 +63,18 @@ export function selectCourses({ grade, completedCourseKeys = [], jobs = [], curr
     }
   }
 
-  // 놓친 저학년 과목: 전공필수 · 핵심 과목(3점) · 미래 추천 과목의 확인된 선수과목
+  // 수강 필요 (현재 학년까지): 전공필수 · 핵심 과목(3점) · 미래 추천 과목의 확인된 선수과목
+  // 현재 학년 과목도 포함한다 (학기 정보가 없어 지났는지 알 수 없으므로 자동 배치하지 않고 안내만)
   const missed = new Map()
   const addMissed = (course, reason) => {
-    if (!course || completed.has(course.key) || !(course.year < grade)) return
+    if (!course || completed.has(course.key) || !(course.year <= grade)) return
     const list = missed.get(course.key) ?? []
     if (!list.some((r) => r.label === reason.label)) list.push(reason)
     missed.set(course.key, list)
   }
   if (grade) {
     for (const course of courses) {
-      if (course.year >= grade) continue
+      if (course.year > grade) continue
       for (const reason of courseReasons(course, scoredJobs, jobRelevance, minScore)) {
         if (reason.type === 'required' || reason.type === 'core') addMissed(course, reason)
       }
