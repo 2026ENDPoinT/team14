@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ActionBar, Bubble, Chip, Hint, StepTitle } from './OnboardingParts.jsx'
-import { CAREERS, EXPERIENCE_GROUPS, SETUP_MODES, TERMS } from './onboardingOptions.js'
+import { CAREERS, EXPERIENCE_GROUPS, TERMS } from './onboardingOptions.js'
 import { GRADE_OPTIONS, MIN_GRADED_COURSES } from './careerKeywords.js'
 
 // 온보딩 단계별 화면. 상태와 저장은 OnboardingPage가 맡고, 여기서는 화면만 그린다.
@@ -392,42 +392,39 @@ export function CareerStep({ selectedId, onSelect, onNext, onStartBasic }) {
   )
 }
 
-// ───── 5. 로드맵 구성 방식 ─────
-export function SetupStep({ undecided = false, mode, onSelect, hasRecommendation, preview, saving, error, onFix, onConfirm }) {
+// ───── 5. 함께할 펫 (마지막 단계) ─────
+// - 직무를 고른 사용자: 직무별로 배정된 펫(autoPet)을 보여 주고 바로 완료
+// - 직무 미정(또는 펫이 정해지지 않는 직무): 5종 중 직접 고른다. 고르기 전에는 완료 버튼 비활성화
+// 저장·완료 처리는 OnboardingPage가 맡는다 (로드맵 생성 + 고른 펫 저장)
+export function PetStep({ autoPet, choice, onChoose, pets, saving, error, onFix, onConfirm }) {
+  const choosing = !autoPet
+  const shown = autoPet ? pets.filter((p) => p.key === autoPet) : pets
+  const selected = autoPet ?? choice
   return (
     <>
-      <StepTitle>당신의 로드맵을 어떻게 시작할까요?</StepTitle>
+      <StepTitle>앞으로 함께할 친구를 만나보세요</StepTitle>
       <div className="ob-body">
-        <div className="ob-options" role="radiogroup" aria-label="로드맵 구성 방식">
-          {SETUP_MODES.map((m) => (
+        <Hint>
+          {choosing
+            ? '아직 진로를 정하지 않아도 괜찮아요. 마음에 드는 친구와 함께 시작해 보세요.'
+            : '선택한 관심 분야에 어울리는 친구가 기다리고 있어요.'}
+        </Hint>
+        <div className={`ob-pets ${choosing ? '' : 'is-single'}`} role={choosing ? 'radiogroup' : undefined} aria-label="함께할 펫">
+          {shown.map((p) => (
             <button
-              key={m.key}
+              key={p.key}
               type="button"
-              role="radio"
-              aria-checked={mode === m.key}
-              className={`ob-option ${mode === m.key ? 'is-selected' : ''}`}
-              onClick={() => onSelect(m.key)}
+              role={choosing ? 'radio' : undefined}
+              aria-checked={choosing ? selected === p.key : undefined}
+              className={`ob-pet ${selected === p.key ? 'is-selected' : ''}`}
+              onClick={choosing ? () => onChoose(p.key) : undefined}
+              disabled={!choosing}
             >
-              <strong>{m.title}</strong>
-              <span>{m.description}</span>
+              {p.image ? <img className="ob-pet__img" src={p.image} alt="" draggable="false" /> : <span className="ob-pet__img" />}
+              <strong>{p.label}</strong>
             </button>
           ))}
         </div>
-        {undecided && (
-          <Hint>희망 직무 없이 전공 교과목 중심의 기본 로드맵으로 시작해요. 직무는 나중에 마이페이지에서 언제든 고를 수 있어요.</Hint>
-        )}
-        {mode === 'auto' && !hasRecommendation && (
-          <Hint>과목 추천 기능이 연결되기 전이라 지금은 추천 과목이 추가되지 않아요. 고른 이수 과목만 반영돼요.</Hint>
-        )}
-        {hasRecommendation && preview && (
-          <Hint>
-            {mode === 'auto' && preview.recommended > 0 && `남은 학년 추천 과목 ${preview.recommended}개를 권장 학기에 넣어요. `}
-            {mode === 'inbox' && preview.recommended > 0 && `남은 학년 추천 과목 ${preview.recommended}개를 보관함에 넣어요. `}
-            {preview.missed > 0
-              ? `지금 학년까지 아직 듣지 않은 필수·핵심 과목 ${preview.missed}개는 로드맵의 '수강 필요'에서 알려 드려요.`
-              : ''}
-          </Hint>
-        )}
 
         {error && (
           <div className="ob-error" role="alert">
@@ -447,7 +444,7 @@ export function SetupStep({ undecided = false, mode, onSelect, hasRecommendation
           </div>
         )}
       </div>
-      <ActionBar onConfirm={onConfirm} confirmLabel={saving ? '저장 중…' : '확인'} disabled={saving} />
+      <ActionBar onConfirm={onConfirm} confirmLabel={saving ? '저장 중…' : '모멘트리 시작하기'} disabled={saving || !selected} />
     </>
   )
 }

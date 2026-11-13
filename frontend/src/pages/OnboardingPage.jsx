@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { completeOnboarding, moveNodes } from '../services/api.js'
 import { recommendCareer } from '../services/careerRecommendation.js'
+import { choosePet } from '../services/rewards.js'
+import { setPetFromServer } from '../features/pet/petStore.js'
+import { JOB_TO_PET, PET_CHARACTERS, petAssetUrl } from '../features/home/petCharacter.js'
 import { useAuth } from '../features/auth/AuthProvider.jsx'
 import { CAREERS, EXPERIENCE_GROUPS, TERMS, UNDECIDED_JOB } from '../features/onboarding/onboardingOptions.js'
 import {
@@ -18,7 +21,7 @@ import {
   CourseStep,
   ExperienceStep,
   ProfileStep,
-  SetupStep,
+  PetStep,
   WelcomeStep,
 } from '../features/onboarding/OnboardingSteps.jsx'
 import '../features/onboarding/onboarding.css'
@@ -26,7 +29,9 @@ import '../features/onboarding/onboarding.css'
 // 단계: 0 프로필 → 1 경험 → 2 수강 과목 → 3 AI 진로 추천(건너뛰기 가능) → 4 희망 직무 → 5 로드맵 구성
 //       → 저장 성공 시 완료 화면
 const STEP_COUNT = 6
-const STEP = { profile: 0, experience: 1, course: 2, ai: 3, career: 4, setup: 5 }
+const STEP = { profile: 0, experience: 1, course: 2, ai: 3, career: 4, pet: 5 }
+// 마지막 단계에서 고를 수 있는 펫 5종 (기존 성장 2단계 그림)
+const PET_OPTIONS = Object.entries(PET_CHARACTERS).map(([key, c]) => ({ key, label: c.label, image: petAssetUrl(key, 2) }))
 const AI_IDLE = { status: 'idle', result: null, error: null }
 
 // 개발용: 주소에 ?testCourse=1을 붙이면 저장 요청에만 테스트 과목 1개를 넣는다.
@@ -66,11 +71,14 @@ export default function OnboardingPage() {
   const [aiPickedKeys, setAiPickedKeys] = useState([])
   const [grades, setGrades] = useState({}) // { 과목 키: 'A+' ... }
   const [ai, setAi] = useState(AI_IDLE)
-  const [setupMode, setSetupMode] = useState('auto') // 'auto' | 'inbox'
+  const setupMode = 'auto' // 로드맵 구성: 추천 과목을 권장 학기에 (구성 방식 고르는 화면은 없앰, 기존 기본값)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null) // { messages, fixes }
   // 과목 위치 저장 결과 (온보딩 저장 후 따로 실행): null | { moves, status: 'failed' | 'retrying' | 'saved' }
   const [placement, setPlacement] = useState(null)
+  // 마지막 단계 펫: 직무를 고르면 기존 직무별 배정(JOB_TO_PET), 미정이면 직접 고른 펫(petChoice)
+  const [petChoice, setPetChoice] = useState('')
+  const completedRef = useRef(null) // 온보딩 저장(로드맵 생성) 성공 결과 → 펫 저장만 다시 시도할 때 중복 생성하지 않게
 
   const term = TERMS.find((t) => t.id === termId) ?? null
   const grade = term?.grade ?? null // 지금 DB에는 학년만 저장된다 (학기는 백엔드 변경 후)
@@ -78,8 +86,8 @@ export default function OnboardingPage() {
   // 선정 함수에 넘길 직무 키 목록 (저장 가능한 키만, 대표 1개)
   // '아직 정하지 않음'은 관심 직무로 저장하지 않는다 (interests 빈 목록 → 전공필수 중심 기본 로드맵, 새싹 펫)
   const jobs = career?.dbKey && career.id !== UNDECIDED_JOB ? [career.dbKey] : []
+  const autoPet = JOB_TO_PET[jobs[0]] ?? null // 직무별 펫 (없으면 마지막 단계에서 직접 고름)
   // 미래 학년 추천(직무 관련도)이 연결됐는지. 지금은 비어 있어 이수 과목만 저장된다.
-  const hasRecommendation = Object.keys(jobRelevance.jobs).length > 0
 
   // AI 추천 단계에서 고를 수 있는 과목 = 이수했다고 고른 과목 (교과과정 순서)
   const completedCourses = curriculum.courses.filter((c) => completedCourseKeys.includes(c.key))
@@ -173,6 +181,7 @@ export default function OnboardingPage() {
   }
 
   async function handleComplete() {
+    if (completedRef.current) return savePetAndFinish(completedRef.current.placementFailed)
     const blocked = findBlocked()
     if (blocked) {
       setError(blocked)
@@ -209,14 +218,37 @@ export default function OnboardingPage() {
     // 학기에 들어간 과목 노드를 타임라인 선 위에 겹치지 않게 놓는다 (RPC는 위치를 (0, 0)으로 저장)
     // 실패해도 온보딩·과목은 이미 저장됐으므로 완료로 진행하고, 완료 화면에서 위치 저장만 다시 시도하게 한다.
     const moves = placeCourseNodes(result.data)
+    let placementFailed = false
     if (moves.length > 0) {
       const moved = await moveNodes(moves)
+      placementFailed = Boolean(moved.error)
       setPlacement({ moves, status: moved.error ? 'failed' : 'saved' })
     }
-    setSaving(false)
-    // 실제 저장에 성공했을 때만: 프로필의 완료 상태를 바로 반영하고(이후 HOME 진입 허용) 완료 화면을 보여준다
+    // 실제 저장에 성공했을 때만: 프로필의 완료 상태를 바로 반영 (이후 HOME 진입 허용)
     markOnboardingCompleted(result.data.user) // 최신 프로필(희망 직무 포함)을 바로 반영
-    setDone(true)
+    completedRef.current = { placementFailed }
+    await savePetAndFinish(placementFailed)
+  }
+
+  // 펫 저장 → HOME으로. 직무를 고른 사용자는 기존처럼 직무로 펫이 정해지므로 저장할 것이 없다
+  // 직무 미정: 고른 펫을 서버(pets.type, RPC choose_pet)에 저장. 실패하면 이 화면에 남아 펫 저장만 다시 시도한다
+  // (펫 행·온기는 complete_onboarding이 이미 한 번 만들었으므로 다시 만들지 않는다)
+  async function savePetAndFinish(placementFailed) {
+    setSaving(true)
+    setError(null)
+    if (!autoPet) {
+      const saved = await choosePet(petChoice)
+      if (saved.error) {
+        setSaving(false)
+        setError({ messages: [`온보딩과 로드맵은 저장했어요. 다만 고른 펫을 저장하지 못했어요. ${saved.error.message}`] })
+        return
+      }
+      setPetFromServer(saved.data.pet)
+    }
+    setSaving(false)
+    if (placementFailed) return setDone(true) // 과목 위치 저장만 다시 시도하는 완료 화면
+    finishOnboarding() // 이제부터 /onboarding에 오면 HOME으로 보낸다
+    navigate('/', { replace: true })
   }
 
   // 위치 저장만 다시 시도 (온보딩은 다시 제출하지 않는다. 같은 위치를 다시 보내므로 여러 번 눌러도 결과가 같다)
@@ -247,7 +279,7 @@ export default function OnboardingPage() {
     <main className="onboarding">
       {/* 상단 바: 모든 단계에서 같은 자리. 스크롤 영역 밖에 두어 스크롤바·콘텐츠 양과 무관하게 고정 */}
       <div className="ob-top">
-        <ProgressHeader percent={percent} onBack={step > 0 ? () => goTo(step - 1) : null} />
+        <ProgressHeader percent={percent} onBack={step > 0 && !completedRef.current ? () => goTo(step - 1) : null} />
       </div>
 
       <div className="ob-scroll" ref={scrollRef}>
@@ -307,7 +339,7 @@ export default function OnboardingPage() {
             onRequest={requestRecommendation}
             onAccept={() => {
               setCareerId(ai.result.job) // 추천 직무를 최종 직무로 선택
-              goTo(STEP.setup)
+              goTo(STEP.pet)
             }}
             onChooseOther={() => goTo(STEP.career)} // 기존 직무 선택 화면에서 직접 고른다
             onSkip={() => goTo(STEP.career)}
@@ -318,21 +350,20 @@ export default function OnboardingPage() {
           <CareerStep
             selectedId={careerId}
             onSelect={setCareerId}
-            onNext={() => goTo(STEP.setup)}
+            onNext={() => goTo(STEP.pet)}
             onStartBasic={() => {
               setCareerId(UNDECIDED_JOB) // 직무 없이 기본 로드맵 (관심 직무는 저장하지 않음)
-              goTo(STEP.setup)
+              goTo(STEP.pet)
             }}
           />
         )}
 
-        {step === STEP.setup && (
-          <SetupStep
-            undecided={jobs.length === 0}
-            mode={setupMode}
-            onSelect={setSetupMode}
-            hasRecommendation={hasRecommendation}
-            preview={{ recommended: coursePreview.recommended.length, missed: coursePreview.missed.length }}
+        {step === STEP.pet && (
+          <PetStep
+            autoPet={autoPet}
+            choice={petChoice}
+            onChoose={setPetChoice}
+            pets={PET_OPTIONS}
             saving={saving}
             error={error}
             onFix={goTo}
