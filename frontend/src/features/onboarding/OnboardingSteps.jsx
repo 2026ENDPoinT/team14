@@ -86,18 +86,22 @@ export function ProfileStep({ nickname, nicknameDone, term, onNicknameSubmit, on
 }
 
 // ───── 2. 기존 경험: 대분류 → 세부 항목 (복수 선택) ─────
+// '대학생활 이벤트'(휴학·군 복무·교환학생 등)는 온보딩에서 고르지 않는다 → 로드맵의 학기 추가로 넣는다.
+// (EXPERIENCE_GROUPS 자체는 그대로 둔다: 로드맵이 기존 이벤트 노드의 종류를 보여 줄 때 쓴다)
+const ONBOARDING_EXPERIENCE_GROUPS = EXPERIENCE_GROUPS.filter((g) => g.id !== 'life')
+
 export function ExperienceStep({ selectedIds, onToggle, hasUnsupported, onNext, onSkip }) {
-  const [groupId, setGroupId] = useState(EXPERIENCE_GROUPS[0].id)
-  const group = EXPERIENCE_GROUPS.find((g) => g.id === groupId)
+  const [groupId, setGroupId] = useState(ONBOARDING_EXPERIENCE_GROUPS[0].id)
+  const group = ONBOARDING_EXPERIENCE_GROUPS.find((g) => g.id === groupId)
   const countIn = (g) => g.items.filter((item) => selectedIds.includes(item.id)).length
-  const selectedItems = EXPERIENCE_GROUPS.flatMap((g) => g.items).filter((item) => selectedIds.includes(item.id))
+  const selectedItems = ONBOARDING_EXPERIENCE_GROUPS.flatMap((g) => g.items).filter((item) => selectedIds.includes(item.id))
 
   return (
     <>
       <StepTitle>지금까지 어떤 경험을 해오셨나요?</StepTitle>
       <div className="ob-body">
         <div className="ob-chips ob-chips--groups" role="tablist" aria-label="경험 분류">
-          {EXPERIENCE_GROUPS.map((g) => (
+          {ONBOARDING_EXPERIENCE_GROUPS.map((g) => (
             <button
               key={g.id}
               type="button"
