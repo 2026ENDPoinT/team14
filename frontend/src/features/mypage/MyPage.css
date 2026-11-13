@@ -241,8 +241,23 @@
   color: var(--dy-ink);
 }
 /* 펫 그림: 동그라미 안에 비율 그대로 맞춘다 */
+.mp-avatar__pet {
+  position: relative; /* 시무룩한 눈썹(SadBrows) 기준 */
+  display: block;
+  line-height: 0;
+}
 .mp-avatar__img {
-  object-fit: contain;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* 3일 이상 못 봤을 때: 색이 바래고(그림만 — 파란 물듦은 그대로 진하게) 살짝 고개를 떨군다 */
+.mp-avatar__pet.is-gloomy {
+  transform: translateY(2px) rotate(-4deg);
+  transition: transform 0.6s;
+}
+.mp-avatar__pet.is-gloomy .mp-avatar__img {
+  filter: saturate(0.45) brightness(0.95);
 }
 
 /* 프로필 바 */

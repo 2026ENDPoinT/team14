@@ -3,7 +3,7 @@ import { useAuth } from '../features/auth/AuthProvider.jsx'
 import { EMPTY_PET, usePet } from '../features/pet/petStore.js'
 import PetImage from '../features/pet/PetImage.jsx'
 import { getEnergyToNextStage, getStageInfo, getStageProgress, MAX_STAGE } from '../features/pet/petStages.js'
-import { PET_CHARACTERS, petAssetName, petAssetUrl, resolvePetCharacter } from '../features/home/petCharacter.js'
+import { PET_CHARACTERS, petAssetName, petAssetUrl, petSadAssetUrl, resolvePetCharacter } from '../features/home/petCharacter.js'
 import { petFrames } from '../features/home/petFrames.js'
 import { jobTitle } from '../features/mypage/jobGroups.js'
 import PetSprite from '../features/home/PetSprite.jsx'
@@ -14,7 +14,8 @@ import GrowthDots from '../features/home/GrowthDots.jsx'
 import WarmthEffect from '../features/diary/WarmthEffect.jsx'
 import HomeQuote from '../features/home/HomeQuote.jsx'
 import PetEffects from '../features/home/PetEffects.jsx'
-import { daysSince, getPreviousVisitDate } from '../services/lastVisit.js'
+import { cheerUp, usePetMood } from '../features/pet/petMood.js'
+import '../features/pet/petMood.css'
 import HomeTutorial from '../features/home/tutorial/HomeTutorial.jsx'
 import { recordAutoTutorial, shouldAutoStartTutorial } from '../features/tutorial/autoTutorial.js'
 import '../features/home/Home.css'
@@ -48,9 +49,10 @@ export default function HomePage() {
   const hopRef = useRef(null)
   const spriteRef = useRef(null) // 펫 부분 애니메이션 (눈 깜빡임·손 흔들기 프레임이 있을 때만)
   const [soilKey, setSoilKey] = useState(0) // 새싹을 누를 때마다 +1 → 흙 알갱이 효과 다시 재생
-  // 오래 못 본 펫: 지난 접속(서버 출석 기록, 오늘 제외)에서 7일 이상 지났으면 춥고 슬픈 모습.
+  // 오래 못 본 펫 (features/pet/petMood.js, 마이페이지 아이콘과 같은 값): 지난 접속(서버 출석 기록, 오늘 제외)에서
+  // 3일 이상 → 시들시들·시무룩(gloomy), 7일 이상 → 거기에 추워서 떨고 눈물·바람(cold).
   // 펫을 한 번 쓰다듬으면(클릭) 풀린다. 보상·출석 규칙과는 무관 (읽기만 함)
-  const [cold, setCold] = useState(false)
+  const { gloomy, cold } = usePetMood(userId)
   const burstId = bursts[0]?.id
   const endBurst = useCallback(() => {
     if (burstId) finishReward(burstId)
@@ -71,19 +73,6 @@ export default function HomePage() {
   // 서버 미준비·오류는 조용히 넘어간다 (오류 안내·가짜 지급 없음)
   useEffect(() => {
     if (userId) autoCheckIn(userId)
-  }, [userId])
-  // 지난 접속 확인: 오늘 출석 기록과 섞이지 않게 '오늘 이전' 기록만 본다 → 출석 처리 순서와 상관없이 판정
-  // 기록이 없으면(새 사용자 등) 평소 모습
-  useEffect(() => {
-    if (!userId) return undefined
-    let alive = true
-    getPreviousVisitDate().then((date) => {
-      const days = daysSince(date)
-      if (alive && days !== null && days >= 7) setCold(true)
-    })
-    return () => {
-      alive = false
-    }
   }, [userId])
 
   // HOME 튜토리얼: 신규 가입 후 HOME 첫 방문에만 자동으로 먼저 연다 (서버 프로필 home_tutorial_seen=false, features/tutorial/autoTutorial.js)
@@ -108,7 +97,7 @@ export default function HomePage() {
   // Web Animations API라 React 다시 그리기가 없고, 연속 클릭하면 이전 동작을 멈추고 처음부터 다시 재생한다.
   function hop() {
     if (assetName === 'sprout') setSoilKey((k) => k + 1)
-    setCold(false) // 쓰다듬어 주면 다시 괜찮아져요
+    cheerUp() // 쓰다듬어 주면 다시 괜찮아져요 (마이페이지 아이콘도 같이)
     spriteRef.current?.react() // 프레임이 있으면 짧게 손 흔들기(없으면 눈 깜빡임). 프레임이 없으면 아무것도 안 함
     const el = hopRef.current
     if (!el?.animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
@@ -131,9 +120,12 @@ export default function HomePage() {
   const maxed = stage >= MAX_STAGE
   const nextMin = getEnergyToNextStage(pet.energy)
   const progress = getStageProgress(pet.energy)
-  const imageUrl = petAssetUrl(character, stage)
+  // 시무룩할 때 시무룩한 그림 파일(<그림>-sad.png)이 있으면 그 그림, 없으면 원래 그림 + 시무룩한 눈썹
+  const sadUrl = gloomy ? petSadAssetUrl(character, stage) : null
+  const imageUrl = sadUrl ?? petAssetUrl(character, stage)
   const assetName = imageUrl ? petAssetName(character, stage) : null
-  const frames = useMemo(() => petFrames(assetName), [assetName])
+  const baseFrames = useMemo(() => petFrames(assetName), [assetName])
+  const frames = sadUrl ? [] : baseFrames // 시무룩한 그림에는 깜빡임 프레임이 없다
   // 위쪽 이름: 사용자 닉네임 (펫 이름 아님). HOME은 프로필 확인이 끝난 뒤에만 그려진다(RouteGuards)
   const nickname = profile?.nickname?.trim() || ''
   // 닉네임 아래 희망 직무: 사용자가 실제로 고른 값(profiles.interests 첫 번째, 마이페이지와 같은 값). 펫 종류로 추정하지 않는다
@@ -258,7 +250,7 @@ export default function HomePage() {
       {/* 펫 캐릭터: 투명 PNG가 있으면 그 이미지, 없으면 대체 상태
           - 바깥(hop): 클릭 반응 / 안쪽(idle): 숨쉬기 반복 — 두 움직임이 섞이지 않게 요소를 나눔
           - key={imageUrl}: 성장 단계가 바뀌면 새 이미지가 짧게 페이드 인 */}
-      <div className={`hm-pet ${cold ? 'is-cold' : ''}`} data-character={character ?? 'none'} data-stage={stage}>
+      <div className={`hm-pet ${gloomy ? 'is-gloomy' : ''} ${cold ? 'is-cold' : ''}`} data-character={character ?? 'none'} data-stage={stage}>
         <button type="button" className="hm-pet__hop" ref={hopRef} onClick={hop} aria-label={`${petLabel} 쓰다듬기`}>
           <span className="hm-pet__idle">
             {imageUrl ? (
@@ -272,8 +264,8 @@ export default function HomePage() {
               </span>
             )}
           </span>
-          {/* 펫 위 효과: 새싹 흙 알갱이 · 오래 못 본 뒤 눈물·바람 (원본 그림은 그대로) */}
-          <PetEffects hostRef={hopRef} assetName={assetName} soilKey={soilKey} cold={cold} />
+          {/* 펫 위 효과: 새싹 흙 알갱이 · 3일 이상 못 본 뒤 머리부터 파랗게·시무룩한 눈썹 · 7일 이상 눈물·바람 (원본 그림은 그대로) */}
+          <PetEffects hostRef={hopRef} assetName={assetName} soilKey={soilKey} cold={cold} brows={gloomy && !sadUrl} tintSrc={gloomy ? imageUrl : null} />
         </button>
       </div>
 

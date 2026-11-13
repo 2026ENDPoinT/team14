@@ -1,0 +1,56 @@
+/* 펫 기분: 시들시들·시무룩 (HOME 펫 · 마이페이지 프로필 아이콘 공용) */
+
+/* 시무룩한 눈썹(八자): 눈 위에 안쪽 끝이 올라가게 */
+.pm-brows {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.pm-brow {
+  position: absolute;
+  height: 2.2%;
+  min-height: 2px;
+  border-radius: 999px;
+  background: rgba(70, 55, 45, 0.85);
+  transform: translate(-50%, -50%);
+  animation: pm-brow-in 0.5s ease-out both;
+}
+/* 왼쪽 눈썹은 오른쪽(안쪽) 끝이, 오른쪽 눈썹은 왼쪽(안쪽) 끝이 올라간다 */
+.pm-brow.is-left {
+  transform: translate(-50%, -50%) rotate(-20deg);
+}
+.pm-brow.is-right {
+  transform: translate(-50%, -50%) rotate(20deg);
+}
+@keyframes pm-brow-in {
+  from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pm-brow { animation: none; }
+}
+
+/* 머리 위부터 파랗게 (SadTint.jsx) — multiply로 원래 그림의 명암을 살린다 */
+.pm-tint {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(74, 112, 190, 0.62) 0%,
+    rgba(74, 112, 190, 0.42) 30%,
+    rgba(74, 112, 190, 0.14) 58%,
+    rgba(74, 112, 190, 0) 75%
+  );
+  mix-blend-mode: multiply;
+  -webkit-mask: var(--pm-mask) center / 100% 100% no-repeat;
+  mask: var(--pm-mask) center / 100% 100% no-repeat;
+  animation: pm-tint-in 1.6s ease-out both;
+}
+@keyframes pm-tint-in {
+  from { clip-path: inset(0 0 100% 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pm-tint { animation: none; }
+}
