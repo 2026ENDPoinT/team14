@@ -3,7 +3,8 @@ import { TrashIcon } from '../roadmap/icons.jsx'
 import { countChars, REWARD_MIN_CHARS } from './countChars.js'
 import { deleteDiary, getDiaryByDate, hasDiaryRewardToday, saveDiary } from './diaryStore.js'
 import { getTodayKST } from './dateUtils.js'
-import PhotoModal from './PhotoModal.jsx'
+import PhotoField from '../photos/PhotoField.jsx'
+import usePhotoDraft from '../photos/usePhotoDraft.js'
 import WarmthEffect from './WarmthEffect.jsx'
 
 const WEEKDAYS = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일']
@@ -24,12 +25,17 @@ function formatDateLong(date) {
 // 날짜를 눌렀을 때 뜨는 일기 팝업 (2-7, 2-8, 2-16)
 // - 이미 쓴 일기는 먼저 읽기만 하고, '수정하기'를 눌러야 고칠 수 있다.
 // - 저장·삭제는 서버에 한다 (diaryStore → services/diary.js). 실패하면 입력한 내용은 그대로 두고 다시 시도할 수 있다.
+// - 사진: 저장 버튼을 누르면 일기 글을 먼저 저장하고(글이 바뀌었을 때만) 사진을 올린다.
+//   사진만 바꾸거나 실패한 사진을 다시 올릴 때는 일기 저장(save_diary)을 부르지 않아 온기가 다시 지급되지 않는다.
+//   올리기에 실패한 사진은 '실패'로 표시되고, 글과 이미 저장된 사진은 그대로 둔다.
 // onChanged: 저장·삭제 후 달력(노란 점)을 다시 그리게 알린다.
 export default function DiaryModal({ date, activities = [], onClose, onChanged }) {
   const [content, setContent] = useState(() => getDiaryByDate(date)?.content ?? '')
   const [isExisting, setIsExisting] = useState(() => Boolean(getDiaryByDate(date)))
   const [editing, setEditing] = useState(false) // 이미 쓴 일기를 고치는 중인지
-  const [photoOpen, setPhotoOpen] = useState(false)
+  // 처음 열 때 일기가 있으면 그 사진을 불러온다 (새로 쓴 일기는 저장 뒤 commit에 일기 id를 넘긴다)
+  const [openedDiaryId] = useState(() => getDiaryByDate(date)?.id ?? null)
+  const photos = usePhotoDraft(openedDiaryId ? { diaryId: openedDiaryId } : null)
   const [toast, setToast] = useState('')
   const [reward, setReward] = useState(null) // 받은 온기 양 (연출 중일 때만 값이 있음)
   const [busy, setBusy] = useState(false) // 저장·삭제 요청 중 (중복 클릭 방지)
@@ -48,16 +54,14 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
     if (!readOnly) textareaRef.current?.focus()
   }, [readOnly])
 
-  // ESC: 사진 팝업이 열려 있으면 그것만 닫고, 아니면 일기 팝업을 닫는다
+  // ESC: 일기 팝업을 닫는다
   useEffect(() => {
     function handleKey(e) {
-      if (e.key !== 'Escape') return
-      if (photoOpen) setPhotoOpen(false)
-      else onClose()
+      if (e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [photoOpen, onClose])
+  }, [onClose])
 
   // 안내 메시지는 2초 뒤 사라짐
   useEffect(() => {
@@ -70,26 +74,49 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
     if (busy) return
     setBusy(true)
     setSaveError('')
-    const result = await saveDiary({ date, content })
+    const stored = getDiaryByDate(date)
+    // 글이 바뀌었거나 새 일기일 때만 일기 저장(보상 판정 포함). 사진만 바뀌었으면 건너뛴다
+    const writeText = !stored || stored.content !== content || !photos.dirty
+    let diaryId = stored?.id
+    let reward = null
+    if (writeText) {
+      const result = await saveDiary({ date, content })
+      if (result.error) {
+        // 저장 실패: 입력한 내용은 그대로 두고, 보상도 없다 (서버가 저장과 보상을 한 번에 처리)
+        setBusy(false)
+        setSaveError(`${result.error.message} 입력한 내용은 그대로 있어요.`)
+        return
+      }
+      diaryId = result.diary.id
+      reward = result.reward
+      setIsExisting(true)
+      onChanged()
+    }
+    // 사진: 새 사진 올리기·지운 사진 삭제
+    const photoResult = photos.dirty ? await photos.commit({ diaryId }) : { failed: 0 }
     setBusy(false)
-    if (result.error) {
-      // 저장 실패: 입력한 내용은 그대로 두고, 보상도 없다 (서버가 저장과 보상을 한 번에 처리)
-      setSaveError(`${result.error.message} 입력한 내용은 그대로 있어요.`)
+    if (reward?.rewarded) setReward(reward.amount)
+    if (photoResult.failed > 0) {
+      // 글은 저장됨. 실패한 사진만 표시해 두고 수정 상태를 유지한다 → '다시 시도'는 사진만 다시 올린다
+      setSaveError(`${writeText ? '일기 글은 저장했어요. ' : ''}사진 ${photoResult.failed}장을 처리하지 못했어요. '다시 시도'를 누르면 그 사진만 다시 올려요. ${photoResult.message}`)
+      if (!editing) setEditing(true)
       return
     }
     // 온기를 받았으면 연기 연출, 아니면 저장 안내 + 받지 못한 이유
     // (일기는 저장됐는데 보상 처리만 실패한 경우도 구분해서 알려 준다)
-    if (result.reward?.rewarded) setReward(result.reward.amount)
-    else if (result.reward?.error) setToast('일기는 저장했어요. 온기 지급은 실패했어요. 잠시 후 다시 확인해 주세요.')
-    else setToast(`${isExisting ? '일기를 수정했어요.' : '일기를 저장했어요.'}${NO_REWARD_NOTE[result.reward?.reason] ?? ''}`)
+    if (!writeText) setToast('사진을 저장했어요.')
+    else if (reward?.rewarded) { /* 연출로 알림 */ }
+    else if (reward?.error) setToast('일기는 저장했어요. 온기 지급은 실패했어요. 잠시 후 다시 확인해 주세요.')
+    else setToast(`${stored ? '일기를 수정했어요.' : '일기를 저장했어요.'}${NO_REWARD_NOTE[reward?.reason] ?? ''}`)
     setIsExisting(true)
     setEditing(false)
-    onChanged()
   }
 
   // 수정 취소: 저장된 내용으로 되돌린다
   function handleCancel() {
     setContent(getDiaryByDate(date)?.content ?? '')
+    photos.reset()
+    setSaveError('')
     setEditing(false)
   }
 
@@ -103,6 +130,7 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
       return
     }
     setContent('')
+    photos.clear()
     setIsExisting(false)
     setEditing(false)
     setToast('일기를 삭제했어요.')
@@ -192,10 +220,13 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
           </div>
         )}
 
-        <button type="button" className="dp-photo-add" onClick={() => setPhotoOpen(true)}>
-          <span className="dp-photo-add__icon" aria-hidden="true">+</span>
-          사진 추가
-        </button>
+        {/* 사진: 읽기 상태에서는 저장된 사진만 보여 주고, 쓰기·수정 중에는 추가·삭제할 수 있다 */}
+        {(!readOnly || photos.items.length > 0 || photos.loading || photos.loadError) && (
+          <div className="rm-field">
+            <span className="rm-eyebrow">사진</span>
+            <PhotoField draft={photos} readOnly={readOnly} onChange={() => setSaveError('')} />
+          </div>
+        )}
 
         {saveError && <p className="dp-save-error" role="alert">{saveError}</p>}
 
@@ -227,7 +258,6 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
         {reward !== null && <WarmthEffect amount={reward} onDone={endReward} />}
       </section>
 
-      {photoOpen && <PhotoModal onClose={() => setPhotoOpen(false)} />}
       <div className={`rm-toast dy-toast ${toast ? 'is-visible' : ''}`} role="status">{toast}</div>
     </div>
   )
