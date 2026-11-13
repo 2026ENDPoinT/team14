@@ -6,6 +6,7 @@ import RoadmapCanvas from '../features/roadmap/RoadmapCanvas.jsx'
 import FabMenu from '../features/roadmap/FabMenu.jsx'
 import InboxPanel from '../features/roadmap/InboxPanel.jsx'
 import AddNodeModal from '../features/roadmap/AddNodeModal.jsx'
+import AddPeriodModal from '../features/roadmap/AddPeriodModal.jsx'
 import NodeDetailModal from '../features/roadmap/NodeDetailModal.jsx'
 import NodeFilter from '../features/roadmap/NodeFilter.jsx'
 import AiGuideButton from '../features/career/guide/AiGuideButton.jsx'
@@ -30,6 +31,7 @@ import {
   setNodeCompleted,
   updateEdge,
 } from '../services/api.js'
+import { insertPeriod } from '../services/periods.js'
 import '../features/roadmap/roadmap.css'
 
 const UNDO_MS = 5000 // 실행 취소 안내가 보이는 시간. 이 시간이 지나면 삭제를 DB에 저장한다
@@ -83,6 +85,7 @@ export default function RoadmapPage() {
   const [fabOpen, setFabOpen] = useState(false) // + 메뉴
   const [inboxOpen, setInboxOpen] = useState(false) // 노드 보관함
   const [addOpen, setAddOpen] = useState(false) // 노드 생성 창
+  const [periodOpen, setPeriodOpen] = useState(false) // 학기 추가 창
   const [detailId, setDetailId] = useState(null) // 상세 창에 열린 노드 id
   const [toast, setToast] = useState('') // 안내 문구, 또는 { text, undo } (실행 취소 버튼이 있는 삭제 안내)
   const [dropPeriodId, setDropPeriodId] = useState(null) // 노드를 끄는 동안 강조할 학기
@@ -386,8 +389,21 @@ export default function RoadmapPage() {
       setConnectMode(true)
       return
     }
-    // SEMESTER는 다음 작업(TASKS 1-10)에서 구현
-    setToast('학기 추가는 준비 중이에요.')
+    // 학기 추가: 로그인한 내 로드맵(DB)에서만
+    if (!isDb) return setToast('로그인하면 학기를 추가할 수 있어요.')
+    setDetailId(null)
+    setPeriodOpen(true)
+  }
+
+  // 학기 추가 저장: 서버가 끼워 넣기·순서 변경을 한 번에 하고 내 학기 전체를 돌려준다
+  // 노드는 학기 id로 붙어 있어 그대로 따라 움직인다. 반환: 성공 null / 실패 오류 문구
+  const handleAddPeriod = async (input) => {
+    const result = await insertPeriod(input)
+    if (result.error) return `학기를 추가하지 못했어요. ${result.error.message}`
+    setPeriods(result.data.periods)
+    setPeriodOpen(false)
+    setToast(`${result.data.period.name}을(를) 타임라인에 추가했어요.`)
+    return null
   }
 
   // categoryId·detailId·categoryLabel: ADD NODE에서 고른 카테고리·세부 활동 (상세 창 종류 수정과 같은 값)
@@ -713,6 +729,13 @@ export default function RoadmapPage() {
           onCreate={handleCreate}
           customCategories={customCategories}
           onAddCustomCategory={addCustomCategory}
+        />
+
+        <AddPeriodModal
+          open={periodOpen}
+          periods={periods}
+          onClose={() => setPeriodOpen(false)}
+          onSubmit={handleAddPeriod}
         />
 
         <NodeDetailModal

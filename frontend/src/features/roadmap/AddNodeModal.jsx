@@ -23,7 +23,9 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
   const [saving, setSaving] = useState(false) // 서버에 저장하는 중 (연속 클릭 방지)
   const [saveError, setSaveError] = useState('')
 
-  const categories = [...BASE_CATEGORIES, ...customCategories]
+  // '대학생활 이벤트'(life)는 학기 추가(휴학·군휴학·교환학생)로 옮겨서 새 활동 종류 목록에서만 뺀다.
+  // 이미 있는 이벤트 노드는 상세 창(NodeDetailModal)에서 그대로 보고 고칠 수 있다.
+  const categories = [...BASE_CATEGORIES.filter((c) => c.id !== 'life'), ...customCategories]
   const category = categories.find((c) => c.id === categoryId) ?? categories[0]
   const detail = category.details.find((d) => d.id === detailId) ?? null
   const theme = detail?.theme ?? category.theme
