@@ -1,0 +1,46 @@
+/* HOME 튜토리얼: 로드맵 튜토리얼(tutorial.css의 rm-tour)을 그대로 쓰고, HOME에 없는 색 변수만 채운다 */
+.hm-tour {
+  --rm-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --rm-surface: #f6f4f0;
+  --rm-shadow-strong: 0 24px 60px rgba(0, 0, 0, 0.14);
+  --rm-text: #2b2620;
+  --rm-muted: #9a8e7f;
+  --rm-field: #ece7de;
+  position: fixed; /* HOME은 화면 전체를 덮는다 (로드맵은 캔버스 안) */
+  z-index: 100;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+}
+
+/* 다시 보기 버튼: 왼쪽 위 작은 원 (오른쪽 위 온기 표시와 같은 높이·같은 톤). 다른 HOME 요소는 그대로 */
+.hm-help {
+  position: absolute;
+  top: 26px;
+  left: 28px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #fff2e4;
+  box-shadow: 0 2px 8px rgba(137, 107, 84, 0.08);
+  color: #896b54;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.hm-help:hover {
+  background: #ffe9d2;
+}
+.hm-help:focus-visible {
+  outline: 2px solid #dca36c;
+  outline-offset: 2px;
+}
+@media (max-width: 900px) {
+  .hm-help {
+    top: 86px;
+    left: 16px;
+  }
+}
