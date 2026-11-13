@@ -6,7 +6,7 @@ import { getEnergyToNextStage, getStageInfo, getStageProgress, MAX_STAGE } from 
 import { PET_CHARACTERS, petAssetUrl, resolvePetCharacter } from '../features/home/petCharacter.js'
 import { autoCheckIn, checkPetName, PET_NAME_MAX, renamePet, RENAME_COST } from '../features/home/homeActions.js'
 import GrowthDots from '../features/home/GrowthDots.jsx'
-import RewardBurst from '../features/home/RewardBurst.jsx'
+import WarmthEffect from '../features/diary/WarmthEffect.jsx'
 import HomeQuote from '../features/home/HomeQuote.jsx'
 import CareerEntryButton from '../features/career/CareerEntryButton.jsx'
 import '../features/home/Home.css'
@@ -15,7 +15,7 @@ import '../features/home/Home.css'
 // - 펫·온기는 서버 값(petStore → pets 테이블). 출석·일기 보상 결과로 바로 갱신된다.
 // - 성장 단계는 누적 온기(pet.energy)로 정한다. 온기를 써도 단계는 내려가지 않는다.
 // - 출석은 버튼 없이 로그인할 때(AuthProvider)·HOME에 들어올 때 자동으로 서버(check_in)에 요청한다.
-//   같은 사용자·날짜에는 요청 하나를 같이 쓴다. 서버가 지급을 확인했을 때만 연출
+//   같은 사용자·날짜에는 요청 하나를 같이 쓴다. 서버가 지급을 확인했을 때만 일기와 같은 연기 연출(온기 +100 획득!)
 // - 이름 변경은 서버 RPC가 없어 "준비 중" 안내만 한다 (가짜 저장·차감 없음)
 export default function HomePage() {
   const { profile, status } = useAuth()
@@ -123,6 +123,8 @@ export default function HomePage() {
 
   return (
     <div className="home-page">
+      {/* 출석 온기 획득 연출: 일기 저장 때와 같은 연기 + '온기 +100 획득!' (화면 전체) */}
+      {bursts[0] && <WarmthEffect key={bursts[0].id} amount={bursts[0].amount} onDone={endBurst} fullScreen />}
       {/* 보유 온기 (오른쪽 위): 햇살 아이콘 + "온기" + 서버에 저장된 잔액(warmth_balance) */}
       <div className="hm-warmth" role="group" aria-label={`보유 온기 ${balance.toLocaleString()}`}>
         <svg className="hm-warmth__icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
@@ -131,7 +133,6 @@ export default function HomePage() {
         </svg>
         <span className="hm-warmth__label" aria-hidden="true">온기</span>
         <span className="hm-warmth__num" aria-hidden="true">{balance.toLocaleString()}</span>
-        {bursts[0] && <RewardBurst key={bursts[0].id} amount={bursts[0].amount} onDone={endBurst} />}
       </div>
 
       {/* AI 진로 추천 (왼쪽 위, 온기와 대칭): 누르면 추천 화면을 전체 화면 팝업으로 연다 */}
