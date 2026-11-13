@@ -42,7 +42,7 @@ export async function getMyPet() {
   return { data: toPet(data) }
 }
 
-// 직무 미정 사용자가 온보딩에서 고른 펫 종류 저장 (RPC choose_pet, migration 20261114002600)
+// 직무 미정 사용자가 온보딩에서 고른 펫 종류 저장 (RPC choose_pet, migration 20261114002700)
 // - 펫 종류는 pets.type에 저장 (직무와 따로). 이미 종류가 있으면 서버가 바꾸지 않는다 (changed=false)
 // - RPC가 아직 서버에 없으면 오류 그대로 돌려준다 (가짜 저장 없음)
 // 성공: { data: { changed, pet } }
