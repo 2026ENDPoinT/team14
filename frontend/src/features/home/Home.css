@@ -478,11 +478,17 @@
   position: absolute;
   pointer-events: none;
 }
-/* 새싹 흙 알갱이: 바닥 가운데에서 좌우로 톡 튀었다가 떨어지며 사라짐 */
+/* 새싹 흙 알갱이: 흙더미 왼쪽 끝·오른쪽 끝에서 불꽃·스프링클러 물줄기처럼 부채꼴로 흩뿌려짐
+   알갱이 모양(동그라미)은 그대로, 부채꼴로 날아갔다가 → 포물선으로 아래로 떨어지며 사라진다 */
 .hm-soil {
   position: absolute;
-  left: 50%;
-  top: 82%;
+  top: 80%;
+}
+.hm-soil.is-left {
+  left: 20%;
+}
+.hm-soil.is-right {
+  left: 80%;
 }
 .hm-soil i {
   position: absolute;
@@ -492,17 +498,19 @@
   background: #9b7653;
   box-shadow: inset -1px -1px 0 rgba(0, 0, 0, 0.12);
   opacity: 0;
-  animation: hm-soil 0.85s cubic-bezier(0.3, 0.6, 0.5, 1) both;
+  animation: hm-spray 0.8s cubic-bezier(0.2, 0.7, 0.4, 1) both;
 }
 .hm-soil i:nth-child(even) {
   background: #b58e68;
 }
-@keyframes hm-soil {
-  0% { opacity: 0; transform: translate(0, 0) scale(0.6); }
+@keyframes hm-spray {
+  0% { opacity: 0; transform: translate(0, 0); }
   10% { opacity: 1; }
-  40% { transform: translate(calc(var(--dx) * 0.6), var(--up)) scale(1); animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6); }
-  85% { opacity: 0.9; }
-  100% { opacity: 0; transform: translate(var(--dx), 10px) scale(0.85); }
+  /* 부채꼴 방향으로 날아올라 가장 높은 곳 */
+  45% { transform: translate(calc(var(--dx) * 0.7), var(--up)); animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6); }
+  80% { opacity: 0.85; }
+  /* 포물선으로 바깥 아래로 떨어지며 사라짐 */
+  100% { opacity: 0; transform: translate(var(--dx), calc(var(--up) * -0.15 + 16px)); }
 }
 /* 오래 못 본 펫: 가볍게 부르르 떨기 (몇 초마다 짧게) */
 .hm-pet.is-cold .hm-pet__hop {

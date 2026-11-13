@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 // HOME 펫 위에 겹쳐 그리는 효과 (원본 PNG는 그대로, CSS/SVG만)
-// - soilKey: 새싹을 누를 때마다 바뀌는 번호 → 흙 알갱이가 바닥에서 톡 튀었다 떨어진다 (새싹일 때만 넘겨 받음)
+// - soilKey: 새싹을 누를 때마다 바뀌는 번호 → 흙더미 양 끝에서 흙 알갱이가 불꽃·물줄기처럼 흩뿌려진다 (새싹일 때만 넘겨 받음)
 // - cold: 오래(7일 이상) 못 본 뒤 첫 방문 → 눈물·바람선 (떨림은 Home.css .hm-pet.is-cold)
 // 위치는 펫 그림 상자 기준 비율이라 화면·펫 크기가 달라도 함께 맞춰진다
 
@@ -16,11 +16,28 @@ const EYES = {
 }
 const DEFAULT_EYES = [0.4, 0.6, 0.4]
 
-// 흙 알갱이 8개: 좌우로 퍼지는 거리(px)·튀는 높이(px)·크기(px)·시작 지연(s)
-const SOIL = [
-  [-34, -30, 6, 0], [-22, -42, 5, 0.03], [-12, -26, 4, 0.06], [-4, -36, 5, 0.02],
-  [6, -40, 4, 0.05], [14, -28, 6, 0.01], [26, -38, 5, 0.04], [36, -24, 4, 0.07],
+// 흙 알갱이: 펫(흙더미)의 왼쪽 끝·오른쪽 끝에서 불꽃·스프링클러 물줄기처럼 부채꼴로 흩뿌려진다
+// 한쪽에 10알. 각도(수평에서 위로, 도)·거리(px)·크기(px)·시작 지연(s)
+// → 알갱이 모양(동그라미)은 그대로, 부채꼴로 날아갔다가 포물선을 그리며 아래로 떨어지고 사라진다
+const SPRAY = [
+  [12, 70, 5, 0], [22, 84, 4, 0.02], [30, 62, 6, 0.03], [38, 92, 4, 0.05], [46, 74, 5, 0.06],
+  [54, 58, 4, 0.08], [62, 80, 6, 0.09], [70, 52, 4, 0.11], [78, 66, 5, 0.12], [86, 46, 4, 0.14],
 ]
+const SIDES = [
+  { side: 'left', dir: -1 },
+  { side: 'right', dir: 1 },
+]
+// 알갱이 하나의 CSS 변수: 날아갈 거리(--dx 옆, --up 위)
+function sprayStyle([angle, dist, size, delay], dir) {
+  const rad = (angle * Math.PI) / 180
+  return {
+    '--dx': `${(Math.cos(rad) * dist * dir).toFixed(1)}px`,
+    '--up': `${(-Math.sin(rad) * dist).toFixed(1)}px`,
+    width: size,
+    height: size,
+    animationDelay: `${delay}s`,
+  }
+}
 
 export default function PetEffects({ hostRef, assetName, soilKey = 0, cold = false }) {
   const [box, setBox] = useState(null) // 펫 그림의 위치·크기 (hostRef 기준)
@@ -54,9 +71,13 @@ export default function PetEffects({ hostRef, assetName, soilKey = 0, cold = fal
   return (
     <span className="hm-fx" aria-hidden="true" style={box}>
       {soilKey > 0 && (
-        <span key={soilKey} className="hm-soil">
-          {SOIL.map(([dx, up, size, delay], i) => (
-            <i key={i} style={{ '--dx': `${dx}px`, '--up': `${up}px`, width: size, height: size, animationDelay: `${delay}s` }} />
+        <span key={soilKey}>
+          {SIDES.map(({ side, dir }) => (
+            <span key={side} className={`hm-soil is-${side}`}>
+              {SPRAY.map((line, i) => (
+                <i key={i} style={sprayStyle(line, dir)} />
+              ))}
+            </span>
           ))}
         </span>
       )}
