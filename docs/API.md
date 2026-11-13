@@ -1,7 +1,8 @@
 # API.md — 프론트엔드 ↔ Supabase 데이터 규격
 
 > 관리 책임: 3번(DB·기술 관리). 변경 시 팀 협의 후 이 문서를 먼저 수정한다.
-> 구조: **프론트엔드 → Supabase SDK → Supabase(PostgreSQL + Auth)**. MVP에서는 Node 서버를 사용하지 않는다.
+> 구조: **프론트엔드 → Supabase SDK → Supabase(PostgreSQL + Auth + Storage + Edge Functions)**. MVP에서는 Node 서버를 사용하지 않는다.
+> 2026-11-14 갱신: 실제 코드 기준. DB 적용·배포 상태는 8장.
 > 프론트엔드는 DB가 준비되기 전까지 이 문서의 JSON 형식(camelCase)으로 Mock Data를 만들어 개발한다.
 
 ## 1. 공통 규칙
@@ -12,6 +13,8 @@
 - Node 서버(`backend/`)는 MVP에서 사용하지 않는다. 폴더는 삭제하지 않고 유지한다.
   - 추후 서버 전용 기능이 필요할 때만 사용하며, 이때 로컬 포트는 `4000`이다. (`http://localhost:4000`)
 - DB 변경(테이블·RLS·함수)은 SQL 파일로 `supabase/migrations/`에 저장해 Git으로 공유한다.
+- AI(Gemini)·외부 수집·회원 탈퇴처럼 비밀 키나 서버 권한이 필요한 일은 **Supabase Edge Function**(`supabase/functions/`)으로 처리한다. (7장)
+- 사진·파일은 Supabase Storage 비공개 버킷(`photos`, `attachments`)에 둔다.
 
 ### 1.2 이름 규칙 (snake_case ↔ camelCase)
 - PostgreSQL 테이블·컬럼: **snake_case** (예: `user_id`, `created_at`, `period_id`)
@@ -56,7 +59,9 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
   "nickname": "민수",
   "grade": 2,
   "onboardingCompleted": false,
-  "interests": ["backend", "ai"],
+  "interests": ["backend"],
+  "homeTutorialSeen": true,
+  "roadmapTutorialSeen": true,
   "createdAt": "2026-11-09T12:00:00+09:00"
 }
 ```
@@ -65,7 +70,9 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 - **회원가입 시 최소 `profiles` 행을 자동 생성**한다. (`onboardingCompleted: false`) 이미 있으면 다시 만들지 않는다.
 - `nickname` 중복 허용.
 - `grade`: 현재 학년 `1` | `2` | `3` | `4` (학년 단위, 해당 학년 1·2학기 포함). 나중에 변경 가능하며, 변경해도 기존 로드맵을 자동으로 덮어쓰지 않는다.
-- `interests`: 온보딩 STEP 4에서 고른 **희망 직무** 키 목록 (예: `"backend"`, `"ai"`)
+- `interests`: 온보딩에서 고른 **희망 직무** 키 목록. 현재 화면은 대표 직무 1개만 저장하고, '아직 정하지 않음'이면 빈 배열 `[]`
+- `homeTutorialSeen` / `roadmapTutorialSeen`: 튜토리얼 자동 실행 기록 (migration `20261114002800`, **실제 DB 미적용**). 칸이 없으면 `undefined` → 튜토리얼을 자동으로 띄우지 않는다. 가입 시 `false`, 기존 가입자는 `true`. 바꾸는 것은 RPC `mark_tutorial_seen`만
+- 닉네임 변경은 RPC `change_nickname`만 (테이블 직접 수정 불가, 4.7)
 
 ### TimelinePeriod (학기/기간, `timeline_periods`)
 ```json
@@ -100,6 +107,7 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 ```
 - **노드 종류(카테고리)** — 화면의 NODE TYPE·DETAIL TYPE 선택값 (migration `20261111001100`)
   - `categoryKey`: 기본 종류 키. 프론트 `nodeCategories.js`의 `BASE_CATEGORIES` id (`major`, `project`, `contest`, `club`, `external`, `career`, `study`, `campus`, `life`, `free`). 형식: 영문 소문자로 시작하는 `a-z0-9_` 40자 이내
+  - **메모 노드:** `categoryKey: "memo"`. 내용·색·크기·글씨 크기는 `node_documents.content`(`format: "memo"`)에 둔다 (NodeDocument 참고)
   - `categoryId`: 사용자 정의 종류 id (`NodeCategory.id`). **본인 종류만** 연결 가능 (DB 복합 외래키로 검증)
   - `detailKey`: 세부 활동 키. 온보딩 경험 항목 id (예: `hackathon`). `categoryKey`가 있을 때만 쓸 수 있다
   - `categoryKey`와 `categoryId`는 **동시에 넣을 수 없다**. 둘 다 `null`이면 `theme`으로 대표 종류를 보여 준다 (기존 노드)
@@ -115,7 +123,8 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
   - 직무가 아니라 **과목 기준** 키이므로, 같은 과목은 노드 1개만 생긴다.
 - `completed`: 이수 완료 표시 (`true`/`false`). STEP 3에서 사용자가 직접 고른 수강 과목만 `true`로 생성된다. 사용자가 나중에 바꿀 수 있다. (필드 이름 `(안)`)
   - 이수 완료 노드의 `periodId`는 연계도 **권장 학기** 위치이며, 실제 수강 학기를 뜻하지 않는다.
-- `position`: 학기 영역 내 상대 좌표 `[React Flow 좌표 기준 협의 필요]`
+- `position`: 학기 기준 상대 좌표 (x: 학기 왼쪽부터, y: 캔버스 위쪽부터. 타임라인 선은 y=200). 교과목은 선 위(작은 카드), 일반 노드는 선 아래에만 놓인다. **메모만** 선 위·선보다 위쪽(y 음수, -400까지)에도 놓일 수 있다
+- `contestId` / `jobPostingId`: 기회 탐색에서 추가한 공고 노드의 원본 공고 id (로드맵 조회 시 `contest`·`job` 정보가 함께 붙는다)
 
 ### NodeCategory (사용자 정의 노드 종류, `node_categories`)
 ```json
@@ -139,6 +148,8 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 }
 ```
 - MVP: `format: "plain"`(텍스트/마크다운). TipTap 도입 시 `"tiptap-json"` 추가 `[미확정]`
+- 메모 노드: `{ "format": "memo", "title": "", "body": "…", "color": "butter|sage|pink|white", "width": 260, "height": 220, "fontSize": 16 }`
+  - 색 값은 저장된 이름 그대로 쓰고 화면에서는 모노톤으로 보인다. `width`·`height`는 220×160 ~ 600×500, `fontSize`는 12~28 (없으면 기본값)
 - 노드와 1:1. 노드 삭제 시 문서도 삭제, **학기 삭제 시에는 삭제되지 않는다.**
 - 회고 작성 여부 판단용 `isReflection` 필드 `[미확정]`
 
@@ -174,22 +185,25 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
   "updatedAt": "2026-11-09T12:00:00+09:00"
 }
 ```
-- 사용자당 1마리. **온보딩 완료 시** 생성한다. (`stage: 1`, `energy: 0`)
+- 사용자당 1마리. **온보딩 완료 시** 생성한다. (`stage: 1`, `energy: 0`) 중복 생성하지 않는다.
   - 온보딩 전에 출석 보상을 받으면 그때 펫 행이 먼저 생긴다. 온보딩은 이미 있는 펫을 그대로 쓴다. (받은 온기 유지)
-- `type`: 희망 직무(관심 분야)에 따른 외형 키 `[미확정]`
+- `type`: 펫 종류 키 `penguin` | `otter` | `black_cat` | `hamster` | `rabbit` 또는 `null`
+  - 직무를 고른 사용자는 `null`로 두고 화면이 희망 직무로 종류를 정한다 (`petCharacter.js` `JOB_TO_PET`)
+  - 직무 미정 사용자가 온보딩에서 고른 펫은 RPC `choose_pet`으로 저장한다 (migration `20261114002700`, **실제 DB 미적용**). 이미 정해진 종류는 바꾸지 않는다
+  - 화면은 `type`을 직무보다 먼저 본다 → 나중에 직무를 골라도 고른 펫이 유지된다. 종류가 없으면 새싹 모습
 - `energy`: **누적 온기**(받은 온기 합계). 성장 단계에 쓰며 차감하지 않는다.
 - `warmthBalance` (DB `warmth_balance`): **사용할 수 있는 온기 잔액**. 보상을 받으면 `energy`와 함께 늘고, 온기를 쓰면 이것만 줄어든다. 홈에 표시하는 값.
 - `stage`: 1~4. 누적 에너지로 정한다.
 
-| stage | 이름 | 누적 에너지 |
+| stage | 이름 | 누적 온기 |
 | --- | --- | --- |
-| 1 | 알 | 0 이상 |
-| 2 | 아기 | 50 이상 |
-| 3 | 성장기 | 150 이상 |
-| 4 | 성체 | 300 이상 |
+| 1 | 새싹 | 0 이상 |
+| 2 | 아기 펫 | 1,200 이상 |
+| 3 | 꼬마 펫 | 2,800 이상 |
+| 4 | 어른 펫 | 5,000 이상 |
 
-- `energyToNextStage`: **다음 단계의 누적 에너지 기준값** (예: 1단계면 `50`). 4단계면 `null`.
-- 기준값은 DB 설정값으로 관리하여 쉽게 바꿀 수 있게 한다. (관리 방식 `[미확정]`)
+- 단계는 화면이 `energy`로 계산한다 (`frontend/src/features/pet/petStages.js`). 서버에 기준값 설정 테이블은 없다.
+- `energyToNextStage`: **다음 단계의 누적 온기 기준값** (예: 1단계면 `1200`). 4단계면 `null`.
 - **프론트에서 직접 수정할 수 없다.** (조회만 가능, 5장)
 
 ### RewardEvent (보상 이력, `reward_events`)
@@ -259,7 +273,9 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 
 | 작업 | 처리 방식 | 설명 |
 | --- | --- | --- |
-| 온보딩 완료 | RPC `complete_onboarding` (안) | 프론트가 선정한 과목 목록을 **검증**한 뒤, 프로필 저장 + 기본 8학기 + 펫 + 경험 노드 + **이수 완료 과목 노드 + 미래 추천 과목 노드**를 한 번에 저장 |
+| 온보딩 완료 | RPC `complete_onboarding` | 프론트가 선정한 과목 목록을 **검증**한 뒤, 프로필 저장 + 기본 8학기 + 펫 + 경험 노드 + **이수 완료 과목 노드 + 미래 추천 과목 노드**를 한 번에 저장 |
+| 미정 사용자 펫 저장 | RPC `choose_pet(p_type)` | 온보딩 완료 **뒤** 직무 미정 사용자가 고른 펫을 `pets.type`에 저장. 허용 값 5종, 이미 종류가 있으면 `changed: false` (**실제 DB 미적용**, 적용 전에는 함수 없음 오류) |
+| 과목 위치 정리 | 테이블 `nodes` 수정 (`moveNodes`) | RPC는 과목 위치를 (0,0)으로 저장 → 프론트가 선 위에 겹치지 않게 놓고 저장 |
 
 **역할 나누기**
 - **과목 선정:** 프론트엔드 JavaScript 함수 (교과과정 데이터는 `frontend/src/data/`, 4.4)
@@ -293,7 +309,8 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 ```
 - `grade`가 없거나 1~4가 아니면 `VALIDATION_ERROR`
 - 학년만 고르고 나머지를 건너뛰어도 기본 8학기와 펫을 만든다. 미래 과목은 미래 학년 전공필수 과목만 선정된다.
-- `roadmapMode` 기본값은 `"auto"`. (값이 없으면 auto로 처리)
+- `roadmapMode` 기본값은 `"auto"`. (값이 없으면 auto로 처리) **현재 화면은 항상 `"auto"`를 보낸다** (구성 방식 고르기 화면 없음)
+- 마지막 펫 화면의 '모멘트리 시작하기'에서 `complete_onboarding` → (직무 미정이면) `choose_pet` 순서로 부른다. 펫 저장만 실패하면 온보딩은 다시 보내지 않고 펫 저장만 다시 시도한다.
 - 노드 생성 규칙:
 
 | 대상 | source | 배치 | completed |
@@ -322,10 +339,14 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 | 작업 | 처리 방식 | 설명 |
 | --- | --- | --- |
 | 로드맵 조회 | 테이블 `timeline_periods`, `nodes`(+`contests` 공고 정보), `edges`, `node_documents` 조회 | `getRoadmap()` → periods + nodes + edges + documents 한 번에 반환. 탐색에서 추가한 공모전 노드에는 `contest`(출처·마감일·원문 링크)가 붙는다 |
-| 학기/기간 삽입 | RPC `insert_period` (안) | 삽입 위치 지정, 뒤 기간 order 재계산 |
-| 학기/기간 삭제 | RPC `delete_period` (안) | 소속 노드를 보관함으로 이동 후 삭제 |
-| 학기 순서 변경 | RPC `reorder_periods` (안) | 여러 행의 order를 함께 변경 |
-| 학기 이름·타입 수정 | 테이블 `timeline_periods` 수정 | 한 행만 바뀌므로 직접 수정 |
+| 학기/기간 삽입 | RPC `insert_timeline_period` | `insertPeriod({ type, afterPeriodId, requestId, name })`. 뒤 기간 order 재계산, `requestId`로 중복 호출 안전, 사용자 이름 '기타' 기간 가능 (migration `20261113002100`, `20261114002300`) |
+| 학기/기간 삭제 | (미구현) | 규칙: 소속 노드를 보관함으로 이동 후 삭제 |
+| 학기 순서 변경 | (미구현) | |
+| 학기 이름·타입 수정 | (미구현) | |
+| 메모 노드 생성·저장 | 테이블 `nodes` 추가 + `node_documents` 저장 | `createMemoNode()`, `saveMemo()` (`services/memo.js`). 크기·글씨 크기도 문서에 저장 |
+| 교과목 추가 ('수강 필요') | RPC `add_course_to_roadmap(p_course_key, p_title, p_period_id)` | 보관함 또는 고른 학기에 과목 노드 생성, 같은 과목 중복 없음 |
+| 노드 사진 | 테이블 `photos` + Storage `photos` | `services/photos.js`. 비공개 버킷, 개수 제한은 DB 함수 |
+| 노드 링크·파일 첨부 | 테이블 `node_attachments` + Storage `attachments` | `services/attachments.js` |
 | 노드 생성 | 테이블 `nodes` 추가 | `createNode()`. 종류 선택값(`categoryKey`·`categoryId`·`detailKey`) 포함. 짧은 메모는 `node_documents`에 함께 저장 |
 | 노드 이동 | 테이블 `nodes` 수정 | `moveNodes(moves)`. periodId·position·status만. 자리 교환은 두 노드를 함께 |
 | 노드 수정 | 테이블 `nodes` 수정 + `node_documents` upsert | `saveNodeDetail()`. 제목·종류(테마·종류 선택값)·기록 |
@@ -342,6 +363,8 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 
 - 저장 결과: 모든 저장은 DB에 성공한 뒤에만 화면을 완료 상태로 바꾼다. 실패하면 화면을 되돌리고 오류 문구를 보여 준다.
 - 학기 가지선 표시 설정(`branchVisibility`)은 아직 DB 컬럼이 없어 화면에서만 유지된다 `[협의 필요]`.
+- 노드 목표일(`dueDate`)도 아직 DB 칸이 없어 화면에서만 유지된다. 공고 노드의 D-day는 원본 공고 마감일을 쓴다.
+- 노드 상세 저장(`saveNodeDetail`)은 저장 버튼으로만 하고, 성공하면 상세 창을 닫는다.
 
 ```json
 // 로드맵 조회 결과
@@ -507,7 +530,11 @@ selectCourses({
 | --- | --- | --- |
 | 내 펫 조회 | 테이블 `pets` 조회 | |
 | 출석 | RPC **`check_in`** | 로그인할 때 자동 호출. 서버 KST 날짜 기준 하루 1회 +100, 중복 지급은 서버에서 방지 (한 트랜잭션, 3장) |
-| 오늘 출석 여부 조회 | 테이블 `reward_events` 조회 (`type: "attendance"`, 오늘 KST 날짜) | 버튼 완료 상태 표시용 |
+| 오늘 출석 여부 조회 | 테이블 `reward_events` 조회 (`type: "attendance"`, 오늘 KST 날짜) | 완료 상태 표시용 |
+| 지난 접속 날짜 | 테이블 `reward_events` 조회 (`attendance`, 오늘 **이전** 가장 최근 `ref_id`) | `services/lastVisit.js`. 펫 시무룩(3일)·추운 모습(7일) 연출용. 읽기만, 기록이 없으면 평소 모습 |
+| 닉네임 변경 | RPC `change_nickname(p_nickname)` | 첫 변경 무료, 이후 온기 잔액 300 차감 (migration `20261114002500`) |
+| 미정 사용자 펫 저장 | RPC `choose_pet(p_type)` | 4.2 참고 (**미적용**) |
+| 튜토리얼 '봤음' 기록 | RPC `mark_tutorial_seen(p_kind)` | `home` \| `roadmap`. 자동 실행 순간 기록 (migration `20261114002800`, **미적용**) |
 
 ```json
 // 출석 요청 (보낼 값 없음. 날짜는 서버가 정함)
@@ -527,7 +554,10 @@ selectCourses({
 | 대외활동 공고 목록 | RPC `list_open_contests_for_me(p_limit)` | `listOpenContests()`. 한국 날짜 기준 **접수 중**인 공고만(마감일 지남·수집처 '마감' 제외), 내 관심 분야와 맞는 공고 먼저, 그다음 마감 임박순 |
 | 기술 글 목록 (Hacker News) | RPC `list_tech_articles_for_me(p_limit)` | `listTechArticles()`. 내 관심 분야와 맞는 글 먼저, 그다음 최신순 |
 | 내가 추가한 공고 | 테이블 `nodes` 조회 (`contest_id`가 있는 행) | `getMyContestNodeIds()` → `{ [contestId]: nodeId }`. 카드의 '추가됨' 표시용 |
-| 공모전 → 내 로드맵 추가 | RPC `add_contest_to_roadmap(p_contest_id)` | `addContestToRoadmap(contestId)`. `[공모전]` 공고만, 마감 전만. 보관함에 노드 생성 |
+| 공모전 → 내 로드맵 추가 | RPC `add_contest_to_roadmap(p_contest_id)` | `addContestToRoadmap(contestId)`. 마감 전만. 보관함에 노드 생성 |
+| 채용 공고 목록 | 테이블 `job_postings` 조회 | `listOpenJobPostings()`. 고용24 수집 (`sync-work24-jobs`) |
+| 채용 → 내 로드맵 추가 | RPC `add_job_posting_to_roadmap(p_job_posting_id)` | `addJobPostingToRoadmap(id)`. 보관함에 노드 생성 |
+| **고른 학기에 바로 배치** | 위 추가 RPC → `moveNodes` | 탐색 화면에서 학기를 고르면 RPC로 만든 노드를 그 학기의 빈자리로 옮겨 저장. 이미 학기에 있는 같은 공고는 옮기지 않는다. 이동 저장이 실패하면 노드는 보관함에 남고 오류를 보여 준다 |
 
 데이터 출처 (자동 수집, 사용자는 조회만):
 - `contests`: 서울과기대 취업진로본부 대외활동 게시판. Edge Function `sync-contests`가 매일 06:00(KST) 목록 1~3페이지를 저장
@@ -582,6 +612,7 @@ selectCourses({
 - "RPC로만" = 프론트가 테이블에 직접 쓰지 못하고, DB 함수 안에서만 바꿀 수 있다.
 - 새 테이블을 만들 때는 RLS를 반드시 켜고 이 표에 추가한다.
 - `service_role` 키는 RLS를 무시하므로 **프론트엔드 코드·`.env`에 절대 넣지 않는다.**
+- 이후 추가된 테이블(`job_postings`, `career_recommendations`, `photos`, `node_attachments` 등)의 정책은 각 migration 파일을 기준으로 한다. (이 표는 아직 모두 옮기지 않음)
 
 ## 6. 프론트엔드 연동 방식
 
@@ -593,3 +624,48 @@ selectCourses({
   - `VITE_SUPABASE_ANON_KEY` (공개용 키. RLS가 보호한다)
 - DB가 준비되기 전에는 `frontend/src/data/`의 Mock Data로 같은 형식(camelCase)을 반환한다.
 - 데이터 형식이 바뀌면 코드보다 먼저 이 문서를 수정하고 팀에 알린다.
+
+## 7. Edge Functions
+
+모두 `supabase/functions/`에 있다. AI 함수는 요청 헤더의 로그인 토큰을 `auth.getUser`로 확인한 뒤 처리하고, 결과를 저장하지 않는다(온보딩 추천 결과만 `career_recommendations`에 저장).
+
+| 함수 | 용도 | 호출 |
+| --- | --- | --- |
+| `recommend-career` | Gemini. `mode` 없음: 온보딩 AI 진로 추천 / `both`·`career`·`activities`: AI 길잡이 (`docs/ai-guide.md`) / `reflect`·`timecapsule`: 일기 AI (아래) | 프론트 `functions.invoke` |
+| `delete-account` | 회원 탈퇴 | 마이페이지 |
+| `sync-contests`, `sync-work24-jobs`, `sync-hacker-news` | 공고·뉴스 수집 | 예약 실행 (사용자 호출 없음) |
+
+- 비밀값: `GEMINI_API_KEY`는 Supabase secrets에만 둔다. 모델은 Flash-Lite 순서대로 시도(한도·일시 오류 시 다음 모델).
+- 요청 본문은 20,000자 이하.
+
+### 7.1 `reflect` — AI 회고 질문 (일기 '오늘의 발자취')
+```json
+// 요청: 발자취 글만 (최대 1500자, 비어 있어도 됨). '오늘의 이야기'는 보내지 않는다
+{ "mode": "reflect", "date": "2026-11-14", "content": "자료구조 과제로 해시 테이블을 구현했다…" }
+// 응답: 질문 1~2개. basis는 발자취 원문에 그대로 있는 구절 (비어 있으면 일반 질문, basis "")
+{ "mode": "reflect", "questions": [{ "question": "…?", "basis": "해시 테이블을 구현" }], "model": "…", "createdAt": "…" }
+```
+- 서버가 basis가 원문에 실제로 있는지 확인하고, 맞지 않는 질문은 버린다. 남는 질문이 없으면 `AI_ERROR`.
+- 답을 일기에 넣는 것은 프론트에서 발자취 끝에 `[회고] 질문\n답`으로 덧붙이고, 저장은 `save_diary`.
+
+### 7.2 `timecapsule` — AI 타임캡슐 (추억보관소)
+```json
+// 요청: 과거·최근 각각 최대 4편, 한 편 400자까지 ('오늘의 이야기' 본문). 과거 마지막과 최근 첫 기록은 30일 이상 차이
+{ "mode": "timecapsule", "past": [{ "date": "2026-03-02", "content": "…" }], "recent": [{ "date": "2026-11-10", "content": "…" }] }
+// 응답
+{ "mode": "timecapsule", "message": "…", "changes": [{ "past": "2026-03-02", "recent": "2026-11-10", "note": "…" }], "model": "…", "createdAt": "…" }
+```
+- `changes`의 날짜는 보낸 기록의 날짜만 허용한다(그 밖은 버림). 기록에 없는 성장·성취를 추측하지 않도록 프롬프트로 제한한다.
+- 프론트는 30일 이상 떨어진 기록이 없으면 호출하지 않고 안내만 한다.
+
+## 8. DB 적용 · 배포 상태 (2026-11-14)
+
+공개 키로 읽기만 해서 확인한 결과. 코드에 있다고 적용·배포된 것은 아니다.
+
+| 항목 | 상태 |
+| --- | --- |
+| migration `20261109000100` ~ `20261114002600_diary_footprint` | 적용됨 |
+| migration `20261114002700_choose_pet` | **미적용** |
+| migration `20261114002800_tutorial_seen` | **미적용** (번호를 `000100`에서 바꿈. 같은 내용이 예전 번호로 적용된 적 없음) |
+| Edge Function `recommend-career`, `delete-account` | 배포됨 |
+| `recommend-career`의 `reflect`·`timecapsule` 모드 | **재배포 필요** (배포 여부 미확인) |

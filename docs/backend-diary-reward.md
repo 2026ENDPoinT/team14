@@ -1,7 +1,7 @@
 # 일기 온기 보상: 백엔드 작업 요청 (3번 담당)
 
-> 작성: 1번 (feature/ux-korean-nav → feature/pet-home-figma에서 규칙 최종 수정) · 상태: **요청 (DB 미적용)**
-> 프론트는 아직 Mock(`frontend/src/features/diary/diaryMock.js`)으로만 동작한다. 실제 DB에 일기 저장·온기 지급은 없다.
+> 작성: 1번 (feature/ux-korean-nav → feature/pet-home-figma에서 규칙 최종 수정) · 상태: **처리됨** (2026-11-14 확인: `save_diary` 보상·발자취 칸 실제 DB 적용됨)
+> 아래는 작성 당시의 요청 기록이다. 지금 일기는 실제 `save_diary`로 저장·보상한다. 최신 규격은 `docs/API.md` 3장·4.6.
 > 아래 SQL은 초안이다. 검토 후 `supabase/migrations/`에 **새 파일**로 추가해 주세요.
 
 ## 1. 확정된 보상 규칙

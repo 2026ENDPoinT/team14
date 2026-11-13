@@ -1,7 +1,8 @@
 # 펫 HOME: 백엔드·에셋 작업 요청
 
-> 작성: 1번 (feature/pet-home-figma) · 상태: **요청 (DB 미적용)**
-> HOME 화면(`frontend/src/pages/HomePage.jsx`)은 Mock 펫 데이터로 동작한다. 출석·펫 이름 변경은 서버 기능이 없어 "준비 중" 안내만 하고, 온기를 지급하거나 차감하지 않는다.
+> 작성: 1번 (feature/pet-home-figma) · 상태: **처리됨** (2026-11-14 확인: `check_in`·`warmth_balance`·`change_nickname` 실제 DB 적용됨)
+> 아래는 작성 당시의 요청 기록이다. 지금 HOME은 실제 서버 펫·출석·닉네임 변경을 쓴다. 최신 규격은 `docs/API.md`.
+> 직무 미정 사용자의 펫 선택 저장은 이후 RPC `choose_pet`(migration `20261114002700`, **DB 미적용**)으로 추가되었다.
 
 ## 1. 확정된 규칙
 
