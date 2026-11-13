@@ -19,7 +19,6 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
   const [title, setTitle] = useState('')
   const [autoTitle, setAutoTitle] = useState('') // 세부 활동으로 자동 입력한 제목 (사용자가 고치지 않았는지 확인용)
   const [destination, setDestination] = useState(INBOX)
-  const [memo, setMemo] = useState('')
   const [saving, setSaving] = useState(false) // 서버에 저장하는 중 (연속 클릭 방지)
   const [saveError, setSaveError] = useState('')
 
@@ -39,7 +38,6 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
       setTitle('')
       setAutoTitle('')
       setDestination(INBOX)
-      setMemo('')
       setSaving(false)
       setSaveError('')
     }
@@ -102,7 +100,7 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
       theme,
       title: title.trim(),
       periodId: destination === INBOX ? null : destination,
-      memo: memo.trim(),
+      memo: '', // 메모는 노드를 만든 뒤 상세 화면에서 쓴다 (생성 시 입력 칸 없음)
       // 고른 카테고리·세부 활동 (로그인 상태면 노드와 함께 DB에 저장된다)
       categoryId: category.id,
       detailId: detail?.id ?? null,
@@ -164,17 +162,6 @@ export default function AddNodeModal({ open, periods, onClose, onCreate, customC
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
-        </label>
-
-        <label className="rm-field">
-          <span className="rm-eyebrow">짧은 메모</span>
-          <textarea
-            className="rm-input rm-textarea"
-            placeholder="간단한 메모 (선택)"
-            rows={3}
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-          />
         </label>
 
         {saveError && <p className="rm-field-note is-error" role="alert">{saveError}</p>}

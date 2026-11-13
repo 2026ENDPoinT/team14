@@ -15,6 +15,7 @@ import { hasSameTitle } from '../features/career/guide/guideData.js'
 import { BASE_CATEGORIES, nodeCategoryId } from '../features/roadmap/nodeCategories.js'
 import RoadmapTutorial from '../features/roadmap/tutorial/RoadmapTutorial.jsx'
 import { hasSeenRoadmapTutorial, markRoadmapTutorialSeen } from '../features/roadmap/tutorial/tutorialStorage.js'
+import { useOptionalAuth } from '../features/auth/AuthProvider.jsx'
 import { linkProblem } from '../features/roadmap/edgeRules.js'
 import { computeLayout, nextPosition, placeNode } from '../features/roadmap/layout.js'
 import {
@@ -213,18 +214,40 @@ export default function RoadmapPage() {
   const closeFilter = useCallback(() => setFilterOpen(false), [])
   const HIDDEN_NOTE = ' (지금 필터로 숨긴 종류라 화면에는 보이지 않아요)'
 
-  // 처음 접속했을 때만 튜토리얼 자동 표시 (캔버스가 자리 잡을 시간을 조금 준다)
+  // 처음 접속했을 때만 튜토리얼 자동 표시 (계정별 기록: 같은 브라우저의 다른 계정도 처음이면 나온다)
+  // - 로드맵을 다 불러와 캔버스(학기·카드)가 그려진 뒤에 시작한다 (불러오는 중·오류 화면에서는 시작하지 않음)
+  // - 로그인했으면 계정 id가 확인된 뒤에 판단한다 (로그인 전 예시 로드맵은 예전 공용 기록)
+  const auth = useOptionalAuth()
+  const tutorialUserId = mode === 'db' ? auth?.profile?.id ?? null : null
+  const tutorialReady = (mode === 'db' && Boolean(tutorialUserId)) || mode === 'mock'
+  const autoTried = useRef(false)
   useEffect(() => {
-    if (hasSeenRoadmapTutorial()) return undefined
-    const timer = setTimeout(() => setTutorialOpen(true), 500)
+    if (!tutorialReady || autoTried.current) return undefined
+    if (hasSeenRoadmapTutorial(tutorialUserId)) {
+      autoTried.current = true
+      return undefined
+    }
+    let tries = 0
+    let timer
+    const start = () => {
+      // 캔버스가 실제로 그려졌는지 확인하고 시작 (아직이면 잠시 뒤 다시, 최대 약 5초)
+      if (document.querySelector('.react-flow__viewport') || tries > 20) {
+        autoTried.current = true
+        setTutorialOpen(true)
+        return
+      }
+      tries += 1
+      timer = setTimeout(start, 250)
+    }
+    timer = setTimeout(start, 500) // 캔버스가 자리 잡을 시간을 조금 준다
     return () => clearTimeout(timer)
-  }, [])
+  }, [tutorialReady, tutorialUserId])
 
-  // 건너뛰거나 완료하면 기록해서 다시 자동으로 나타나지 않게 한다
+  // 건너뛰거나 완료하면 기록해서 다시 자동으로 나타나지 않게 한다 (계정별)
   const closeTutorial = useCallback(() => {
-    markRoadmapTutorialSeen()
+    markRoadmapTutorialSeen(tutorialUserId)
     setTutorialOpen(false)
-  }, [])
+  }, [tutorialUserId])
 
   // 학기 컬럼 배치 (가로 자동 확장): 노드 배치로부터 학기별 x·너비를 매번 다시 계산한다
   // - 노드를 오른쪽에 놓으면 그 학기가 넓어지고 뒤 학기는 밀린다. 노드를 빼거나 지우면 필요한 만큼으로 줄어든다
@@ -678,6 +701,16 @@ export default function RoadmapPage() {
           onChange={setFilterIds}
         >
           <AiGuideButton open={guideOpen} onClick={() => { setFilterOpen(false); setGuideOpen(true) }} />
+          {/* 튜토리얼 다시 보기 (기록과 상관없이 언제든 열린다) */}
+          <button
+            type="button"
+            className="rm-help"
+            onClick={() => { setFilterOpen(false); setTutorialOpen(true) }}
+            aria-label="로드맵 사용법 다시 보기"
+            title="로드맵 사용법 다시 보기"
+          >
+            ?
+          </button>
         </NodeFilter>
 
         {/* 비어 있는 로드맵 안내 (누를 수 없는 안내 문구) */}

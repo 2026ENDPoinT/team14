@@ -68,7 +68,8 @@ export default function NodeCard({
             {nodeKindLabel(node)}
           </span>
           <strong className="rm-card__title">{node.title}</strong>
-          <span className="rm-card__sub">{subtitle || '한 줄 부가 정보'}</span>
+          {/* 기록이 있으면 첫 줄만, 없으면 비워 둔다 (카드 크기는 그대로, 종류·이름이 가운데) */}
+          {subtitle && <span className="rm-card__sub">{subtitle}</span>}
         </>
       )}
     </button>
