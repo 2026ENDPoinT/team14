@@ -22,7 +22,7 @@ import RoadmapTutorial from '../features/roadmap/tutorial/RoadmapTutorial.jsx'
 import { recordAutoTutorial, shouldAutoStartTutorial } from '../features/tutorial/autoTutorial.js'
 import { useOptionalAuth } from '../features/auth/AuthProvider.jsx'
 import { linkProblem } from '../features/roadmap/edgeRules.js'
-import { AUTO_GAP, MEMO_KEY, MEMO_SIZE, MIN_NODE_Y, cardSize, computeLayout, memoSizeOf, nextPosition, nodesOverlap, placeNode, planNewNodeSpace, respaceCourses } from '../features/roadmap/layout.js'
+import { AUTO_GAP, MEMO_KEY, MEMO_MIN_Y, MEMO_SIZE, cardSize, computeLayout, memoSizeOf, nextPosition, nodesOverlap, placeNode, planNewNodeSpace, respaceCourses } from '../features/roadmap/layout.js'
 import {
   createEdge,
   createNode,
@@ -607,7 +607,7 @@ export default function RoadmapPage() {
   }, [isDb])
 
   // 메모 크기 바꾸기 (오른쪽 위 핸들). 왼쪽 아래 모서리를 고정하므로 높이가 바뀐 만큼 윗변(y)도 옮긴다.
-  // - 타임라인 위로 올라가거나 같은 학기의 다른 노드와 겹치면 바꾸지 않는다 (이전 크기 그대로)
+  // - 캔버스 위쪽 끝을 넘거나 같은 학기의 다른 노드와 겹치면 바꾸지 않는다 (이전 크기 그대로). 타임라인 선·학기 배지와는 겹쳐도 된다
   // - 너비가 커지면 학기 너비·뒤 학기 위치는 노드 크기로 다시 계산된다
   // - 저장: 크기는 node_documents.content.width·height, 위치는 기존 노드 이동 저장. 하나라도 실패하면 이전 값으로 되돌린다
   // - 관계선은 만들지 않는다 (겹침 판정만)
@@ -617,7 +617,7 @@ export default function RoadmapPage() {
     if (!node?.position) return { error: '메모를 찾을 수 없어요.' }
     const old = cardSize(node)
     const position = { x: node.position.x, y: node.position.y - (h - old.h) }
-    if (position.y < MIN_NODE_Y) return { error: '타임라인 위로는 키울 수 없어요.' }
+    if (position.y < MEMO_MIN_Y) return { error: '캔버스 위쪽 끝을 넘어서 키울 수 없어요.' } // 메모는 타임라인 선보다 위쪽에도 둘 수 있다
     const resized = { ...node, size: { w, h }, position }
     const hit = nodesRef.current.some(
       (n) => n.id !== nodeId && n.status === 'placed' && n.periodId === node.periodId && nodesOverlap(resized, n),

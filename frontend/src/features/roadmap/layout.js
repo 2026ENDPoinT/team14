@@ -46,8 +46,9 @@ export function canSitOnLine(node) {
 // 따로 저장하는 값 없이 위치(position)로만 판단한다.
 // 선 위에는 canSitOnLine 노드만 놓을 수 있으므로(placeNode) 종류는 다시 보지 않는다.
 // → 선 위의 전공·학업 노드를 다른 종류로 바꿔도, 선 위에 있는 동안은 작은 카드 그대로 (선 아래로 옮기면 일반 카드)
+// 메모는 선 위에 자유롭게 놓을 수 있지만 '선 위 작은 카드'로 보지 않는다 (교과목 자리 교환·밀어내기·작은 카드 표시 대상 아님)
 export function isOnLine(node) {
-  return node.status === 'placed' && Boolean(node.position) && node.position.y < TIMELINE_Y
+  return !isMemo(node) && node.status === 'placed' && Boolean(node.position) && node.position.y < TIMELINE_Y
 }
 
 // 작은 카드(제목만)로 보여 줄지: 교과목은 항상, 전공·학업 노드는 선 위에 있을 때만
@@ -133,10 +134,13 @@ export function nextPosition(nodes, periodId) {
 //   → 카드 일부가 경계를 넘어도 P에 놓이고 P가 넓어진다 (학기를 넓히려는 드래그)
 //   → 카드 전체가 다음 학기 선을 넘으면 다음 학기로 이동 (학기를 옮기려는 드래그)
 // - 그 밖(왼쪽으로 끌기, 보관함·새 노드): 카드 중심이 있는 학기 (findPeriodAt)
+// 메모는 타임라인 선보다 위쪽 빈 공간에도 놓을 수 있다: 캔버스 화면 이동 범위 맨 위(y -400)까지
+export const MEMO_MIN_Y = -400
 export function dropPeriodFor(node, topLeft, layout) {
   const { w, h } = cardSize(node)
   const cx = topLeft.x + w / 2
-  const cy = topLeft.y + h / 2
+  // 학기는 가로 위치로 정해진다. 선 위쪽(캔버스 y 0보다 위)에 놓은 메모도 같은 학기로 본다
+  const cy = isMemo(node) ? Math.max(0, topLeft.y + h / 2) : topLeft.y + h / 2
   const col = node.status === 'placed' && node.periodId ? layout.cols[node.periodId] : null
   if (col && cy >= 0 && cy <= CANVAS_HEIGHT && cx >= col.x && topLeft.x < col.x + col.width) {
     return layout.periods.find((p) => p.id === node.periodId) ?? null
@@ -225,12 +229,14 @@ export function placeNode(node, topLeft, nodes, layout, { gap = GAP } = {}) {
   // 장애물: 같은 학기의 다른 노드 + 그 학기 배지
   // (다른 학기 노드는 영역이 겹치지 않는다. 학기가 넓어지면 뒤 학기는 통째로 밀려나므로 장애물이 아니다.
   //  다음 학기 배지와의 간격은 EDGE 여백으로 지켜진다)
+  // 메모: 타임라인 선·학기 배지와는 겹쳐도 된다 (다른 노드와의 겹침만 피한다)
+  const memo = isMemo(node)
   const obstacles = [
     ...nodes
       .filter((n) => n.status === 'placed' && n.periodId === period.id && n.id !== node.id)
       .map((n) => nodeBox(n, layout))
       .filter(Boolean),
-    badgeBox(col),
+    ...(memo ? [] : [badgeBox(col)]),
   ]
   // 카드 왼쪽 위 꼭짓점이 놓일 수 있는 x 범위 (학기 너비·카드 너비 기준)
   const xRange = (width, size) => ({ minX: col.x, maxX: col.x + width - EDGE - size.w })
@@ -246,9 +252,10 @@ export function placeNode(node, topLeft, nodes, layout, { gap = GAP } = {}) {
   }
   // 그 밖의 경우(또는 선 위에 자리가 없을 때): 타임라인 선 아래 (교과목은 작은 카드, 나머지는 일반 카드)
   if (!box) {
-    const size = isCourse(node) ? PILL_SIZE : isMemo(node) ? MEMO_SIZE : CARD_SIZE
+    const size = isCourse(node) ? PILL_SIZE : memo ? cardSize(node) : CARD_SIZE
     const target = { x: cx - size.w / 2, y: cy - size.h / 2 }
-    const yRange = { minY: MIN_Y, maxY: CANVAS_HEIGHT - size.h }
+    // 메모는 선 위·선보다 위쪽 공간에도 놓을 수 있다 (MEMO_MIN_Y까지). 일반 노드는 선 아래만
+    const yRange = { minY: memo ? MEMO_MIN_Y : MIN_Y, maxY: CANVAS_HEIGHT - size.h }
     box = findFree(target, size, { ...xRange(maxWidth, size), ...yRange }, obstacles, Infinity, gap)
   }
   if (!box) return null
@@ -264,7 +271,6 @@ export function nodesOverlap(a, b) {
   if (!a.position || !b.position) return false
   return overlaps({ ...a.position, ...cardSize(a) }, { ...b.position, ...cardSize(b) })
 }
-export const MIN_NODE_Y = TIMELINE_Y + 16 // 선 아래 노드 윗변의 최소 y (placeNode의 MIN_Y와 같은 값)
 
 // ───────── 새 일반 활동의 기본 위치 (활동 추가 창에서 학기를 골랐을 때만) ─────────
 // 드래그·보관함 배치는 placeNode 그대로 (사용자가 놓은 자리 존중). 이미 저장된 노드 좌표는 바꾸지 않는다.
