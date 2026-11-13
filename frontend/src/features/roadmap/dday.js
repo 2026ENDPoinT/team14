@@ -9,6 +9,12 @@ const KST_DATE = new Intl.DateTimeFormat('en-CA', {
   day: '2-digit',
 })
 
+// 기회 탐색에서 가져온 노드(공모전·대외활동·채용): 원본 공고 마감일만 쓴다 (개인 목표일 입력·표시 없음)
+// 공고 정보(contest·job)를 못 불러온 경우도 연결 id로 판단한다
+export function usesSourceDeadline(node) {
+  return Boolean(node?.contest || node?.job || node?.contestId || node?.jobPostingId)
+}
+
 // 한국 시간 기준 오늘 'YYYY-MM-DD'
 export function todayKST(now = new Date()) {
   return KST_DATE.format(now) // en-CA 형식이 YYYY-MM-DD
