@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PetImage from '../pet/PetImage.jsx'
 import { getEnergyToNextStage, getStageByNumber, getStageInfo, getStageProgress } from '../pet/petStages.js'
@@ -131,12 +131,32 @@ function ChevronOnly() {
 //  1) 현재 학기 이후 과목을 새 직무에 맞게 재설정할지 (예/아니오)
 //  2) 새 직무에 맞는 펫 안내 (펫은 직무에 따라 자동으로 바뀌고 온기·성장 단계는 유지)
 //  → 확인하면 희망 직무가 바뀐다. 중간에 취소하면 아무것도 바뀌지 않는다.
-// 닉네임·학년은 '저장' 버튼으로 저장한다.
+// 닉네임·학년은 '저장' 버튼으로 저장한다. 닉네임은 서버 RPC(change_nickname)로만 바뀐다.
+//   실패하면 입력값을 그대로 두고 원인을 입력칸 아래에 보여 준다. 저장 중에는 버튼을 막는다 (중복 차감 방지)
 export function ProfilePanel({ profile, pet, onSave }) {
   const [draft, setDraft] = useState(profile)
   const [pendingJob, setPendingJob] = useState(null) // 확인 창에서 묻는 중인 새 직무
-  const set = (key) => (e) => setDraft((d) => ({ ...d, [key]: e.target.value }))
+  const [saving, setSaving] = useState(false)
+  const [nameError, setNameError] = useState('')
+  const set = (key) => (e) => {
+    setDraft((d) => ({ ...d, [key]: e.target.value }))
+    if (key === 'nickname') setNameError('')
+  }
   const nickname = draft.nickname.trim()
+
+  // 서버에 저장된 닉네임이 바뀌면(저장 성공) 입력칸도 그 값으로 맞춘다
+  useEffect(() => {
+    setDraft((d) => ({ ...d, nickname: profile.nickname }))
+  }, [profile.nickname])
+
+  async function handleSave() {
+    if (saving) return
+    setSaving(true)
+    setNameError('')
+    const result = await onSave({ ...profile, nickname, grade: Number(draft.grade) })
+    setSaving(false)
+    if (result?.error) setNameError(`${result.error} 닉네임이 바뀌지 않았어요.`)
+  }
 
   function pickJob(jobId) {
     if (jobId !== profile.desiredJob) setPendingJob(jobId)
@@ -148,8 +168,9 @@ export function ProfilePanel({ profile, pet, onSave }) {
       <ProfileBar profile={profile} pet={pet} />
       <label className="mp-field">
         <span className="mp-field__label">닉네임</span>
-        <input className="dy-input mp-input" value={draft.nickname} onChange={set('nickname')} maxLength={NICKNAME_MAX * 2} />
+        <input className="dy-input mp-input" value={draft.nickname} onChange={set('nickname')} maxLength={NICKNAME_MAX * 2} aria-label="닉네임" />
         <span className="mp-field__note">최대 {NICKNAME_MAX}자 · 첫 변경은 무료, 이후 변경마다 온기 {NICKNAME_COST}</span>
+        {nameError && <span className="mp-field__note is-error" role="alert">{nameError}</span>}
       </label>
       <label className="mp-field">
         <span className="mp-field__label">학년</span>
@@ -166,10 +187,10 @@ export function ProfilePanel({ profile, pet, onSave }) {
         <button
           type="button"
           className="dp-btn dp-btn--accent"
-          onClick={() => onSave({ ...profile, nickname, grade: Number(draft.grade) })}
-          disabled={!nickname}
+          onClick={handleSave}
+          disabled={!nickname || saving}
         >
-          저장
+          {saving ? '저장 중…' : '저장'}
         </button>
       </div>
 
