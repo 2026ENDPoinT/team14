@@ -10,6 +10,7 @@ import { jobTitle } from './jobGroups.js'
 import { JOB_TO_PET, PET_CHARACTERS } from '../home/petCharacter.js'
 import { useAuth } from '../auth/AuthProvider.jsx'
 import WithdrawDialog from './WithdrawDialog.jsx'
+import { NICKNAME_COST, NICKNAME_MAX } from '../profile/nickname.js'
 
 // 마이페이지 오른쪽 화면들. 왼쪽 메뉴에서 고른 것 하나만 보인다.
 // 모두 Mock 데이터 기반이며, 실제 저장·인증은 3번(인증·서비스) 연동 때 연결한다.
@@ -142,7 +143,8 @@ export function ProfilePanel({ profile, pet, onSave }) {
       <ProfileBar profile={profile} pet={pet} />
       <label className="mp-field">
         <span className="mp-field__label">닉네임</span>
-        <input className="dy-input mp-input" value={draft.nickname} onChange={set('nickname')} maxLength={20} />
+        <input className="dy-input mp-input" value={draft.nickname} onChange={set('nickname')} maxLength={NICKNAME_MAX * 2} />
+        <span className="mp-field__note">최대 {NICKNAME_MAX}자 · 첫 변경은 무료, 이후 변경마다 온기 {NICKNAME_COST}</span>
       </label>
       <label className="mp-field">
         <span className="mp-field__label">학년</span>

@@ -246,3 +246,86 @@ grant execute on function public.check_in() to authenticated;
 ```
 - `save_diary`의 +200도 같은 방식으로 `warmth_balance`를 함께 올려야 한다 (5번 항목).
 - 펫 조회 서비스가 생기면 HOME의 Mock 펫(`getPet`)을 실제 값으로 바꾼다 → 출석 전에도 실제 잔액 표시.
+
+## 9. 닉네임 변경 `change_nickname` (2026-11-13 추가, 펫 이름 변경을 대체)
+
+HOME 위쪽 이름이 **펫 이름 → 사용자 닉네임(`profiles.nickname`)**으로 바뀌었다. 예전 `rename_pet`(3장 4번) 대신 이 RPC를 만든다.
+프론트: `frontend/src/services/nickname.js` → `features/profile/nickname.js` (HOME·마이페이지 공용). **아직 서버에 없다 → 화면은 "준비 중" 안내만, 닉네임·온기 그대로.**
+
+규칙
+- 1~8자 (앞뒤 공백 제거, 이모지 1글자). 같은 닉네임이면 아무것도 바꾸지 않음(차감 없음, `changed=false`)
+- 첫 **실제** 변경은 무료, 이후 변경마다 `pets.warmth_balance`에서 300 차감. 잔액이 부족하면 아무것도 바꾸지 않음
+- 누적 온기(`energy`)·성장 단계·보상 기록은 그대로
+- 닉네임 저장과 차감은 **한 트랜잭션** (행 잠금으로 동시 요청 방지)
+- 온보딩에서 처음 정하는 닉네임(`complete_onboarding`)은 변경 횟수에 넣지 않는다
+
+**우회 막기 (중요)**: 지금은 `grant update (nickname, grade, interests) on profiles to authenticated`라서 브라우저에서 `profiles.nickname`을 직접 바꿀 수 있다 → 규칙·차감을 건너뛸 수 있음. 아래처럼 `nickname` 직접 수정 권한을 빼고 RPC로만 바꾸게 한다. (RLS 정책은 그대로, 컬럼 권한만 조정)
+
+응답 계약
+```json
+{ "profile": { "id": "…", "nickname": "콩떡", "…": "…" }, "cost": 300, "changed": true, "pet": { "energy": 1400, "warmth_balance": 1100, "stage": 2, "…": "…" } }
+```
+오류: `raise exception 'VALIDATION_ERROR' | 'INSUFFICIENT_WARMTH' | 'UNAUTHENTICATED' | 'NOT_FOUND' using detail = '한글 안내'` (프론트가 message로 코드, details로 문구를 읽는다)
+
+migration 초안 (**적용하지 않음**, 3번 검토 후 새 파일로 추가)
+```sql
+alter table public.profiles add column nickname_change_count integer not null default 0 check (nickname_change_count >= 0);
+
+-- 닉네임은 RPC로만 바꾼다 (학년·희망 직무 직접 수정 권한은 그대로)
+revoke update (nickname) on public.profiles from authenticated;
+-- (기존 grant가 컬럼 목록 grant라 위 한 줄로 nickname만 빠진다. 적용 후 grade·interests 수정이 되는지 확인)
+
+create function public.change_nickname(p_nickname text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_name text := btrim(coalesce(p_nickname, ''));
+  v_profile public.profiles;
+  v_pet public.pets;
+  v_cost integer := 0;
+begin
+  if v_uid is null then
+    raise exception 'UNAUTHENTICATED' using detail = '로그인이 필요합니다.';
+  end if;
+  if char_length(v_name) < 1 or char_length(v_name) > 8 then
+    raise exception 'VALIDATION_ERROR' using detail = '닉네임은 1~8자로 입력해 주세요.';
+  end if;
+
+  select * into v_profile from public.profiles where id = v_uid for update;
+  if not found then
+    raise exception 'NOT_FOUND' using detail = '프로필이 없습니다.';
+  end if;
+
+  -- 같은 닉네임: 아무것도 바꾸지 않음
+  if v_profile.nickname is not distinct from v_name then
+    return jsonb_build_object('profile', to_jsonb(v_profile), 'cost', 0, 'changed', false, 'pet', public.my_pet_json(v_uid));
+  end if;
+
+  if v_profile.nickname_change_count > 0 then
+    v_cost := 300;
+    select * into v_pet from public.pets where user_id = v_uid for update;
+    if not found or v_pet.warmth_balance < v_cost then
+      raise exception 'INSUFFICIENT_WARMTH' using detail = '온기가 부족해요. 닉네임 변경에는 온기 300이 필요해요.';
+    end if;
+    update public.pets set warmth_balance = warmth_balance - v_cost, updated_at = now() where user_id = v_uid;
+    -- 사용 기록을 남길지(예: warmth_spends 테이블)는 3번이 결정
+  end if;
+
+  update public.profiles
+    set nickname = v_name, nickname_change_count = nickname_change_count + 1
+    where id = v_uid
+    returning * into v_profile;
+
+  return jsonb_build_object('profile', to_jsonb(v_profile), 'cost', v_cost, 'changed', true, 'pet', public.my_pet_json(v_uid));
+end;
+$$;
+
+revoke all on function public.change_nickname(text) from public, anon;
+grant execute on function public.change_nickname(text) to authenticated;
+```
+- `pets.name`·`rename_pet`(3장)은 더 이상 필요 없다. (HOME에 펫 이름을 보이지 않음)
+- 적용 후 확인: 첫 변경 무료 → 두 번째 300 차감 → 잔액 부족 시 거절(닉네임 그대로) → 같은 이름 무료 → 브라우저에서 `profiles.nickname` 직접 update가 거절되는지.

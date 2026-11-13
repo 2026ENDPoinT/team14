@@ -78,6 +78,11 @@
   color: #000;
   white-space: nowrap;
 }
+/* 닉네임이 아직 없을 때 안내 (흐리게) */
+.hm-name__text.is-empty {
+  font-weight: 600;
+  color: #9a8e7f;
+}
 /* 수정 아이콘: 이름 오른쪽에 붙여 두어 이름은 가운데 그대로 */
 .hm-name__edit {
   position: absolute;
@@ -371,42 +376,52 @@
   }
 }
 
-/* ───── 온기 지급 연출 (서버 확인 후에만) ───── */
+/* ───── 온기 지급 연출 (서버 확인 후에만) ─────
+   펫 위로 "+N 온기" 배지가 떠오르고, 햇살 조각이 오른쪽 위 온기 표시로 날아간다 (RewardBurst.jsx)
+   좌표는 화면 픽셀(position: fixed) 기준. 색은 온기 표시와 같은 살구·갈색 */
 .hm-burst {
-  position: absolute;
-  left: 50%;
-  top: 50%;
+  position: fixed;
+  inset: 0;
+  z-index: 30; /* 펫·이름 위, 공통 메뉴(35) 아래 */
   pointer-events: none;
 }
 .hm-burst__text {
-  position: absolute;
-  left: 0;
-  top: 0;
-  transform: translate(-50%, 0);
-  font-size: 13px;
+  position: fixed;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: #fff2e4;
+  box-shadow: 0 6px 18px rgba(137, 107, 84, 0.16);
+  font-size: 16px;
   font-weight: 800;
   color: #896b54;
   white-space: nowrap;
-  animation: hm-rise 1.6s var(--hm-ease) forwards;
+  transform: translate(-50%, -50%);
+  animation: hm-rise 1.9s var(--hm-ease) forwards;
 }
-.hm-burst__dot {
-  position: absolute;
-  left: -3px;
-  top: -3px;
-  width: 6px;
-  height: 6px;
+.hm-burst__sun {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
   border-radius: 50%;
-  background: #dca36c;
-  animation: hm-spark 1.2s var(--hm-ease) forwards;
+  background: radial-gradient(circle, #ffe2a8 0 35%, #f4b86a 70%);
+  box-shadow: 0 0 8px rgba(244, 184, 106, 0.8);
+  opacity: 0;
+  animation: hm-fly 1.2s cubic-bezier(0.55, 0, 0.35, 1) var(--d) forwards;
 }
 @keyframes hm-rise {
-  0% { opacity: 0; transform: translate(-50%, 6px); }
-  20% { opacity: 1; }
-  100% { opacity: 0; transform: translate(-50%, 34px); }
+  0% { opacity: 0; transform: translate(-50%, -20%) scale(0.85); }
+  15% { opacity: 1; transform: translate(-50%, -90%) scale(1.05); }
+  25% { transform: translate(-50%, -100%) scale(1); }
+  75% { opacity: 1; transform: translate(-50%, -120%); }
+  100% { opacity: 0; transform: translate(-50%, -150%); }
 }
-@keyframes hm-spark {
-  0% { opacity: 0.9; transform: rotate(var(--a)) translateX(0) scale(1); }
-  100% { opacity: 0; transform: rotate(var(--a)) translateX(26px) scale(0.4); }
+/* 펫 둘레로 퍼졌다가(--sx, --sy) 온기 표시(--tx, --ty)로 날아가며 작아진다 */
+@keyframes hm-fly {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.6); }
+  20% { opacity: 1; transform: translate(var(--sx), var(--sy)) scale(1.1); }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.4); }
 }
 
 /* ───── 안내 메시지 ───── */
@@ -433,6 +448,11 @@
   transform: translate(-50%, 0);
 }
 
+@keyframes hm-fade {
+  0%, 100% { opacity: 0; transform: translate(-50%, -100%); }
+  15%, 80% { opacity: 1; transform: translate(-50%, -100%); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .home-page::before,
   .home-page::after,
@@ -441,9 +461,12 @@
   .hm-quote__text {
     animation: none;
   }
-  .hm-burst__text,
-  .hm-burst__dot {
-    animation-duration: 0.01s;
+  /* 움직임 줄이기: 날아가는 햇살 없이 배지만 잠깐 보여 준다 */
+  .hm-burst__sun {
+    display: none;
+  }
+  .hm-burst__text {
+    animation: hm-fade 1.2s linear forwards;
   }
   .hm-quote,
   .hm-name__edit {

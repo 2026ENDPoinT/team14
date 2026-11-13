@@ -4,6 +4,7 @@ import { EMPTY_PET, usePet } from '../features/pet/petStore.js'
 import { useAuth } from '../features/auth/AuthProvider.jsx'
 import { JOB_TO_PET, PET_CHARACTERS } from '../features/home/petCharacter.js'
 import { updateMyDesiredJob } from '../services/api.js'
+import { saveNickname } from '../features/profile/nickname.js'
 import { mockProfile, mockSettings } from '../features/mypage/myPageMock.js'
 import { Icon } from '../features/mypage/ui.jsx'
 import {
@@ -57,7 +58,10 @@ export default function MyPage() {
   // 로그인했으면 희망 직무는 DB 프로필(interests 첫 번째 = 대표 직무) 값을 쓴다. 나머지 항목은 아직 Mock
   const auth = useAuth()
   const signedIn = auth.status === 'ready'
-  const shownProfile = signedIn ? { ...profile, desiredJob: auth.profile.interests?.[0] ?? null } : profile
+  // 닉네임도 로그인했으면 DB 프로필 값 (HOME과 같은 값). 바꿀 때는 HOME과 같은 규칙(서버 RPC change_nickname)
+  const shownProfile = signedIn
+    ? { ...profile, nickname: auth.profile.nickname ?? '', desiredJob: auth.profile.interests?.[0] ?? null }
+    : profile
 
   useEffect(() => {
     if (!toast) return
@@ -75,8 +79,19 @@ export default function MyPage() {
   // ※ 과목 재설정은 실제로는 서버 RPC로 처리해야 한다. (지금은 Mock: 안내만)
   async function saveProfile(next, choices) {
     if (!choices) {
-      setProfile(next)
-      setToast('프로필을 저장했어요.')
+      // 닉네임: 로그인했으면 서버 RPC로만 바꾼다 (첫 변경 무료·이후 온기 300, 같은 이름이면 그대로).
+      //   실패하면 닉네임은 그대로 두고 안내만. 학년은 아직 화면에서만 바뀐다 (Mock)
+      let nicknameNote = ''
+      if (signedIn) {
+        const saved = await saveNickname(next.nickname, { current: shownProfile.nickname, applyProfile: auth.applyProfile })
+        if (saved.error) {
+          setToast(`${saved.error} 닉네임이 바뀌지 않았어요.`)
+          return
+        }
+        if (saved.ok) nicknameNote = ` ${saved.message}`
+      }
+      setProfile({ ...next, nickname: signedIn ? profile.nickname : next.nickname })
+      setToast(`프로필을 저장했어요.${nicknameNote}`)
       return
     }
     const newPet = JOB_TO_PET[next.desiredJob]
