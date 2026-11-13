@@ -4,7 +4,8 @@ import { useEffect, useRef } from 'react'
 // - categories: 학기에 배치된 활동이 실제로 쓰는 종류만 (기본·직접 추가 종류 모두. 계산은 RoadmapPage)
 // - selected: 보이게 할 카테고리 id 목록. 비어 있으면 전체 보기
 // - 화면 표시만 바꾼다 (노드 데이터·위치·학기는 그대로)
-export default function NodeFilter({ open, onToggle, onClose, categories, selected, onChange }) {
+// - children: 필터 버튼 바로 옆에 붙일 버튼 (AI 길잡이)
+export default function NodeFilter({ open, onToggle, onClose, categories, selected, onChange, children }) {
   const ref = useRef(null)
 
   // 팝오버 밖을 누르면 닫기
@@ -35,6 +36,7 @@ export default function NodeFilter({ open, onToggle, onClose, categories, select
         종류 필터
         {active && <span className="rm-filter__count">{selected.length}</span>}
       </button>
+      {children}
       {/* 걸러 보는 중일 때: 상태와 [전체 보기]를 버튼 옆에 바로 보여 준다 */}
       {active && !open && (
         <span className="rm-filter__status">

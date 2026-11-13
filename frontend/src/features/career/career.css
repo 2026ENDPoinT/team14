@@ -121,6 +121,7 @@
   margin-top: 14px;
   border-top: 1px solid rgba(0, 0, 0, .1);
 }
+
 .career-panel .ob-ai-career__tag {
   display: inline-block;
   margin-left: 7px;
@@ -131,6 +132,7 @@
   font-size: 10px;
   font-weight: 800;
 }
+
 .career-panel .ob-chip.is-selected .ob-ai-career__tag {
   background: rgba(255, 255, 255, .18);
   color: #fff;

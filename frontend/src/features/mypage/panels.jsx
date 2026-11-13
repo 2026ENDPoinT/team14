@@ -7,7 +7,7 @@ import { getTodayKST } from '../diary/dateUtils.js'
 import { Group, LinkRow, PanelTitle, Row, Segment, Toggle } from './ui.jsx'
 import JobPicker from './JobPicker.jsx'
 import { jobTitle } from './jobGroups.js'
-import { JOB_TO_PET, PET_CHARACTERS } from '../home/petCharacter.js'
+import { JOB_TO_PET, PET_CHARACTERS, petAssetUrl, resolvePetCharacter } from '../home/petCharacter.js'
 import { useAuth } from '../auth/AuthProvider.jsx'
 import WithdrawDialog from './WithdrawDialog.jsx'
 import { NICKNAME_COST, NICKNAME_MAX } from '../profile/nickname.js'
@@ -18,20 +18,36 @@ import { canNotify, showDiaryNotification } from '../diary/DiaryReminder.jsx'
 // 닉네임·학년·이메일·희망 직무·일기·펫은 서버 값. 설정은 이 브라우저에 저장(settingsStore). 일기 알림은 브라우저 알림(DiaryReminder)
 
 // 펫 아이콘 동그라미 (학기 배지와 같은 연노랑)
-// ※ 나중에 단계에 맞는 펫 이미지(5가지 중 1개)가 들어갈 자리. 지금은 임시 아이콘(PetImage)
-export function Avatar({ stage, size = 84 }) {
+// 희망 직무 → 펫 종류(펭귄·수달·검은 고양이·햄스터·토끼), 단계 → 이미지 (HOME과 같은 그림)
+// - 1단계(새싹)는 모든 직무 공통 그림, 2~4단계(아기·꼬마·어른 펫)는 펫 종류마다 다른 그림
+// - 단계는 누적 온기 기준 (서버 stage가 더 높으면 그 값 — HOME·일기와 같은 규칙)
+// - 직무가 '아직 정하지 않음'이라 펫 종류를 모르면 임시 아이콘(PetImage)
+export function Avatar({ pet, job, size = 84 }) {
+  const stage = petStage(pet)
+  const character = resolvePetCharacter(pet, job ? [job] : [])
+  const imageUrl = petAssetUrl(character, stage)
+  const label = character ? `${PET_CHARACTERS[character].label} ${getStageByNumber(stage).name}` : getStageByNumber(stage).name
   return (
     <span className="mp-avatar" style={{ width: size, height: size }}>
-      <PetImage stage={stage} size={Math.round(size * 0.76)} />
+      {imageUrl ? (
+        <img className="mp-avatar__img" src={imageUrl} alt={`내 펫: ${label}`} width={Math.round(size * 0.8)} height={Math.round(size * 0.8)} />
+      ) : (
+        <PetImage stage={stage} size={Math.round(size * 0.76)} />
+      )}
     </span>
   )
+}
+
+// 펫 단계 (누적 온기 기준, 서버 stage가 더 높으면 그 값)
+function petStage(pet) {
+  return Math.max(pet?.stage ?? 1, getStageInfo(pet?.energy ?? 0).stage)
 }
 
 // 프로필 바: 펫 아이콘 + 닉네임 + 학년 (+ 오른쪽 버튼)
 function ProfileBar({ profile, pet, action }) {
   return (
     <div className="mp-profile">
-      <Avatar stage={pet.stage} />
+      <Avatar pet={pet} job={profile.desiredJob} />
       <div className="mp-profile__text">
         <p className="mp-profile__name">{profile.nickname}</p>
         <p className="mp-profile__univ">{profile.grade}학년</p>
@@ -82,7 +98,7 @@ export function AccountPanel({ profile, pet }) {
       <PanelTitle title="계정 센터" desc="로그인 정보와 계정 설정을 한곳에서 관리해 보세요." />
       <div className="mp-card">
         <button type="button" className="mp-row mp-row--link mp-row--big" onClick={() => setSub('personal')}>
-          <Avatar stage={pet.stage} size={56} />
+          <Avatar pet={pet} job={profile.desiredJob} size={56} />
           <div className="mp-row__text">
             <p className="mp-row__label">프로필</p>
             <p className="mp-row__hint">{profile.nickname} · {profile.grade}학년</p>
@@ -298,14 +314,14 @@ export function DisplayPanel({ settings, update }) {
 }
 
 // ── 내 활동: 내 기록 요약 (다른 사용자와 비교하지 않음) ──
-export function ActivityPanel({ pet }) {
+export function ActivityPanel({ profile, pet }) {
   useDiaries() // 내 일기를 서버에서 불러온다
   const today = getTodayKST()
   const allDiaries = listDiaries('0000-01-01', today)
   const monthDiaries = allDiaries.filter((d) => d.date.startsWith(today.slice(0, 7)))
   const recent = [...allDiaries].reverse().slice(0, 3)
   // 단계: 누적 온기 기준 (서버 stage가 더 높으면 그 값 — 일기·HOME과 같은 규칙)
-  const stage = getStageByNumber(Math.max(pet.stage ?? 1, getStageInfo(pet.energy).stage))
+  const stage = getStageByNumber(petStage(pet))
   const nextMin = getEnergyToNextStage(pet.energy) // 다음 단계 기준 (최고 단계면 null)
 
   return (
@@ -319,7 +335,7 @@ export function ActivityPanel({ pet }) {
 
       <Group title="나의 펫">
         <div className="mp-pet">
-          <Avatar stage={stage.stage} size={64} />
+          <Avatar pet={pet} job={profile?.desiredJob} size={64} />
           <div className="mp-pet__info">
             <p className="mp-row__label">{stage.stage}단계 · {stage.name}</p>
             <div className="dy-bar" aria-hidden="true">

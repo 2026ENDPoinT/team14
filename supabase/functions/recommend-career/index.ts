@@ -16,8 +16,21 @@
 //
 // 필요한 환경 변수: GEMINI_API_KEY (Supabase secrets), SUPABASE_URL·SUPABASE_ANON_KEY (자동 제공)
 // 로그: 요청 내용(키워드)과 키는 남기지 않는다. 실패 시 모델 이름과 HTTP 상태만 남긴다.
+//
+// [AI 길잡이 모드] 요청에 mode가 있으면 로드맵 'AI 길잡이'로 처리한다 (guide.ts에 요청·응답 형식).
+//   mode가 없으면 위의 온보딩 추천과 완전히 같게 동작한다.
+//   길잡이 결과·성적·일기는 저장하지 않는다. 같은 인증·Secret(GEMINI_API_KEY)·모델 순서를 쓴다.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import {
+  buildResponseSchema,
+  buildSystemPrompt,
+  evidenceOptions,
+  type GuideInput,
+  LIMITS,
+  parseGuideInput,
+  validateGuideOutput,
+} from './guide.ts'
 
 // 무료 한도가 있는 Flash-Lite 모델. 앞의 모델이 없거나(404), 한도를 넘었거나(429),
 // Gemini 서버가 일시적으로 응답하지 못하면(500·502·503·504, 시간 초과·네트워크 오류) 다음 모델을 쓴다.
@@ -121,6 +134,77 @@ async function askGemini(model: string, apiKey: string, keywords: string[]) {
   }
 }
 
+const GUIDE_TIMEOUT_MS = 20000 // 길잡이는 결과가 길어서 모델 하나당 조금 더 기다린다
+
+async function askGeminiGuide(model: string, apiKey: string, input: GuideInput) {
+  const refs = evidenceOptions(input)
+  const response = await fetch(`${API_BASE}/${model}:generateContent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+    signal: AbortSignal.timeout(GUIDE_TIMEOUT_MS),
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: buildSystemPrompt(JOBS, input.mode) }] },
+      contents: [{ role: 'user', parts: [{ text: JSON.stringify({ ...input, evidenceOptions: refs }) }] }],
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 3072, // 비용 제한: 직무 3개 + 활동 5개가 들어갈 만큼만
+        responseMimeType: 'application/json',
+        responseSchema: buildResponseSchema(JOBS, refs),
+      },
+    }),
+  })
+  if (!response.ok) {
+    await response.body?.cancel()
+    return { status: response.status }
+  }
+  const data = await response.json()
+  const text = (data?.candidates?.[0]?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? '').join('')
+  try {
+    return { status: 200, result: validateGuideOutput(JSON.parse(text), input, JOBS) }
+  } catch {
+    return { status: 200, result: null }
+  }
+}
+
+// AI 길잡이 처리 (로그인 확인은 끝난 상태). 저장하지 않는다.
+async function handleGuide(body: unknown) {
+  const parsed = parseGuideInput(body, JOBS, KEYWORDS)
+  if ('error' in parsed) return fail(400, 'VALIDATION_ERROR', parsed.error)
+  const input = parsed.input
+
+  const apiKey = (Deno.env.get('GEMINI_API_KEY') ?? '').trim()
+  if (!apiKey) return fail(500, 'SERVER_ERROR', 'AI 추천 설정이 없습니다.')
+
+  let lastStatus = 0
+  for (const model of MODELS) {
+    let answer
+    try {
+      answer = await askGeminiGuide(model, apiKey, input)
+    } catch {
+      console.error(`recommend-career(guide): ${model} 요청 실패(시간 초과·네트워크) → 다음 모델`)
+      lastStatus = 504
+      continue
+    }
+    lastStatus = answer.status
+    if (TRY_NEXT.has(answer.status)) {
+      console.error(`recommend-career(guide): ${model} HTTP ${answer.status} → 다음 모델`)
+      continue
+    }
+    if (answer.status !== 200) {
+      console.error(`recommend-career(guide): ${model} HTTP ${answer.status}`)
+      return fail(502, 'AI_ERROR', 'AI 추천을 받지 못했습니다.')
+    }
+    if (!answer.result) {
+      console.error(`recommend-career(guide): ${model} 응답 검증 실패`)
+      return fail(502, 'AI_ERROR', 'AI 추천 결과가 올바르지 않습니다.')
+    }
+    return json({ mode: input.mode, ...answer.result, model, recommendedAt: new Date().toISOString() })
+  }
+  if (lastStatus === 429) return fail(429, 'RATE_LIMITED', 'AI 추천 사용 한도를 넘었습니다. 잠시 후 다시 시도해 주세요.')
+  if (lastStatus >= 500) return fail(502, 'AI_ERROR', 'AI 추천 서버가 잠시 응답하지 않습니다.')
+  return fail(502, 'AI_ERROR', '사용할 수 있는 AI 모델이 없습니다.')
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (request.method !== 'POST') return fail(405, 'VALIDATION_ERROR', 'POST만 지원합니다.')
@@ -138,10 +222,15 @@ Deno.serve(async (request) => {
   // 2. 입력 확인: 정해진 역량 키워드만, 중복 제거
   let body: unknown
   try {
-    body = await request.json()
+    const text = await request.text()
+    // 요청 길이 제한 (토큰 비용 보호). 온보딩 요청은 키워드 15개라 이보다 훨씬 짧다
+    if (text.length > LIMITS.bodyChars) return fail(400, 'VALIDATION_ERROR', '요청이 너무 깁니다.')
+    body = JSON.parse(text)
   } catch {
     return fail(400, 'VALIDATION_ERROR', '요청 형식이 올바르지 않습니다.')
   }
+  // AI 길잡이 모드
+  if ((body as { mode?: unknown })?.mode !== undefined) return handleGuide(body)
   const raw = (body as { keywords?: unknown })?.keywords
   if (!Array.isArray(raw) || raw.length === 0 || raw.length > MAX_KEYWORDS) {
     return fail(400, 'VALIDATION_ERROR', `keywords는 1~${MAX_KEYWORDS}개여야 합니다.`)
