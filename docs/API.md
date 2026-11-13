@@ -653,7 +653,7 @@ selectCourses({
 { "mode": "reflect", "questions": [{ "question": "…?", "basis": "해시 테이블을 구현" }], "model": "…", "createdAt": "…" }
 ```
 - 서버가 basis가 원문에 실제로 있는지 확인하고, 맞지 않는 질문은 버린다. 남는 질문이 없으면 `AI_ERROR`.
-- 답을 일기에 넣는 것은 프론트에서 발자취 끝에 `[회고] 질문\n답`으로 덧붙이고, 저장은 `save_diary`.
+- 화면은 질문만 보여 주고, 답은 사용자가 발자취 칸에 직접 쓴다(저장은 `save_diary`). 발자취가 비어 있으면 화면이 정해 둔 작성 질문을 보여 주고 AI를 부르지 않는다 (서버는 빈 `content`도 받을 수 있음).
 
 ### 7.2 `timecapsule` — AI 타임캡슐 (추억보관소)
 ```json
