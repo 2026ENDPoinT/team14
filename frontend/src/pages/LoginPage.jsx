@@ -149,7 +149,6 @@ export default function LoginPage() {
       <main className="lg-main">
         {/* 서비스 이름 ([미확정] Campus Roadmap은 가칭) */}
         <header className="lg-brand">
-          <span className="lg-logo" aria-hidden="true"><RoadmapMark /></span>
           <p className="lg-name">Campus <strong>Roadmap</strong></p>
           <p className="lg-tagline">계획하고, 기록하고, 펫과 함께 자라는 대학생활</p>
         </header>
@@ -194,15 +193,18 @@ export default function LoginPage() {
 
                 <label className="lg-field">
                   <span className="lg-field__label">이메일</span>
-                  <input
-                    className="lg-input"
-                    type="email"
-                    placeholder="example@university.ac.kr"
-                    aria-label="이메일"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                  />
+                  <span className="lg-icon-field">
+                    <input
+                      className="lg-input"
+                      type="email"
+                      placeholder="example@university.ac.kr"
+                      aria-label="이메일"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                    />
+                    <span className="lg-icon-field__icon" aria-hidden="true"><UserIcon /></span>
+                  </span>
                 </label>
 
                 {mode !== 'reset' && (
@@ -272,14 +274,13 @@ export default function LoginPage() {
   )
 }
 
-// 로고: 위로 이어지는 로드맵 노드 3개 (마지막은 노란 점)
-function RoadmapMark() {
+// 이메일 칸 사람 아이콘
+function UserIcon() {
   return (
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
-      <path d="M5 18L12 12L19 6" stroke="#bdbdbd" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="5" cy="18" r="2.8" fill="#d0d0d0" />
-      <circle cx="12" cy="12" r="2.8" fill="#9a9a9a" />
-      <circle cx="19" cy="6" r="3.2" fill="#f2d68f" />
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="8.5" r="3.5" />
+      <path d="M5 19.5c1.2-3.3 3.9-5 7-5s5.8 1.7 7 5" />
     </svg>
   )
 }
