@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { TrashIcon } from '../roadmap/icons.jsx'
 import { countChars, REWARD_MIN_CHARS } from './countChars.js'
-import { deleteDiary, getDiaryByDate, hasDiaryRewardToday, saveDiary } from './diaryStore.js'
+import { deleteDiary, DIARY_REWARD, getDiaryByDate, hasDiaryRewardToday, saveDiary } from './diaryStore.js'
 import { getTodayKST } from './dateUtils.js'
 import PhotoField from '../photos/PhotoField.jsx'
 import usePhotoDraft from '../photos/usePhotoDraft.js'
 import WarmthEffect from './WarmthEffect.jsx'
+import FootprintField from './FootprintField.jsx'
+import { PHOTO_MAX_COUNT } from '../../services/photos.js'
+import './DiaryModal.css'
 
 const WEEKDAYS = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일']
 
@@ -31,6 +34,9 @@ function formatDateLong(date) {
 // onChanged: 저장·삭제 후 달력(노란 점)을 다시 그리게 알린다.
 export default function DiaryModal({ date, activities = [], onClose, onChanged }) {
   const [content, setContent] = useState(() => getDiaryByDate(date)?.content ?? '')
+  // 오늘의 발자취 (선택): 글 + 연결한 로드맵 노드
+  const [footprint, setFootprint] = useState(() => getDiaryByDate(date)?.footprint ?? '')
+  const [linkedNodeId, setLinkedNodeId] = useState(() => getDiaryByDate(date)?.linkedNodeId ?? null)
   const [isExisting, setIsExisting] = useState(() => Boolean(getDiaryByDate(date)))
   const [editing, setEditing] = useState(false) // 이미 쓴 일기를 고치는 중인지
   // 처음 열 때 일기가 있으면 그 사진을 불러온다 (새로 쓴 일기는 저장 뒤 commit에 일기 id를 넘긴다)
@@ -41,13 +47,33 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
   const [busy, setBusy] = useState(false) // 저장·삭제 요청 중 (중복 클릭 방지)
   const [saveError, setSaveError] = useState('') // 저장 실패 안내 (사라지지 않고 다시 시도할 때까지 남는다)
   const textareaRef = useRef(null)
+  const photoInputRef = useRef(null) // 이야기 칸 안 사진 추가 동그라미가 여는 파일 선택 창
+  const [photoNotice, setPhotoNotice] = useState('') // 사진 추가 안내 (형식·크기·장수 초과)
   const endReward = useCallback(() => setReward(null), [])
 
   const readOnly = isExisting && !editing
   const isToday = date === getTodayKST() // 온기는 오늘(KST) 날짜 일기에만
   const charCount = countChars(content)
   const meetsLength = charCount >= REWARD_MIN_CHARS
-  const progress = Math.min(100, Math.round((charCount / REWARD_MIN_CHARS) * 100))
+
+  // 글자 수 안내 (보상 판단은 서버가 다시 한다)
+  const rewardHint = !isToday
+    ? '지난 날짜의 일기는 온기 없이 저장돼요.'
+    : hasDiaryRewardToday()
+      ? '오늘 일기 온기는 이미 받았어요.'
+      : meetsLength
+        ? '저장하면 온기를 받을 수 있어요.'
+        : `${REWARD_MIN_CHARS - charCount}자 더 쓰면 온기를 받을 수 있어요.`
+
+  // 20자 게이지: 오늘 일기를 쓰거나 고칠 때, 아직 오늘 일기 온기를 받지 않았을 때만 (보상 판단은 서버가 다시 함)
+  const showGoal = !readOnly && isToday && !hasDiaryRewardToday()
+
+  // 사진 고르기 (이야기 칸 안 동그라미 버튼). 저장 버튼을 눌러야 올라간다
+  function pickPhotos(e) {
+    setPhotoNotice(photos.addFiles(e.target.files) || '')
+    e.target.value = '' // 같은 파일을 다시 고를 수 있게
+    setSaveError('')
+  }
 
   // 쓸 수 있는 상태가 되면 입력칸에 바로 커서를 둔다
   useEffect(() => {
@@ -75,12 +101,13 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
     setBusy(true)
     setSaveError('')
     const stored = getDiaryByDate(date)
-    // 글이 바뀌었거나 새 일기일 때만 일기 저장(보상 판정 포함). 사진만 바뀌었으면 건너뛴다
-    const writeText = !stored || stored.content !== content || !photos.dirty
+    // 글(이야기·발자취·연결 활동)이 바뀌었거나 새 일기일 때만 일기 저장(보상 판정 포함). 사진만 바뀌었으면 건너뛴다
+    const textChanged = !stored || stored.content !== content || stored.footprint !== footprint || (stored.linkedNodeId ?? null) !== linkedNodeId
+    const writeText = textChanged || !photos.dirty
     let diaryId = stored?.id
     let reward = null
     if (writeText) {
-      const result = await saveDiary({ date, content })
+      const result = await saveDiary({ date, content, footprint, linkedNodeId })
       if (result.error) {
         // 저장 실패: 입력한 내용은 그대로 두고, 보상도 없다 (서버가 저장과 보상을 한 번에 처리)
         setBusy(false)
@@ -114,7 +141,10 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
 
   // 수정 취소: 저장된 내용으로 되돌린다
   function handleCancel() {
-    setContent(getDiaryByDate(date)?.content ?? '')
+    const stored = getDiaryByDate(date)
+    setContent(stored?.content ?? '')
+    setFootprint(stored?.footprint ?? '')
+    setLinkedNodeId(stored?.linkedNodeId ?? null)
     photos.reset()
     setSaveError('')
     setEditing(false)
@@ -130,6 +160,8 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
       return
     }
     setContent('')
+    setFootprint('')
+    setLinkedNodeId(null)
     photos.clear()
     setIsExisting(false)
     setEditing(false)
@@ -140,14 +172,25 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
   return (
     <div className="dp-modal" role="dialog" aria-modal="true" aria-label={`${formatDateLong(date)} 일기`}>
       <div className="dp-modal__backdrop" onClick={onClose} />
-      <section className="dp-modal__card">
+      <section className="dp-modal__card dm-card">
         <header className="dp-modal__head">
-          <div>
+          <div className="dm-head">
             <p className="rm-eyebrow">나의 하루</p>
-            <h2 className="dp-modal__title">{formatDateLong(date)}</h2>
-            <p className="rm-muted dp-modal__sub">
-              {isExisting ? '노란 점으로 남긴 하루' : '아직 비어 있는 하루'}
-            </p>
+            <div className="dm-head__row">
+              <h2 className="dp-modal__title dm-title">{formatDateLong(date)}</h2>
+              {/* 이날 마감·목표일인 주요 활동 (로드맵 노드, 읽기만): 날짜 옆에 작게 */}
+              {activities.length > 0 && (
+                <ul className="dm-acts" aria-label="이날의 활동">
+                  {activities.map((node) => (
+                    <li key={node.id} className="dm-act" title={`${node.title} (${node.dueDate ? '목표일' : '마감일'})`}>
+                      <span className={`dm-act__dot ${node.completed ? 'is-done' : ''}`} aria-hidden="true" />
+                      <span className="dm-act__title">{node.title}</span>
+                      <span className="dm-act__kind">{node.dueDate ? '목표일' : '마감일'}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
           <div className="rm-modal__actions">
             {isExisting && (
@@ -158,74 +201,74 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
             <button type="button" className="dp-text-btn" onClick={onClose}>닫기</button>
           </div>
         </header>
-        <hr className="rm-divider dp-divider" />
 
-        {/* 이날 마감·목표일인 주요 활동 (로드맵 노드, 읽기만) */}
-        {activities.length > 0 && (
-          <div className="dp-acts">
-            <p className="dp-acts__label">이날의 활동</p>
-            <ul className="dp-acts__list">
-              {activities.map((node) => (
-                <li key={node.id} className="dp-acts__item">
-                  <span className={`dp-acts__dot ${node.completed ? 'is-done' : ''}`} aria-hidden="true" />
-                  <span className="dp-acts__title">{node.title}</span>
-                  <span className="dp-acts__kind">{node.dueDate ? '목표일' : '마감일'}</span>
-                </li>
-              ))}
-            </ul>
+        {/* 오늘의 이야기: 입력칸 안 왼쪽 아래에 사진 추가 동그라미, 고른 사진은 칸 안에 작게 */}
+        <section className="dm-story" aria-label="오늘의 이야기">
+          <div className="dm-story__head">
+            <h3 className="dm-story__title">오늘의 이야기</h3>
           </div>
-        )}
-
-        <div className="rm-field">
-          <span className="rm-eyebrow">오늘의 이야기</span>
           {readOnly ? (
             <p className="dp-story">{content || '(내용 없음)'}</p>
           ) : (
-            // 로드맵 노드 카드 모양 입력칸 (30자를 채우면 왼쪽 점이 노랗게)
-            <div className="dy-node dy-node--top">
+            // 일기 입력칸 (로드맵 노드 카드 모양, 20자를 채우면 왼쪽 점이 노랗게). 사진 추가 동그라미는 칸 안 왼쪽 아래
+            <div className="dy-node dy-node--top dm-story__node">
               <span className={`dy-node__dot ${meetsLength ? 'is-done' : ''}`} aria-hidden="true" />
               <textarea
                 ref={textareaRef}
-                className="dy-input dy-textarea dp-textarea"
+                className="dy-input dy-textarea dm-story__input"
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="오늘 있었던 일을 자유롭게 적어 보세요."
+                placeholder="오늘은 어떤 하루였나요? 자유롭게 이야기해 주세요."
+                aria-label="오늘의 이야기"
               />
+              <div className="dm-story__foot">
+                {photos.items.length < PHOTO_MAX_COUNT && !photos.loading && (
+                  <button
+                    type="button"
+                    className="dm-photo-btn"
+                    onClick={() => photoInputRef.current?.click()}
+                    aria-label="사진 추가"
+                    title={`사진 추가 (jpg·png·webp·gif, 한 장 5MB까지 최대 ${PHOTO_MAX_COUNT}장)`}
+                  >
+                    <PhotoPlusIcon />
+                  </button>
+                )}
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  multiple
+                  hidden
+                  onChange={pickPhotos}
+                />
+                {photos.items.length === 0 && <span className="dm-story__hint">사진은 저장할 때 함께 올라가요</span>}
+                {photos.items.length > 0 && (
+                  <div className="dm-story__photos">
+                    <PhotoField draft={photos} allowAdd={false} onChange={() => setSaveError('')} />
+                  </div>
+                )}
+                {showGoal && <GoalRing count={charCount} goal={REWARD_MIN_CHARS} />}
+              </div>
             </div>
           )}
-        </div>
+          {/* 게이지가 없을 때(지난 날짜·오늘 온기를 이미 받음)만 안내 한 줄 */}
+          {!readOnly && !showGoal && (!isExisting || isToday) && <p className="rm-muted dm-hint">{rewardHint}</p>}
+          {photoNotice && <p className="dm-hint is-error" role="alert">{photoNotice}</p>}
+          {/* 읽기 상태: 저장된 사진 */}
+          {readOnly && (photos.items.length > 0 || photos.loading || photos.loadError) && (
+            <PhotoField draft={photos} readOnly />
+          )}
+        </section>
 
-        {/* 쓰거나 고칠 때만 글자 수 게이지를 보여 준다 (보상 판단은 서버가 다시 함) */}
-        {/* 새로 쓸 때, 그리고 오늘 일기를 고칠 때 (오늘 일기는 수정으로 20자를 채워도 온기를 받음) */}
-        {!readOnly && (!isExisting || isToday) && (
-          <div className="rm-field">
-            <div className="dy-count">
-              <span className="rm-eyebrow">글자 수</span>
-              <span className={`dy-count__num ${meetsLength ? 'is-done' : ''}`}>
-                {charCount}자 / {REWARD_MIN_CHARS}자
-              </span>
-            </div>
-            <div className="dy-bar" aria-hidden="true">
-              <div className={`dy-bar__fill ${meetsLength ? 'is-done' : ''}`} style={{ width: `${progress}%` }} />
-            </div>
-            <p className="rm-muted dy-hint">
-              {!isToday
-                ? '지난 날짜의 일기는 온기 없이 저장돼요. 온기는 오늘 일기에만 받을 수 있어요.'
-                : hasDiaryRewardToday()
-                  ? '오늘 일기 온기는 이미 받았어요. 고친 내용은 그대로 저장돼요.'
-                  : meetsLength
-                    ? '저장하면 온기를 받을 수 있어요.'
-                    : `${REWARD_MIN_CHARS - charCount}자 더 쓰면 온기를 받을 수 있어요.`}
-            </p>
-          </div>
-        )}
-
-        {/* 사진: 읽기 상태에서는 저장된 사진만 보여 주고, 쓰기·수정 중에는 추가·삭제할 수 있다 */}
-        {(!readOnly || photos.items.length > 0 || photos.loading || photos.loadError) && (
-          <div className="rm-field">
-            <span className="rm-eyebrow">사진</span>
-            <PhotoField draft={photos} readOnly={readOnly} onChange={() => setSaveError('')} />
-          </div>
+        {/* 오늘의 발자취 (선택): 이야기 바로 아래. 공부·활동 기록 + 로드맵 활동 연결 */}
+        {(!readOnly || footprint || linkedNodeId) && (
+          <FootprintField
+            text={footprint}
+            onTextChange={setFootprint}
+            nodeId={linkedNodeId}
+            onNodeChange={setLinkedNodeId}
+            readOnly={readOnly}
+          />
         )}
 
         {saveError && <p className="dp-save-error" role="alert">{saveError}</p>}
@@ -259,6 +302,47 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
       </section>
 
       <div className={`rm-toast dy-toast ${toast ? 'is-visible' : ''}`} role="status">{toast}</div>
+    </div>
+  )
+}
+
+// 사진 추가 아이콘 (액자 + 작은 +)
+function PhotoPlusIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7" />
+      <circle cx="9" cy="10" r="1.5" />
+      <path d="M20 16l-4-4-8 8" />
+      <path d="M18 3v6M15 6h6" />
+    </svg>
+  )
+}
+
+// 20자 게이지: 글을 쓸수록 동그라미가 노랗게 차오르고, 다 채우면 체크 + '온기 받을 준비 완료!'
+const RING_R = 10
+const RING_LEN = 2 * Math.PI * RING_R
+function GoalRing({ count, goal }) {
+  const done = count >= goal
+  const ratio = Math.min(1, count / goal)
+  const label = done ? '온기 받을 준비 완료!' : `${goal - count}자 더 쓰면 온기 +${DIARY_REWARD}`
+  return (
+    <div className={`dm-goal ${done ? 'is-done' : ''}`} role="status" aria-label={`글자 수 ${count}자 / ${goal}자. ${label}`}>
+      <span className="dm-goal__label" aria-hidden="true">{label}</span>
+      <span className="dm-goal__ring" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 26 26">
+          <circle className="dm-goal__track" cx="13" cy="13" r={RING_R} />
+          <circle
+            className="dm-goal__fill"
+            cx="13"
+            cy="13"
+            r={RING_R}
+            strokeDasharray={RING_LEN}
+            strokeDashoffset={RING_LEN * (1 - ratio)}
+          />
+        </svg>
+        <span className="dm-goal__num">{done ? '✓' : count}</span>
+      </span>
     </div>
   )
 }

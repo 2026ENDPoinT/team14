@@ -86,10 +86,11 @@ export function hasDiaryRewardToday() {
 
 // 작성/수정 → 서버 저장 성공 시에만 목록 반영
 // 결과: { diary, reward: { rewarded, amount?, reason? } } 또는 { error } (실패하면 화면의 입력 내용은 그대로 둔다)
-export async function saveDiary({ date, content }) {
+// footprint(오늘의 발자취)·linkedNodeId(연결한 노드)는 선택
+export async function saveDiary({ date, content, footprint = null, linkedNodeId = null }) {
   if (!date) return { error: { code: 'VALIDATION_ERROR', message: '날짜를 선택해 주세요.' } }
   if (date > getTodayKST()) return { error: { code: 'VALIDATION_ERROR', message: '미래 날짜에는 일기를 쓸 수 없어요.' } }
-  const result = await diaryService.saveDiary({ date, content })
+  const result = await diaryService.saveDiary({ date, content, footprint, linkedNodeId })
   if (result.error) return { error: result.error }
   const { diary, reward, pet } = result.data
   const others = state.diaries.filter((d) => d.date !== diary.date)

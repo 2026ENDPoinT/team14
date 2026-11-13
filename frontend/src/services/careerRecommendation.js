@@ -65,27 +65,52 @@ export async function getMyCompletedNodes() {
 // 결과: { data: { mode, careers, activities, recommendedAt } } 또는 { error: { code, message } }
 //   결과는 저장하지 않는다. 희망 직무·펫·로드맵도 바뀌지 않는다.
 export async function requestAiGuide(payload) {
-  if (!supabase) return { error: toError('SERVER_ERROR') }
-  const { data: session } = await supabase.auth.getSession()
-  if (!session.session) return { error: toError('UNAUTHENTICATED') }
-
-  const { data, error } = await supabase.functions.invoke('recommend-career', { body: payload })
-  if (error) {
-    let code = 'AI_ERROR'
-    try {
-      code = (await error.context.json())?.error?.code ?? code
-    } catch {
-      // 네트워크 오류·함수 없음 등
-    }
-    return { error: toError(code) }
+  if (!supabase) return { error: { code: 'CONFIG_ERROR', message: 'Supabase 연결 설정이 없어요. frontend/.env의 VITE_SUPABASE_URL과 VITE_SUPABASE_ANON_KEY를 확인해 주세요.' } }
+  let session
+  try {
+    const { data, error } = await supabase.auth.getSession()
+    if (error) throw error
+    session = data?.session
+  } catch {
+    return { error: { code: 'AUTH_ERROR', message: '로그인 상태를 확인하지 못했어요. 다시 로그인해 주세요.' } }
   }
-  // 응답 모양 확인: 모드에 맞는 결과가 없으면 성공으로 보지 않는다
+  if (!session) return { error: toError('UNAUTHENTICATED') }
+
+  let data, error
+  try {
+    const response = await supabase.functions.invoke('recommend-career', { body: payload })
+    data = response.data
+    error = response.error
+  } catch (err) {
+    return { error: { code: 'NETWORK_ERROR', message: `AI 서버 요청이 실패했어요. 네트워크나 Supabase 함수 주소를 확인해 주세요. (${err instanceof Error ? err.message : '네트워크 오류'})` } }
+  }
+  if (error) {
+    const status = error.context?.status ?? null
+    let body = null
+    try { body = await error.context?.json() } catch { /* no JSON body */ }
+    const code = body?.error?.code ?? (status === 404 ? 'FUNCTION_NOT_FOUND' : status === 401 ? 'UNAUTHENTICATED' : status === 429 ? 'RATE_LIMITED' : 'AI_ERROR')
+    const prefix = status === 404 ? 'Supabase에 recommend-career 함수가 배포되어 있는지 확인해 주세요.'
+      : status === 401 ? '로그인이 만료됐거나 함수 인증 설정이 맞지 않아요.'
+      : status === 429 ? 'AI 요청 한도를 초과했어요. 잠시 뒤 다시 시도해 주세요.'
+      : status === 400 ? '요청 형식이 서버에서 거부됐어요. 프론트엔드와 Edge Function 배포 버전을 맞춰 주세요.'
+      : status === 500 ? 'AI 서버 설정(GEMINI_API_KEY 등)을 확인해 주세요.'
+      : status === 502 ? 'Gemini 모델 호출 또는 응답 검증에 실패했어요. 함수 로그를 확인해 주세요.'
+      : 'AI 서버 호출에 실패했어요. Supabase Edge Functions 로그를 확인해 주세요.'
+    return { error: { code, message: `${prefix}${status ? ` (HTTP ${status})` : ''}${body?.error?.message ? ` · ${body.error.message}` : ''}` } }
+  }
+
   const careers = Array.isArray(data?.careers) ? data.careers : []
   const activities = Array.isArray(data?.activities) ? data.activities : []
   const needCareers = payload.mode !== 'activities'
   const needActivities = payload.mode !== 'career'
   if ((needCareers && careers.length < 2) || (needActivities && activities.length < 3)) {
-    return { error: toError('AI_ERROR') }
+    const oldEndpoint = data?.job && !Array.isArray(data?.careers)
+    return { error: {
+      code: 'RESPONSE_MISMATCH',
+      message: oldEndpoint
+        ? '서버가 이전 방식의 AI 추천 결과를 보냈어요. 새로운 AI 길잡이 코드가 포함된 recommend-career Edge Function을 배포해야 해요.'
+        : 'AI 응답 형식이 현재 길잡이 화면과 맞지 않아요. Supabase 함수 로그와 최신 배포 버전을 확인해 주세요.',
+    } }
   }
   return { data: { mode: payload.mode, careers, activities, recommendedAt: data.recommendedAt ?? null } }
 }

@@ -1,0 +1,190 @@
+/* 일기 팝업 '오늘의 발자취' (FootprintField.jsx)
+   색은 .diary-page 변수(DiaryEditor.css)를 쓴다. 연한 크림 카드로 '오늘의 이야기'와 구분한다 */
+.fp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 22px;
+  border: 1px solid #efe9d8;
+  border-radius: 20px;
+  background: #fffdf6;
+}
+.fp-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.fp-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--dy-ink);
+}
+.fp-card__title svg {
+  color: #8fa67f;
+}
+.fp-card__optional {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--rm-muted);
+}
+
+/* 입력칸: 일기 입력칸과 같은 모양, 높이만 낮게 */
+.fp-card .fp-input {
+  min-height: 96px;
+  padding: 20px 26px;
+  resize: vertical;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.fp-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--rm-text);
+  white-space: pre-wrap;
+}
+.fp-note {
+  margin: 0;
+  font-size: 12px;
+}
+
+/* 종류 칩 */
+.fp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.fp-chip {
+  padding: 7px 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--rm-field);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dy-ink);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.fp-chip:hover {
+  transform: translateY(-1px);
+}
+.fp-chip.is-active {
+  background: var(--rm-accent);
+}
+
+/* 고른 종류의 노드 목록 */
+.fp-nodes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.fp-node {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.fp-node:hover {
+  border-color: var(--rm-dot);
+}
+.fp-node.is-selected {
+  border-color: var(--rm-accent-dot);
+  background: #fff8e2;
+}
+.fp-node__dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--rm-dot);
+}
+.fp-node__dot.is-done {
+  background: var(--rm-accent-dot);
+}
+.fp-node__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rm-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fp-node__place {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--rm-muted);
+}
+
+/* 연결한 활동 */
+.fp-linked {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+}
+.fp-linked__label {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--rm-muted);
+}
+.fp-linked__name {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--rm-accent);
+  font-weight: 700;
+  color: var(--dy-ink);
+}
+.fp-linked__remove {
+  border: none;
+  background: none;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--rm-muted);
+  cursor: pointer;
+}
+
+/* ── 유리 느낌 (로그인 화면과 같은 스타일) ── */
+.fp-card {
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 253, 246, 0.42);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.fp-chip {
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.45);
+}
+.fp-chip.is-active {
+  border-color: rgba(242, 214, 143, 0.9);
+  background: linear-gradient(90deg, #fcefc6, #f2d68f);
+}
+.fp-node {
+  border: 1px solid rgba(85, 85, 85, 0.12);
+  background: rgba(255, 255, 255, 0.45);
+}
+.fp-node.is-selected {
+  border-color: var(--rm-accent-dot);
+  background: rgba(252, 239, 198, 0.6);
+}

@@ -187,8 +187,13 @@ export default function HomePage() {
 
   return (
     <div className="home-page">
-      {/* HOME 사용법 다시 보기 (왼쪽 위 작은 버튼) */}
-      <button type="button" className="hm-help" onClick={() => setTourOpen(true)} aria-label="HOME 사용법 보기" title="HOME 사용법 보기">?</button>
+      {/* 왼쪽 위: HOME 사용법 다시 보기(?) + 서비스 로고(로그인 화면과 같은 글꼴, 누르면 새로고침) */}
+      <div className="hm-topleft">
+        <button type="button" className="hm-help" onClick={() => setTourOpen(true)} aria-label="HOME 사용법 보기" title="HOME 사용법 보기">?</button>
+        <button type="button" className="hm-logo" onClick={() => window.location.reload()} aria-label="Momentree 새로고침" title="새로고침">
+          Momentree
+        </button>
+      </div>
       <HomeTutorial open={tourOpen} onClose={closeTour} />
       {/* 출석 온기 획득 연출: 일기 저장 때와 같은 연기 + '온기 +100 획득!' (화면 전체) */}
       {bursts[0] && (
