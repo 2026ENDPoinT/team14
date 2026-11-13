@@ -180,8 +180,13 @@ export default function OnboardingPage() {
     return messages.length > 0 ? { messages, fixes } : null
   }
 
+  // 완료: 펫을 먼저 저장(choose_pet)하고, 그다음 온보딩 저장(complete_onboarding)
+  // - 펫 저장이 실패하면 온보딩은 아직 완료되지 않은 상태 → 새로고침·재로그인해도 온보딩에서 이어서 마칠 수 있다
+  // - 직무 미정: 고른 펫을 pets.type에 저장 (직무와 따로). 실패하면 여기서 멈추고 다시 시도
+  // - 직무를 고른 사용자: 펫 종류를 비운다(직무로 자동 결정, 앞서 미정으로 골라 둔 펫이 남지 않게). 실패해도 진행
+  // - 온보딩 저장은 한 번만 (completedRef, 서버도 이미 완료면 CONFLICT) → 로드맵·과목 중복 생성 없음
   async function handleComplete() {
-    if (completedRef.current) return savePetAndFinish(completedRef.current.placementFailed)
+    if (completedRef.current) return finish(completedRef.current.placementFailed)
     const blocked = findBlocked()
     if (blocked) {
       setError(blocked)
@@ -190,6 +195,13 @@ export default function OnboardingPage() {
 
     setSaving(true)
     setError(null)
+
+    const picked = await choosePet(autoPet ? null : petChoice)
+    if (picked.error && !autoPet) {
+      setSaving(false)
+      setError({ messages: [`고른 펫을 저장하지 못했어요. ${picked.error.message} 다시 눌러 주세요.`] })
+      return
+    }
 
     // 추천 과목: auto → 권장 학기 / inbox → 보관함 (위치는 RPC가 roadmap_mode로 정한다)
     const recommended = coursePreview.recommended
@@ -226,27 +238,15 @@ export default function OnboardingPage() {
     }
     // 실제 저장에 성공했을 때만: 프로필의 완료 상태를 바로 반영 (이후 HOME 진입 허용)
     markOnboardingCompleted(result.data.user) // 최신 프로필(희망 직무 포함)을 바로 반영
+    if (picked.data?.pet) setPetFromServer(picked.data.pet) // HOME 펫 종류를 서버 값으로 바로 맞춘다
     completedRef.current = { placementFailed }
-    await savePetAndFinish(placementFailed)
+    finish(placementFailed)
   }
 
-  // 펫 저장 → HOME으로. 직무를 고른 사용자는 기존처럼 직무로 펫이 정해지므로 저장할 것이 없다
-  // 직무 미정: 고른 펫을 서버(pets.type, RPC choose_pet)에 저장. 실패하면 이 화면에 남아 펫 저장만 다시 시도한다
-  // (펫 행·온기는 complete_onboarding이 이미 한 번 만들었으므로 다시 만들지 않는다)
-  async function savePetAndFinish(placementFailed) {
-    setSaving(true)
-    setError(null)
-    if (!autoPet) {
-      const saved = await choosePet(petChoice)
-      if (saved.error) {
-        setSaving(false)
-        setError({ messages: [`온보딩과 로드맵은 저장했어요. 다만 고른 펫을 저장하지 못했어요. ${saved.error.message}`] })
-        return
-      }
-      setPetFromServer(saved.data.pet)
-    }
+  // HOME으로 (과목 위치 저장이 실패했으면 위치 저장만 다시 시도하는 완료 화면)
+  function finish(placementFailed) {
     setSaving(false)
-    if (placementFailed) return setDone(true) // 과목 위치 저장만 다시 시도하는 완료 화면
+    if (placementFailed) return setDone(true)
     finishOnboarding() // 이제부터 /onboarding에 오면 HOME으로 보낸다
     navigate('/', { replace: true })
   }
