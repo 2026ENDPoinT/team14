@@ -2,46 +2,63 @@ import { useRef, useState } from 'react'
 import { AI_LIMITS, requestReflectQuestions } from '../../services/aiReflection.js'
 import './aiDiary.css'
 
-const ANSWER_MAX = 500
+// 일기 창 '오늘의 발자취'의 회고 질문 (질문만 보여 준다. 답은 사용자가 위 발자취 칸에 바로 쓴다)
+// - 발자취가 비어 있을 때: 영역을 처음 열면 작성 질문 1개를 바로 보여 준다 (AI 호출 없음)
+//   '다른 질문'을 누르면 다른 주제(배운 점·어려웠던 순간·작은 성취·다음에 해 볼 일·오늘 한 일)로 바뀐다 → 같은 질문이 연속으로 나오지 않음
+// - 발자취를 쓴 뒤: 'AI 회고 질문 받기'를 누르면 지금 쓴 발자취 글만 AI에 보내 그 내용에 맞춘 질문(최대 2개)을 보여 준다
+//   '오늘의 이야기'는 보내지 않는다. 보낸 글·질문은 저장하지 않는다
+const STARTERS = [
+  { topic: '배운 점', question: '오늘 새로 알게 된 것이나 배운 점 하나를 적어 볼까요?' },
+  { topic: '어려웠던 순간', question: '오늘 공부나 활동에서 가장 막혔던 순간은 언제였나요? 어떻게 넘어갔는지도 적어 보세요.' },
+  { topic: '작은 성취', question: '오늘 해낸 작은 일 하나를 떠올려 볼까요? 아무리 작아도 괜찮아요.' },
+  { topic: '다음에 해 볼 일', question: '오늘을 돌아보면, 다음에 이어서 해 보고 싶은 일은 무엇인가요?' },
+  { topic: '오늘 한 일', question: '오늘 어떤 공부나 활동을 했나요? 한 가지만 적어도 좋아요.' },
+]
 
-// 일기 창 '오늘의 발자취'의 AI 회고 인터뷰
-// - 버튼을 눌렀을 때만 지금 쓰고 있는 발자취 글(content로 받음)만 AI에 보낸다 (글자 수 조건 없음, 비어 있으면 일반 질문). '오늘의 이야기'는 보내지 않는다
-// - 질문(최대 2개)에 답하고 '일기에 추가'를 누르면 발자취 끝에 [회고] 형식으로 덧붙인다 (기존 글은 그대로)
-//   onAppend(text) → 오류 문구 또는 null
-// - 저장은 일기 창의 기존 저장 버튼으로 (여기서는 저장하지 않는다)
-export default function AiReflection({ date, content, onAppend }) {
+// 지금과 다른 주제 중 하나 (연속으로 같은 질문이 나오지 않게)
+const nextStarter = (current) => {
+  const others = STARTERS.map((_, i) => i).filter((i) => i !== current)
+  return others[Math.floor(Math.random() * others.length)]
+}
+
+export default function AiReflection({ date, content }) {
+  const [starter, setStarter] = useState(() => Math.floor(Math.random() * STARTERS.length))
   const [state, setState] = useState({ status: 'idle', questions: [], error: '' })
-  const [answers, setAnswers] = useState([])
-  const [notice, setNotice] = useState('')
   const busyRef = useRef(false)
   const hasText = Boolean(content?.trim())
 
   async function ask() {
     if (busyRef.current) return
     busyRef.current = true
-    setNotice('')
     setState({ status: 'loading', questions: [], error: '' })
     const result = await requestReflectQuestions({ date, content })
     busyRef.current = false
     if (result.error) return setState({ status: 'error', questions: [], error: result.error.message })
-    setAnswers(result.data.questions.map(() => ''))
     setState({ status: 'ready', questions: result.data.questions, error: '' })
   }
 
-  function append() {
-    const pairs = state.questions
-      .map((q, i) => ({ q: q.question, a: answers[i]?.trim() }))
-      .filter((p) => p.a)
-    if (pairs.length === 0) return
-    const problem = onAppend(pairs.map((p) => `[회고] ${p.q}\n${p.a}`).join('\n\n'))
-    if (problem) return setNotice(problem) // 답은 그대로 둔다
-    setState({ status: 'idle', questions: [], error: '' })
-    setAnswers([])
-    setNotice('발자취 끝에 회고를 추가했어요. 저장 버튼을 눌러야 저장돼요.')
+  // 발자취가 비어 있으면: 작성 질문 1개 (처음 열 때 바로)
+  if (!hasText) {
+    const s = STARTERS[starter]
+    return (
+      <div className="ai-diary" aria-live="polite">
+        <div className="ai-diary__qa">
+          <div className="ai-diary__item" data-topic={s.topic}>
+            <span className="ai-diary__topic">{s.topic}</span>
+            <span className="ai-diary__q">{s.question}</span>
+          </div>
+          <div className="ai-diary__actions">
+            <button type="button" className="ai-diary__btn" onClick={() => setStarter(nextStarter)}>
+              다른 질문
+            </button>
+          </div>
+        </div>
+        <p className="ai-diary__note">위 발자취 칸에 바로 적어 보세요. 글을 쓰면 그 내용에 맞춘 질문도 받을 수 있어요.</p>
+      </div>
+    )
   }
 
-  const hasAnswer = answers.some((a) => a.trim())
-
+  // 발자취를 쓴 뒤: 내용에 맞춘 AI 질문
   return (
     <div className="ai-diary" aria-live="polite">
       {state.status !== 'ready' && (
@@ -50,40 +67,24 @@ export default function AiReflection({ date, content, onAppend }) {
             {state.status === 'loading' ? '질문을 만드는 중…' : 'AI 회고 질문 받기'}
           </button>
           <p className="ai-diary__note">
-            {hasText
-              ? `누르면 위 발자취 글(최대 ${AI_LIMITS.diaryText}자)만 AI에 보내요. '오늘의 이야기'는 보내지 않고, 발자취에 적힌 경험으로만 질문을 만들어요. 보낸 글은 저장하지 않아요.`
-              : `발자취가 비어 있으면 오늘의 공부·활동·배운 점을 돌아보는 질문을 받아요. '오늘의 이야기'는 AI에 보내지 않아요.`}
+            {`누르면 위 발자취 글(최대 ${AI_LIMITS.diaryText}자)만 AI에 보내요. '오늘의 이야기'는 보내지 않고, 발자취에 적힌 경험으로만 질문을 만들어요. 보낸 글은 저장하지 않아요.`}
           </p>
         </>
       )}
       {state.status === 'error' && <p className="ai-diary__error" role="alert">{state.error}</p>}
-      {notice && <p className="ai-diary__note is-done" role="status">{notice}</p>}
 
       {state.status === 'ready' && (
         <div className="ai-diary__qa">
-          {state.questions.map((q, i) => (
-            <label key={q.question} className="ai-diary__item">
+          {state.questions.map((q) => (
+            <div key={q.question} className="ai-diary__item">
               <span className="ai-diary__q">{q.question}</span>
               {q.basis && <span className="ai-diary__basis">발자취 속 “{q.basis}”에서</span>}
-              <textarea
-                className="dy-input ai-diary__answer"
-                rows={2}
-                maxLength={ANSWER_MAX}
-                value={answers[i] ?? ''}
-                placeholder="떠오르는 대로 답해 보세요 (비워 두면 추가하지 않아요)"
-                onChange={(e) => setAnswers((prev) => prev.map((a, j) => (j === i ? e.target.value : a)))}
-              />
-            </label>
+            </div>
           ))}
+          <p className="ai-diary__note">답은 위 발자취 칸에 이어서 적으면 돼요.</p>
           <div className="ai-diary__actions">
-            <button type="button" className="ai-diary__btn is-primary" onClick={append} disabled={!hasAnswer}>
-              일기에 추가
-            </button>
-            <button
-              type="button"
-              className="ai-diary__btn"
-              onClick={() => setState({ status: 'idle', questions: [], error: '' })}
-            >
+            <button type="button" className="ai-diary__btn" onClick={ask}>다시 받기</button>
+            <button type="button" className="ai-diary__btn" onClick={() => setState({ status: 'idle', questions: [], error: '' })}>
               닫기
             </button>
           </div>

@@ -6,7 +6,7 @@ import { getTodayKST } from './dateUtils.js'
 import PhotoField from '../photos/PhotoField.jsx'
 import usePhotoDraft from '../photos/usePhotoDraft.js'
 import WarmthEffect from './WarmthEffect.jsx'
-import FootprintField, { FOOTPRINT_MAX } from './FootprintField.jsx'
+import FootprintField from './FootprintField.jsx'
 import { isFootprintReady } from '../../services/diary.js'
 import AiReflection from './AiReflection.jsx'
 import { PHOTO_MAX_COUNT } from '../../services/photos.js'
@@ -270,20 +270,9 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
             nodeId={linkedNodeId}
             onNodeChange={setLinkedNodeId}
             readOnly={readOnly}
-            // AI 회고 인터뷰: '오늘의 발자취'(공부·활동 기록)만 AI에 보낸다. '오늘의 이야기'는 읽거나 보내지 않는다
-            // 답은 발자취 끝에 [회고]로 덧붙임 (저장은 아래 저장 버튼). 발자취 칸이 서버에 있을 때만
-            extra={!readOnly && isFootprintReady() ? (
-              <AiReflection
-                date={date}
-                content={footprint}
-                onAppend={(text) => {
-                  const next = `${footprint.trimEnd()}\n\n${text}`
-                  if ([...next].length > FOOTPRINT_MAX) return `발자취는 ${FOOTPRINT_MAX}자까지 쓸 수 있어요. 답을 줄여 주세요.`
-                  setFootprint(next)
-                  return null
-                }}
-              />
-            ) : null}
+            // 회고 질문: 질문만 보여 주고, 답은 사용자가 발자취 칸에 바로 쓴다 (별도 답변 칸 없음)
+            // 비어 있으면 작성 질문 1개를 바로(AI 호출 없음), 글을 쓰면 그 내용에 맞춘 AI 질문. 발자취 칸이 서버에 있을 때만
+            extra={!readOnly && isFootprintReady() ? <AiReflection date={date} content={footprint} /> : null}
           />
         )}
 
