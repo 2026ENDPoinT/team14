@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import PetImage from '../pet/PetImage.jsx'
 import { getStageByNumber, getStageProgress } from '../pet/petStages.js'
-import { listDiaries } from '../diary/diaryMock.js'
+import { listDiaries, useDiaries } from '../diary/diaryStore.js'
 import { getTodayKST } from '../diary/dateUtils.js'
 import { Group, LinkRow, PanelTitle, Row, Segment, Toggle } from './ui.jsx'
 import JobPicker from './JobPicker.jsx'
 import { jobTitle } from './jobGroups.js'
 import { JOB_TO_PET, PET_CHARACTERS } from '../home/petCharacter.js'
 import { useAuth } from '../auth/AuthProvider.jsx'
+import WithdrawDialog from './WithdrawDialog.jsx'
 
 // 마이페이지 오른쪽 화면들. 왼쪽 메뉴에서 고른 것 하나만 보인다.
 // 모두 Mock 데이터 기반이며, 실제 저장·인증은 3번(인증·서비스) 연동 때 연결한다.
@@ -39,6 +40,7 @@ function ProfileBar({ profile, pet, action }) {
 
 // ── 계정 센터 (하위 화면: 프로필 / 연결된 계정 / 내 정보) ──
 export function AccountPanel({ profile, pet, notReady }) {
+  const [withdrawOpen, setWithdrawOpen] = useState(false) // 회원 탈퇴 확인 창
   // 로그아웃: 기존 AuthProvider의 logout. 성공하면 라우트 가드가 로그인 화면으로 보낸다
   const { logout } = useAuth()
   const handleLogout = async () => {
@@ -103,8 +105,9 @@ export function AccountPanel({ profile, pet, notReady }) {
       </Group>
       <Group>
         <LinkRow icon="logout" label="로그아웃" onClick={handleLogout} />
-        <LinkRow icon="leave" label="회원 탈퇴" onClick={notReady} danger />
+        <LinkRow icon="leave" label="회원 탈퇴" onClick={() => setWithdrawOpen(true)} danger />
       </Group>
+      {withdrawOpen && <WithdrawDialog onClose={() => setWithdrawOpen(false)} />}
     </>
   )
 }
@@ -297,6 +300,7 @@ export function DisplayPanel({ settings, update }) {
 
 // ── 내 활동: 내 기록 요약 (다른 사용자와 비교하지 않음) ──
 export function ActivityPanel({ pet }) {
+  useDiaries() // 내 일기를 서버에서 불러온다
   const today = getTodayKST()
   const allDiaries = listDiaries('0000-01-01', today)
   const monthDiaries = allDiaries.filter((d) => d.date.startsWith(today.slice(0, 7)))

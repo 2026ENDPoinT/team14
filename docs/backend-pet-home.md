@@ -152,6 +152,13 @@ grant execute on function public.change_desired_job(text) to authenticated;
 
 ## 8. 자동 출석 `check_in` (2026-11-12 추가)
 
+> **적용됨 (2026-11-13, migration `20261113001900_rewards_attendance_diary.sql`, team4-dev)** — 아래 초안과 다른 점
+> - 실제 응답: `{ "date", "reward": { "rewarded", "energy"?, "reason"? }, "pet": pets 행 전체 }` (`docs/API.md` 4.7)
+>   → `services/api.js` `checkInToday`가 이 형식을 읽어 기존 `{ rewarded, energy, date, pet }` 모양으로 바꿔 준다.
+> - 기존 펫의 잔액은 누적 온기로 채우지 않았다 (적용 직전 모든 펫 energy 0, 보상 기록 0건 확인).
+> - 펫이 아직 없으면(온보딩 전 첫 로그인) 펫 행을 만들어 지급한다. 온보딩은 그 펫을 그대로 쓴다.
+> - 로그인할 때(AuthProvider)와 HOME에 들어올 때 같은 요청(`autoCheckIn`, 사용자·날짜별 1개)을 같이 쓴다.
+
 HOME의 '출석하기' 버튼을 없애고, **로그인 사용자가 HOME에 들어오면 자동으로** `check_in`을 부른다.
 프론트(`services/api.js` `checkInToday`, `features/home/homeActions.js` `autoCheckIn`)는 이미 연결되어 있고,
 RPC가 없으면(`PGRST202`) 조용히 넘어간다 — 지급 연출·숫자 변경 없음, 오류 안내 없음.

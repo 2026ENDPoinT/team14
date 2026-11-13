@@ -1,6 +1,8 @@
 // HOME 서버 요청 (자동 출석·펫 이름 변경)
 // 온기 증가·차감은 서버 RPC만 한다. 화면에서 성공한 것처럼 처리하지 않는다. (가짜 지급·저장·차감 금지)
 import { checkInToday } from '../../services/api.js'
+import { setPetFromServer } from '../pet/petStore.js'
+import { toPet } from '../../services/rewards.js'
 import { getTodayKST } from '../diary/dateUtils.js'
 
 export const ATTENDANCE_REWARD = 100 // 하루 첫 출석 +100 온기
@@ -24,6 +26,8 @@ export function autoCheckIn(userId) {
     // 일시적인 오류(네트워크 등)면 다음 HOME 방문 때 다시 시도. 서버 미준비(NOT_READY)는 이번 접속 동안 다시 묻지 않는다
     entry.promise.then((result) => {
       if (result.error && result.error.code !== 'NOT_READY') attempts.delete(key)
+      // 서버가 돌려준 펫(누적 온기·잔액)으로 홈·일기·마이페이지 표시를 맞춘다
+      if (result.data?.petRow) setPetFromServer(toPet(result.data.petRow))
     })
   }
   return entry

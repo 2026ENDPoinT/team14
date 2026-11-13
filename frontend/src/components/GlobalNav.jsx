@@ -5,7 +5,7 @@ import './GlobalNav.css'
 // - 색·그림자·움직임은 예전 로드맵 반원 메뉴(RoadmapNav)의 값을 그대로 쓴다 (GlobalNav.css)
 // - 로그인·온보딩을 마친 화면에서만 App.jsx가 그린다 (로그인·비밀번호 재설정·온보딩에서는 숨김)
 // - 현재 페이지는 노란색 배경 + aria-current="page"
-// - 일기 영역(/diary, /memories)에 있으면 아래에 작은 하위 탭(일기 쓰기 · 추억 보관소)을 보여 준다
+// - 일기 영역(/diary, /memories)의 '일기 · 추억 보관소' 전환은 화면 안의 탭으로 한다 (하위 탭은 없앰)
 
 // 작은 선형 아이콘 (stroke = 글자색)
 const icon = (path) => (
@@ -29,14 +29,8 @@ const MENUS = [
   { to: '/mypage', label: '마이페이지', icon: 'mypage', match: (p) => p.startsWith('/mypage') },
 ]
 
-const DIARY_TABS = [
-  { to: '/diary', label: '일기 쓰기', match: (p) => p.startsWith('/diary') },
-  { to: '/memories', label: '추억 보관소', match: (p) => p.startsWith('/memories') },
-]
-
 export default function GlobalNav() {
   const { pathname } = useLocation()
-  const inDiary = pathname.startsWith('/diary') || pathname.startsWith('/memories')
 
   return (
     <div className="gnav-wrap">
@@ -58,19 +52,6 @@ export default function GlobalNav() {
           })}
         </ul>
       </nav>
-
-      {inDiary && (
-        <nav className="gnav-sub" aria-label="일기 메뉴">
-          {DIARY_TABS.map((t) => {
-            const active = t.match(pathname)
-            return (
-              <Link key={t.to} to={t.to} className={`gnav-sub__item ${active ? 'is-active' : ''}`} aria-current={active ? 'page' : undefined}>
-                {t.label}
-              </Link>
-            )
-          })}
-        </nav>
-      )}
     </div>
   )
 }
