@@ -8,6 +8,9 @@ import InboxPanel from '../features/roadmap/InboxPanel.jsx'
 import AddNodeModal from '../features/roadmap/AddNodeModal.jsx'
 import NodeDetailModal from '../features/roadmap/NodeDetailModal.jsx'
 import NodeFilter from '../features/roadmap/NodeFilter.jsx'
+import AiGuideButton from '../features/career/guide/AiGuideButton.jsx'
+import AiGuidePanel from '../features/career/guide/AiGuidePanel.jsx'
+import { hasSameTitle } from '../features/career/guide/guideData.js'
 import { BASE_CATEGORIES, nodeCategoryId } from '../features/roadmap/nodeCategories.js'
 import RoadmapTutorial from '../features/roadmap/tutorial/RoadmapTutorial.jsx'
 import { hasSeenRoadmapTutorial, markRoadmapTutorialSeen } from '../features/roadmap/tutorial/tutorialStorage.js'
@@ -69,6 +72,7 @@ export default function RoadmapPage() {
   const [dropPeriodId, setDropPeriodId] = useState(null) // 노드를 끄는 동안 강조할 학기
   const [tutorialOpen, setTutorialOpen] = useState(false) // 첫 접속 튜토리얼
   const [connectMode, setConnectMode] = useState(false) // CONNECT: 노드 오른쪽 핸들로 관계선 만들기
+  const [guideOpen, setGuideOpen] = useState(false) // AI 길잡이 패널
   // 직접 추가한 노드 종류 (ADD NODE·NODE DETAILS 공용). 로그인한 사용자의 종류를 DB(node_categories)에서 불러오고 저장한다.
   const [customCategories, setCustomCategories] = useState([])
 
@@ -227,7 +231,8 @@ export default function RoadmapPage() {
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key !== 'Escape') return
-      if (detailId) setDetailId(null)
+      if (guideOpen) setGuideOpen(false)
+      else if (detailId) setDetailId(null)
       else if (addOpen) setAddOpen(false)
       else if (fabOpen) setFabOpen(false)
       else if (filterOpen) setFilterOpen(false)
@@ -236,7 +241,7 @@ export default function RoadmapPage() {
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [detailId, addOpen, fabOpen, filterOpen, connectMode, inboxOpen])
+  }, [guideOpen, detailId, addOpen, fabOpen, filterOpen, connectMode, inboxOpen])
 
   // 안내 메시지는 2초 뒤 사라짐 (실행 취소가 있는 안내는 5초)
   useEffect(() => {
@@ -419,6 +424,22 @@ export default function RoadmapPage() {
     else setToast('활동을 보관함에 추가했어요.')
     return null
   }
+
+  // AI 길잡이 추천 활동 → 보관함 (사용자가 카드의 버튼을 눌렀을 때만)
+  // 기존 노드 생성 함수(createNode)로 저장하고, 성공했을 때만 화면에 넣는다. 학기에 자동 배치하지 않는다.
+  // 같은 이름의 활동이 이미 있으면 저장하지 않는다. 기존 활동은 바꾸거나 지우지 않는다.
+  // 반환 { ok } 또는 { error: 문구 }
+  const addGuideActivity = useCallback(async ({ title, theme, categoryId, memo }) => {
+    if (mode !== 'db') return { error: '로그인하면 보관함에 추가할 수 있어요.' }
+    if (hasSameTitle(nodesRef.current, title)) return { error: '이미 로드맵에 같은 이름의 활동이 있어요.' }
+    const result = await createNode({ title, theme, categoryKey: categoryId, memo })
+    if (result.error) return { error: `보관함에 추가하지 못했어요. ${result.error.message}` }
+    const node = { ...result.data.node, categoryLabel: categoryLabelOf(result.data.node.categoryId, customCategories) }
+    setNodes((prev) => [...prev, node])
+    if (result.data.document) setDocuments((prev) => ({ ...prev, [node.id]: result.data.document }))
+    return { ok: true }
+  }, [mode, customCategories])
+  const guideHasActivity = useCallback((title) => hasSameTitle(nodesRef.current, title), [])
 
   // 상세 창 저장: 제목·기록, 그리고 종류를 바꿨으면 종류(type)
   // type: { theme, categoryId, detailId, categoryLabel }
@@ -603,7 +624,9 @@ export default function RoadmapPage() {
           categories={usedCategories}
           selected={filterIds}
           onChange={setFilterIds}
-        />
+        >
+          <AiGuideButton open={guideOpen} onClick={() => { setFilterOpen(false); setGuideOpen(true) }} />
+        </NodeFilter>
 
         {/* 비어 있는 로드맵 안내 (누를 수 없는 안내 문구) */}
         {(periods.length === 0 || nodes.length === 0) && (
@@ -671,6 +694,18 @@ export default function RoadmapPage() {
           customCategories={customCategories}
           onAddCustomCategory={addCustomCategory}
         />
+
+        {guideOpen && (
+          <AiGuidePanel
+            open
+            onClose={() => setGuideOpen(false)}
+            signedIn={isDb}
+            nodes={nodes}
+            documents={documents}
+            onAddActivity={addGuideActivity}
+            hasActivity={guideHasActivity}
+          />
+        )}
 
         <RoadmapTutorial open={tutorialOpen} nodes={nodes} layout={layout} onClose={closeTutorial} />
 
