@@ -189,7 +189,7 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
   - 온보딩 전에 출석 보상을 받으면 그때 펫 행이 먼저 생긴다. 온보딩은 이미 있는 펫을 그대로 쓴다. (받은 온기 유지)
 - `type`: 펫 종류 키 `penguin` | `otter` | `black_cat` | `hamster` | `rabbit` 또는 `null`
   - 직무를 고른 사용자는 `null`로 두고 화면이 희망 직무로 종류를 정한다 (`petCharacter.js` `JOB_TO_PET`)
-  - 직무 미정 사용자가 온보딩에서 고른 펫은 RPC `choose_pet`으로 저장한다 (migration `20261114002700`, **실제 DB 미적용**). 이미 정해진 종류는 바꾸지 않는다
+  - 직무 미정 사용자가 온보딩에서 고른 펫은 온보딩 완료 전에 RPC `choose_pet`으로 저장한다 (migration `20261114002700`·`002800`, **실제 DB 미적용**). 온보딩을 마친 뒤에는 바꿀 수 없다
   - 화면은 `type`을 직무보다 먼저 본다 → 나중에 직무를 골라도 고른 펫이 유지된다. 종류가 없으면 새싹 모습
 - `energy`: **누적 온기**(받은 온기 합계). 성장 단계에 쓰며 차감하지 않는다.
 - `warmthBalance` (DB `warmth_balance`): **사용할 수 있는 온기 잔액**. 보상을 받으면 `energy`와 함께 늘고, 온기를 쓰면 이것만 줄어든다. 홈에 표시하는 값.
@@ -216,9 +216,10 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
   "createdAt": "2026-11-09T12:00:00+09:00"
 }
 ```
-- `type`: `attendance` | `diary_first_of_day` | `node_reflection` | `semester_reflection`
+- `type`: `attendance` | `diary_first_of_day` | `footprint_first_of_day` | `node_reflection` | `semester_reflection`
   - `attendance`: 출석 보상 (로그인할 때 자동으로 `check_in` 호출)
   - `diary_first_of_day`: **오늘(서버 KST) 날짜 일기**를 처음으로 **공백 포함 본문 20자 이상**으로 저장(또는 수정)했을 때의 보상
+  - `footprint_first_of_day`: **오늘(서버 KST) 날짜 일기**에 내용이 있는 '오늘의 발자취'(앞뒤 공백 제외 1자 이상)를 처음 저장했을 때의 보상 (migration `20261114002900`)
 - `refId`: 출석·일기는 지급 날짜(서버 KST 날짜), 노드 회고는 nodeId, 학기 회고는 periodId
 - **프론트에서 직접 추가·수정·삭제할 수 없다.** (조회만 가능, 5장)
 
@@ -230,6 +231,7 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 | --- | --- | --- | --- |
 | attendance | 지급 날짜(KST) | +100 | 로그인 시 자동 출석, 사용자·날짜당 1회 |
 | diary_first_of_day | 지급 날짜(KST) | +200 | 오늘 날짜 일기, 공백 포함 본문 20자 이상, 사용자·날짜당 1회 |
+| footprint_first_of_day | 지급 날짜(KST) | +100 | 오늘 날짜 일기, 이번 저장 요청에 내용이 있는 발자취(앞뒤 공백 제외 1자 이상)가 있을 때, 사용자·날짜당 1회. 일기 보상과 따로 판정 (둘 다 받을 수 있음). `p_footprint: null`(발자취를 보내지 않은 저장)으로는 지급하지 않음 |
 | node_reflection | nodeId | +15 (제안값) | 노드당 1회 (P1) |
 | semester_reflection | periodId | +30 (제안값) | 학기당 1회 (P1) |
 
@@ -241,7 +243,7 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 5. **온기 갱신:** 새로 추가된 경우에만 `pets.energy`(누적)와 `pets.warmth_balance`(잔액)를 함께 늘린다. 펫이 아직 없으면 펫 행을 만든다. (`stage`는 화면이 `energy`로 계산)
 - 1~5는 **하나의 트랜잭션**에서 처리한다. 중간에 실패하면 전부 취소된다.
 - 같은 요청이 동시에 여러 번 와도 유일 제약 때문에 보상은 한 번만 들어간다.
-- **하루 1회:** `attendance`, `diary_first_of_day`는 각각 서버 KST 날짜당 1회만 지급한다.
+- **하루 1회:** `attendance`, `diary_first_of_day`, `footprint_first_of_day`는 각각 서버 KST 날짜당 1회만 지급한다. 수정·재저장, 삭제 후 다시 쓰기, 동시 저장으로도 다시 받을 수 없다.
 - 일기 수정·재저장·삭제 후 재작성으로 보상을 다시 받을 수 없다. (삭제해도 RewardEvent는 유지)
 - 20자 미만으로 저장한 오늘 일기를 같은 날 수정해 **처음으로 20자 이상**이 되면, 그날 아직 `diary_first_of_day`가 없을 때만 지급한다.
 - 과거 날짜 일기는 저장만 하고 지급하지 않는다. 미래 날짜 일기는 `VALIDATION_ERROR`로 저장하지 않는다.
@@ -274,7 +276,7 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 | 작업 | 처리 방식 | 설명 |
 | --- | --- | --- |
 | 온보딩 완료 | RPC `complete_onboarding` | 프론트가 선정한 과목 목록을 **검증**한 뒤, 프로필 저장 + 기본 8학기 + 펫 + 경험 노드 + **이수 완료 과목 노드 + 미래 추천 과목 노드**를 한 번에 저장 |
-| 미정 사용자 펫 저장 | RPC `choose_pet(p_type)` | 온보딩 완료 **뒤** 직무 미정 사용자가 고른 펫을 `pets.type`에 저장. 허용 값 5종, 이미 종류가 있으면 `changed: false` (**실제 DB 미적용**, 적용 전에는 함수 없음 오류) |
+| 펫 종류 저장 | RPC `choose_pet(p_type)` | 온보딩 완료 **전에** 부른다. 펫 행이 없으면 만들고, 미정 사용자가 고른 종류(5종)로 정하거나 바꾼다. 직무를 고른 사용자는 `p_type: null`로 비운다(직무로 자동 결정). 같은 값이면 `changed: false`. 온보딩 완료 뒤에는 `CONFLICT` (migration `20261114002700` + `20261114002800_choose_pet_during_onboarding`, **실제 DB 미적용**) |
 | 과목 위치 정리 | 테이블 `nodes` 수정 (`moveNodes`) | RPC는 과목 위치를 (0,0)으로 저장 → 프론트가 선 위에 겹치지 않게 놓고 저장 |
 
 **역할 나누기**
@@ -310,7 +312,9 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 - `grade`가 없거나 1~4가 아니면 `VALIDATION_ERROR`
 - 학년만 고르고 나머지를 건너뛰어도 기본 8학기와 펫을 만든다. 미래 과목은 미래 학년 전공필수 과목만 선정된다.
 - `roadmapMode` 기본값은 `"auto"`. (값이 없으면 auto로 처리) **현재 화면은 항상 `"auto"`를 보낸다** (구성 방식 고르기 화면 없음)
-- 마지막 펫 화면의 '모멘트리 시작하기'에서 `complete_onboarding` → (직무 미정이면) `choose_pet` 순서로 부른다. 펫 저장만 실패하면 온보딩은 다시 보내지 않고 펫 저장만 다시 시도한다.
+- 마지막 펫 화면의 '모멘트리 시작하기'에서 **`choose_pet` → `complete_onboarding`** 순서로 부른다.
+  - 직무 미정 사용자의 펫 저장이 실패하면 온보딩을 완료하지 않고 멈춘다(다시 누르면 펫 저장부터). 직무를 고른 사용자의 `choose_pet(null)` 실패는 무시하고 진행한다.
+  - `complete_onboarding`은 같은 펫 행을 `on conflict do nothing`으로 쓰므로 펫이 두 번 생기지 않는다. 온보딩 저장이 성공한 뒤에는 다시 보내지 않는다.
 - 노드 생성 규칙:
 
 | 대상 | source | 배치 | completed |
@@ -514,6 +518,8 @@ selectCourses({
 }
 // 결과 (보상 없음: reason = NOT_TODAY 과거 날짜 | TOO_SHORT 20자 미만 | ALREADY_REWARDED 오늘 이미 받음)
 { "diary": { /* Diary */ }, "reward": { "rewarded": false, "reason": "TOO_SHORT" }, "pet": { /* Pet */ } }
+// 발자취 보상 (migration 20261114002900부터 함께 옴)
+"footprintReward": { "rewarded": true, "energy": 100 }   // 또는 { "rewarded": false, "reason": "NOT_TODAY" | "EMPTY" | "ALREADY_REWARDED" }
 ```
 - 일기 작성·수정은 테이블에 직접 쓰지 않고 `save_diary`를 통해서만 한다.
 - 일기는 **글자 수와 관계없이 저장된다.** 20자 미만이면 보상만 지급하지 않는다.
@@ -521,7 +527,8 @@ selectCourses({
 - 보상은 일기 날짜가 **서버가 계산한 오늘(Asia/Seoul)** 일 때만 지급한다. 과거 날짜 일기는 저장만 한다.
 - 미래 날짜 일기는 쓸 수 없다. (`VALIDATION_ERROR`)
 - 본문은 5000자까지 저장한다.
-- 발자취(`footprint`)는 선택이며 2000자까지. 보내지 않으면(`null`) 기존 발자취를 그대로 둔다. 보상 판정(20자)은 본문(`content`)만 센다.
+- 발자취(`footprint`)는 선택이며 2000자까지. 보내지 않으면(`null`) 기존 발자취를 그대로 둔다. 일기 보상 판정(20자)은 본문(`content`)만 센다.
+- 발자취 보상(+100)은 오늘 날짜 + 이번 저장에 내용이 있는 발자취일 때 하루 1회 (3장). 서버 응답 키는 `footprint_reward`, 서비스 계층이 `footprintReward`로 바꾼다. 서버가 아직 주지 않으면 `null`
 - 연결 노드(`linkedNodeId`)는 내 노드만 가능 (아니면 `NOT_FOUND`). 보내지 않으면 연결을 끊는다.
 
 ### 4.7 펫
@@ -533,7 +540,7 @@ selectCourses({
 | 오늘 출석 여부 조회 | 테이블 `reward_events` 조회 (`type: "attendance"`, 오늘 KST 날짜) | 완료 상태 표시용 |
 | 지난 접속 날짜 | 테이블 `reward_events` 조회 (`attendance`, 오늘 **이전** 가장 최근 `ref_id`) | `services/lastVisit.js`. 펫 시무룩(3일)·추운 모습(7일) 연출용. 읽기만, 기록이 없으면 평소 모습 |
 | 닉네임 변경 | RPC `change_nickname(p_nickname)` | 첫 변경 무료, 이후 온기 잔액 300 차감 (migration `20261114002500`) |
-| 미정 사용자 펫 저장 | RPC `choose_pet(p_type)` | 4.2 참고 (**미적용**) |
+| 펫 종류 저장 | RPC `choose_pet(p_type)` | 온보딩 완료 전에만, 4.2 참고 (**미적용**) |
 | 튜토리얼 '봤음' 기록 | RPC `mark_tutorial_seen(p_kind)` | `home` \| `roadmap`. 자동 실행 순간 기록 (migration `20261114003000`, **미적용**) |
 
 ```json
@@ -665,7 +672,9 @@ selectCourses({
 | 항목 | 상태 |
 | --- | --- |
 | migration `20261109000100` ~ `20261114002600_diary_footprint` | 적용됨 |
-| migration `20261114002700_choose_pet` | **미적용** |
+| migration `20261114002700_choose_pet` | **미적용** (함수 없음 확인) |
+| migration `20261114002800_choose_pet_during_onboarding` (팀원, 002700 다음에 적용) | **미적용** |
+| migration `20261114002900_footprint_reward` (팀원, 발자취 보상) | **확인 못 함** (함수 이름·인자가 같아 외부에서 구분 불가) |
 | migration `20261114003000_tutorial_seen` | **미적용** (번호를 `000100` → `002800` → `003000`으로 바꿈. 팀원의 `002800`과 겹치지 않게. 같은 내용이 적용된 적 없음) |
 | migration `20261114003100_delete_timeline_period` (학기 삭제) | **미적용** → 적용 전에는 × 를 누르면 '서버에 준비되지 않았어요' 안내, 아무것도 바뀌지 않음 |
 | Edge Function `recommend-career`, `delete-account` | 배포됨 |
