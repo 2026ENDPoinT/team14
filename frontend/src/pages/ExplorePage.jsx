@@ -214,7 +214,7 @@ export default function ExplorePage() {
                   <DeadlineBadge deadline={c.deadline} status={c.sourceStatus} />
                   {c.matchesInterest && <span className="ex-interest">관심 분야</span>}
                 </div>
-                <a className="ex-card__title" href={c.url} target="_blank" rel="noopener noreferrer"><FieldTitle title={c.title} /></a>
+                <a className="ex-card__title" href={c.url} target="_blank" rel="noopener noreferrer"><FieldTitle title={c.title} hideOther /></a>
                 <p className="ex-card__sub">{sourceName(c.source)} · 마감 {c.deadline ?? '정보 없음'}</p>
                 {addButton('contest', c, addBlockReason({ deadline: c.deadline, status: c.sourceStatus }))}
               </li>
@@ -289,10 +289,12 @@ export default function ExplorePage() {
 
 // 제목 앞에 직무 분야 [분야명]을 붙여 보여 준다. (저장된 제목은 그대로, 화면에서만 붙임)
 // 분야가 둘이면 [백엔드] [프론트엔드]처럼 나란히 붙인다
-function FieldTitle({ title }) {
+// hideOther: 판단이 어려울 때 붙는 [기타]만 숨긴다 (공모전·대외활동 카드). 다른 분야 라벨과 원문 제목은 그대로
+function FieldTitle({ title, hideOther = false }) {
+  const labels = fieldLabelsOf(title).filter((label) => !(hideOther && label === FIELD_LABELS.other))
   return (
     <>
-      {fieldLabelsOf(title).map((label) => (
+      {labels.map((label) => (
         <span key={label} className="ex-field" data-field={label}>[{label}] </span>
       ))}
       {title}
