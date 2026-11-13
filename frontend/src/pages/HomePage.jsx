@@ -5,6 +5,7 @@ import PetImage from '../features/pet/PetImage.jsx'
 import { getEnergyToNextStage, getStageInfo, getStageProgress, MAX_STAGE } from '../features/pet/petStages.js'
 import { PET_CHARACTERS, petAssetName, petAssetUrl, resolvePetCharacter } from '../features/home/petCharacter.js'
 import { petFrames } from '../features/home/petFrames.js'
+import { jobTitle } from '../features/mypage/jobGroups.js'
 import PetSprite from '../features/home/PetSprite.jsx'
 import { autoCheckIn } from '../features/home/homeActions.js'
 import { dropSeenRewards, finishReward, markRewardSeen, seenRewardIds, useRewardQueue } from '../features/home/rewardQueue.js'
@@ -119,6 +120,9 @@ export default function HomePage() {
   const frames = useMemo(() => petFrames(assetName), [assetName])
   // 위쪽 이름: 사용자 닉네임 (펫 이름 아님). HOME은 프로필 확인이 끝난 뒤에만 그려진다(RouteGuards)
   const nickname = profile?.nickname?.trim() || ''
+  // 닉네임 아래 희망 직무: 사용자가 실제로 고른 값(profiles.interests 첫 번째, 마이페이지와 같은 값). 펫 종류로 추정하지 않는다
+  const desiredJob = profile?.interests?.[0]
+  const desiredJobLabel = desiredJob && desiredJob !== 'undecided' && jobTitle(desiredJob) !== '선택 안 함' ? jobTitle(desiredJob) : '희망 직무 미정'
   // 펫 이미지 설명용 (화면에 이름으로 보이지 않음)
   const petLabel = character ? PET_CHARACTERS[character].label : '내 펫'
   // 온기 잔액: 서버 pets.warmth_balance (누적 온기 energy와 별개 — 온기를 쓰면 잔액만 줄어든다)
@@ -214,6 +218,7 @@ export default function HomePage() {
         ) : (
           <>
             <h1 className={`hm-name__text ${nickname ? '' : 'is-empty'}`}>{nickname || '닉네임을 정해 주세요'}</h1>
+            <p className="hm-name__job">{desiredJobLabel}</p>
             <button type="button" className="hm-name__edit" aria-label="닉네임 수정" title="닉네임 수정" onClick={startEdit}>
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4" />
