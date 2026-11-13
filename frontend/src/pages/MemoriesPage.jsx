@@ -4,7 +4,7 @@ import DiaryCalendar from '../features/diary/DiaryCalendar.jsx'
 import DiaryModal from '../features/diary/DiaryModal.jsx'
 import MonthPicker from '../features/diary/MonthPicker.jsx'
 import HighlightTimeline from '../features/diary/HighlightTimeline.jsx'
-import { groupByDate, activityDate, useActivities } from '../features/diary/activities.js'
+import { groupByDate, useActivities } from '../features/diary/activities.js'
 import { listDiaries, useDiaries } from '../features/diary/diaryStore.js'
 import { EMPTY_PET, usePet } from '../features/pet/petStore.js'
 import { getStageByNumber, getStageInfo, PET_STAGES } from '../features/pet/petStages.js'
@@ -103,17 +103,9 @@ export default function MemoriesPage() {
 
   const closeModal = useCallback(() => setOpenDate(null), [])
 
-  // 주요 활동 카드: 지난 날짜면 일기 탭에서 그날을 연다. 날짜가 없거나 미래면 로드맵으로
+  // 주요 활동 카드: 로드맵으로 가서 그 노드가 있는 자리로 화면을 옮기고 잠깐 반짝여 보여 준다 (RoadmapPage ?focus=)
   function openActivity(node) {
-    const date = activityDate(node)
-    if (!date || date > today) {
-      navigate('/roadmap')
-      return
-    }
-    const [year, month] = date.split('-').map(Number)
-    setView({ year, month })
-    navigate(`/diary?date=${date}`) // 화면이 새로 그려져도 그 날짜 팝업이 열리게
-    setOpenDate(date)
+    navigate(`/roadmap?focus=${encodeURIComponent(node.id)}`)
   }
 
   const refresh = useCallback(() => setVersion((v) => v + 1), [])
