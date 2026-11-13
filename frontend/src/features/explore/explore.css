@@ -3,7 +3,7 @@
   overflow-y: auto; /* 로드맵과 달리 목록은 세로로 스크롤 */
 }
 .ex-main {
-  max-width: 1100px;
+  max-width: 720px; /* 목록 묶음(.ex-panel 720px)과 같은 폭 → 제목·탭·목록 전체가 화면 가운데에 */
   margin: 0 auto;
   padding: 120px 32px 64px;
 }

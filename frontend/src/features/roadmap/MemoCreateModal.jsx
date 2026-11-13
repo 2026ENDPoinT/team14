@@ -4,7 +4,7 @@ import { CloseIcon } from './icons.jsx'
 import { MEMO_COLORS } from './MemoNode.jsx'
 import './memo.css'
 
-const SWATCH = { butter: '#f6e3a8', sage: '#b9cdb3', pink: '#f0c9c6', white: '#ffffff' }
+const SWATCH = { butter: '#f3f3f3', sage: '#e2e2e2', pink: '#cdcdcd', white: '#ffffff' }
 
 // 메모 추가 창: 학기 · 제목(선택) · 내용 · 색
 // onCreate({ periodId, title, body, color }) → 오류 문구 또는 null (성공하면 부모가 창을 닫는다)

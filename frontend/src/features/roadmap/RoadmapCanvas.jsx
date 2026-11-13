@@ -70,7 +70,7 @@ export default function RoadmapCanvas({
   const [startViewport] = useState(() => initialViewport(window.innerWidth, window.innerHeight, layout, nodes)) // 첫 진입 화면 위치
   const [resetKey, setResetKey] = useState(0) // 원래 위치로 되돌리기용
   const wrapRef = useRef(null)
-  const { getViewport, setCenter } = useReactFlow()
+  const { getViewport, setCenter, screenToFlowPosition } = useReactFlow()
 
   // 새 노드로 화면 이동: 노드의 학기(periodId)·학기 기준 좌표로 캔버스 위치를 구하고(nodeBox),
   // 지금 화면에 다 보이면 그대로, 아니면 배율은 그대로 두고 노드가 가운데 오게 옮긴다 (fitView 아님)
@@ -218,21 +218,25 @@ export default function RoadmapCanvas({
 
   // 끄는 노드 중심이 다른 카드 안쪽에 들어갔는지 (연결 후보)
   // 캔버스 좌표로 비교하므로 확대·축소·화면 이동과 상관없다. liveBoxes는 화면에 그려진 카드만이라 필터로 숨긴 노드는 제외
+  // - 큰 노드(메모)는 중심이 작은 과목 카드에 잘 안 들어가므로, 마우스 포인터가 대상 카드 안에 있어도 후보로 본다
   const findDropLink = useCallback(
-    (flowNode) => {
+    (flowNode, event) => {
       const me = boxAt(flowNode.position, flowNode.data.node)
       const cx = me.x + me.w / 2
       const cy = me.y + me.h / 2
+      const screen = event && pointOf(event)
+      const pointer = screen ? screenToFlowPosition({ x: screen.x, y: screen.y }) : null
+      const inside = (b, x, y) => x > b.x + DROP_INSET && x < b.x + b.w - DROP_INSET && y > b.y + DROP_INSET && y < b.y + b.h - DROP_INSET
       for (const [id, b] of liveBoxes) {
         if (id === flowNode.id) continue
-        if (cx > b.x + DROP_INSET && cx < b.x + b.w - DROP_INSET && cy > b.y + DROP_INSET && cy < b.y + b.h - DROP_INSET) {
+        if (inside(b, cx, cy) || (pointer && inside(b, pointer.x, pointer.y))) {
           const problem = linkProblem(edges, flowNode.id, id) // 자기 자신·중복(방향 무관) 검사
           return { id, valid: !problem, problem }
         }
       }
       return null
     },
-    [liveBoxes, edges],
+    [liveBoxes, edges, screenToFlowPosition],
   )
 
   const onNodeDragStart = useCallback((event, flowNode) => {
@@ -260,7 +264,7 @@ export default function RoadmapCanvas({
       const swap = findSwapTarget(flowNode.data.node, flowNode.position, nodes, layout, canSwapWith)
       setSwapId(swap?.id ?? null)
       // 자리 교환 대상이 없고, 다른 카드 위면 연결 후보 강조 (학기 강조는 끈다)
-      const candidate = swap ? null : findDropLink(flowNode)
+      const candidate = swap ? null : findDropLink(flowNode, event)
       setDropLink((prev) => (prev?.id === candidate?.id && prev?.valid === candidate?.valid ? prev : candidate))
       if (candidate) {
         onDropTargetChange(null)
@@ -288,7 +292,7 @@ export default function RoadmapCanvas({
       }
       // ③ 다른 카드 위 → 관계선 (② 자리 교환 대상이 있으면 planDrop이 처리). 클릭·손떨림(4px 이하)은 제외
       const swap = findSwapTarget(flowNode.data.node, flowNode.position, nodes, layout, canSwapWith)
-      const candidate = !swap && draggedRef.current ? findDropLink(flowNode) : null
+      const candidate = !swap && draggedRef.current ? findDropLink(flowNode, event) : null
       if (candidate) {
         if (candidate.valid) onEdgeCreate(flowNode.id, candidate.id)
         else onLinkReject(candidate.problem)

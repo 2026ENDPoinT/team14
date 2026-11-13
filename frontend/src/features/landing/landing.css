@@ -20,6 +20,8 @@
   overflow-y: auto;
   background: var(--lp-bg);
   color: var(--lp-text);
+  /* 로고 글씨: 기기에 있는 둥근 글꼴(애플 SF Rounded 등), 없으면 기본 글꼴 — 내려받는 글꼴 없음 */
+  --lp-round: ui-rounded, 'SF Pro Rounded', 'Arial Rounded MT Bold', 'Nunito', 'Pretendard', -apple-system, sans-serif;
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
   -webkit-font-smoothing: antialiased;
   word-break: keep-all;
@@ -43,11 +45,12 @@
 .lp-brand {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   color: var(--lp-text);
-  font-size: 16px;
+  font-family: var(--lp-round);
+  font-size: 17px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   text-decoration: none;
 }
 .lp-login {
@@ -86,10 +89,11 @@
   animation: lp-in 1s var(--lp-ease) 0.1s both;
 }
 .lp-wordmark {
-  margin: 18px 0 0;
+  margin: 16px 0 0;
+  font-family: var(--lp-round);
   font-size: clamp(44px, 8vw, 84px);
   font-weight: 700;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.025em;
   line-height: 1;
   animation: lp-in 1s var(--lp-ease) 0.25s both;
 }
