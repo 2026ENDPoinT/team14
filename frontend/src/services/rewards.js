@@ -42,8 +42,9 @@ export async function getMyPet() {
   return { data: toPet(data) }
 }
 
-// 직무 미정 사용자가 온보딩에서 고른 펫 종류 저장 (RPC choose_pet, migration 20261114002700)
-// - 펫 종류는 pets.type에 저장 (직무와 따로). 이미 종류가 있으면 서버가 바꾸지 않는다 (changed=false)
+// 온보딩에서 고른 펫 종류 저장 (RPC choose_pet, migration 20261114002700 → 20261114002800에서 교체)
+// - 펫 종류는 pets.type에 저장 (직무와 따로). 온보딩을 마치기 전에만 부를 수 있다 (펫 행이 없으면 서버가 만든다)
+// - type: 펫 키 또는 null(직무를 고른 경우 비움). 온보딩을 마친 뒤에는 서버가 거절한다 (CONFLICT)
 // - RPC가 아직 서버에 없으면 오류 그대로 돌려준다 (가짜 저장 없음)
 // 성공: { data: { changed, pet } }
 export async function choosePet(type) {
