@@ -25,7 +25,7 @@ function formatDateLong(date) {
 // - 이미 쓴 일기는 먼저 읽기만 하고, '수정하기'를 눌러야 고칠 수 있다.
 // - 저장·삭제는 서버에 한다 (diaryStore → services/diary.js). 실패하면 입력한 내용은 그대로 두고 다시 시도할 수 있다.
 // onChanged: 저장·삭제 후 달력(노란 점)을 다시 그리게 알린다.
-export default function DiaryModal({ date, onClose, onChanged }) {
+export default function DiaryModal({ date, activities = [], onClose, onChanged }) {
   const [content, setContent] = useState(() => getDiaryByDate(date)?.content ?? '')
   const [isExisting, setIsExisting] = useState(() => Boolean(getDiaryByDate(date)))
   const [editing, setEditing] = useState(false) // 이미 쓴 일기를 고치는 중인지
@@ -131,6 +131,22 @@ export default function DiaryModal({ date, onClose, onChanged }) {
           </div>
         </header>
         <hr className="rm-divider dp-divider" />
+
+        {/* 이날 마감·목표일인 주요 활동 (로드맵 노드, 읽기만) */}
+        {activities.length > 0 && (
+          <div className="dp-acts">
+            <p className="dp-acts__label">이날의 활동</p>
+            <ul className="dp-acts__list">
+              {activities.map((node) => (
+                <li key={node.id} className="dp-acts__item">
+                  <span className={`dp-acts__dot ${node.completed ? 'is-done' : ''}`} aria-hidden="true" />
+                  <span className="dp-acts__title">{node.title}</span>
+                  <span className="dp-acts__kind">{node.dueDate ? '목표일' : '마감일'}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="rm-field">
           <span className="rm-eyebrow">오늘의 이야기</span>
