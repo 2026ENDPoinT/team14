@@ -1,7 +1,10 @@
+/* 서비스 이름용 둥근 글꼴 (Google Fonts, 영문만) */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@800;900&display=swap');
+
 /* 로그인 화면 스타일
    색·그림자·모서리는 로드맵·일기 화면과 같다. (변수는 DiaryEditor.css의 .diary-page) */
 
-/* 배경: 가운데가 살짝 진한 회색 그라데이션 + 떠 있는 입체 원 장식 */
+/* 배경: 가운데가 살짝 진한 회색 그라데이션 */
 .lg-page {
   display: flex;
   align-items: center;
@@ -11,30 +14,6 @@
       #ececec 45%,
       var(--rm-bg) 100%);
 }
-.lg-page::before,
-.lg-page::after {
-  content: '';
-  position: fixed;
-  border-radius: 50%;
-  background: linear-gradient(145deg, #fafafa, #e2e2e2);
-  box-shadow: 20px 26px 50px rgba(0, 0, 0, 0.08), -16px -16px 40px rgba(255, 255, 255, 0.9);
-  pointer-events: none;
-}
-.lg-page::before {
-  top: -90px;
-  left: -70px;
-  width: 300px;
-  height: 300px;
-}
-.lg-page::after {
-  right: -60px;
-  bottom: -80px;
-  width: 240px;
-  height: 240px;
-  background: linear-gradient(145deg, #fbefc8, #f2d68f); /* 노란 원 하나로 포인트 */
-  box-shadow: 18px 22px 44px rgba(170, 130, 40, 0.18), -14px -14px 36px rgba(255, 255, 255, 0.85);
-}
-
 /* 서비스 이름 + 카드를 세로로 가운데 */
 .lg-main {
   position: relative;
@@ -55,21 +34,11 @@
   align-items: center;
   text-align: center;
 }
-.lg-logo {
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-  margin-bottom: 12px;
-  border-radius: 20px;
-  background: linear-gradient(145deg, #fbfbfb, #e6e6e6);
-  box-shadow: 8px 10px 20px rgba(0, 0, 0, 0.1), -6px -6px 14px rgba(255, 255, 255, 0.95),
-    inset 1px 1px 0 rgba(255, 255, 255, 0.9);
-}
 .lg-name {
   margin: 0;
-  font-size: 30px;
-  font-weight: 500;
+  font-family: 'Nunito', var(--rm-font); /* 둥근 글꼴 (불러오지 못하면 기본 글꼴) */
+  font-size: 40px;
+  font-weight: 800;
   letter-spacing: -0.01em;
   color: var(--dy-ink);
   text-shadow: 1px 1px 0 #fff;
@@ -317,4 +286,109 @@
   .lg-card {
     padding: 32px 24px 28px;
   }
+}
+/* 휴대폰: 서비스 이름이 두 줄로 꺾이지 않게 */
+@media (max-width: 480px) {
+  .lg-name {
+    font-size: 34px;
+  }
+}
+
+/* ════════ 투명(유리) 버전 ════════
+   색은 그대로(회색 + 노랑), 카드·입력칸·버튼을 반투명하게 하고 뒤를 흐리게 비친다.
+   위의 입체(볼록) 스타일을 아래 규칙이 덮어쓴다. */
+
+/* 유리 뒤로 비칠 부드러운 색 번짐 (카드 뒤 가운데, 노랑 + 회색) */
+.lg-main::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: -1;
+  width: min(760px, 120vw);
+  height: 620px;
+  transform: translate(-50%, -46%);
+  background:
+    radial-gradient(circle at 30% 38%, rgba(242, 214, 143, 0.9) 0, rgba(242, 214, 143, 0) 42%),
+    radial-gradient(circle at 72% 64%, rgba(248, 230, 173, 0.85) 0, rgba(248, 230, 173, 0) 40%),
+    radial-gradient(circle at 62% 26%, rgba(190, 190, 190, 0.55) 0, rgba(190, 190, 190, 0) 36%);
+  filter: blur(30px);
+  pointer-events: none;
+}
+
+.lg-name {
+  text-shadow: none;
+}
+
+.lg-card {
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+}
+
+/* 입력칸: 투명 + 가는 테두리 */
+.lg-input {
+  border: 1px solid rgba(85, 85, 85, 0.22);
+  background: rgba(255, 255, 255, 0.35);
+  box-shadow: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.lg-input:focus {
+  border-color: var(--rm-accent-dot);
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 0 3px rgba(242, 214, 143, 0.35);
+}
+.lg-input::placeholder {
+  color: #9a9a9a;
+}
+
+/* 이메일 칸 오른쪽 아이콘 (비밀번호 칸의 눈 아이콘과 같은 자리) */
+.lg-icon-field {
+  position: relative;
+  display: block;
+}
+.lg-icon-field .lg-input {
+  padding-right: 48px;
+}
+.lg-icon-field__icon {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  display: grid;
+  color: #999;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* 버튼: 평평한 반투명 + 노란 그라데이션 */
+.lg-btn {
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.lg-btn:active:not(:disabled) {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.lg-btn--accent {
+  border-color: rgba(255, 255, 255, 0.6);
+  background: linear-gradient(90deg, #fcefc6, #f2d68f);
+  box-shadow: 0 8px 20px rgba(170, 130, 40, 0.22);
+}
+.lg-btn--google {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.lg-or::before,
+.lg-or::after {
+  background: rgba(85, 85, 85, 0.18);
+}
+.lg-msg {
+  background: rgba(248, 230, 173, 0.7);
+}
+.lg-msg--error {
+  background: rgba(247, 225, 223, 0.8);
 }

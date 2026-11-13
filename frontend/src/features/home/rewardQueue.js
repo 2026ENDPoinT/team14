@@ -28,6 +28,11 @@ export function markRewardSeen(id) {
   shown.add(id)
 }
 
+// 지금까지 본 보상 id (HOME을 열 때 한 번 읽어서, 첫 화면부터 다시 보여 주지 않게)
+export function seenRewardIds() {
+  return new Set(shown)
+}
+
 // HOME을 새로 열 때: 이미 본 보상(도중에 떠난 것)은 대기열에서 뺀다
 export function dropSeenRewards() {
   const next = queue.filter((r) => !shown.has(r.id))

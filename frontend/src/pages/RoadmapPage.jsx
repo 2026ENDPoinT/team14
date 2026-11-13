@@ -46,6 +46,22 @@ function categoryLabelOf(categoryId, customCategories) {
   return [...BASE_CATEGORIES, ...customCategories].find((c) => c.id === categoryId)?.label ?? null
 }
 
+// 노드 배치가 바뀐 학기 id 목록 (이전·새 노드 비교: 추가·삭제·이동·학기 변경)
+function changedPeriodIds(prev, next) {
+  const ids = new Set()
+  const before = new Map(prev.map((n) => [n.id, n]))
+  const key = (n) => (n.status === 'placed' ? `${n.periodId}:${n.position?.x}:${n.position?.y}` : 'stored')
+  for (const n of next) {
+    const old = before.get(n.id)
+    before.delete(n.id)
+    if (old === n || (old && key(old) === key(n))) continue
+    if (old?.status === 'placed') ids.add(old.periodId)
+    if (n.status === 'placed') ids.add(n.periodId)
+  }
+  for (const old of before.values()) if (old.status === 'placed') ids.add(old.periodId) // 지운 노드
+  return ids
+}
+
 // 로드맵 페이지: 하나의 화면에서 상태에 따라 메뉴·보관함·팝업이 나타나고 사라진다.
 // 데이터: 로그인했으면 내 학기·노드·연결선·노드 문서를 DB에서 불러오고,
 //         노드 생성·이동·수정(이름·종류·기록)·완료 표시·삭제, 연결선 추가·변경·삭제를 DB에 저장한다.
@@ -201,13 +217,21 @@ export default function RoadmapPage() {
 
   // 학기 컬럼 배치 (가로 자동 확장): 노드 배치로부터 학기별 x·너비를 매번 다시 계산한다
   // - 노드를 오른쪽에 놓으면 그 학기가 넓어지고 뒤 학기는 밀린다. 노드를 빼거나 지우면 필요한 만큼으로 줄어든다
-  // - holdRef: 넓어진 학기에서 뒤 학기로 노드를 옮긴 직후에만 앞 학기 너비를 붙잡아 둔다
-  //   (바로 줄면 뒤 학기가 왼쪽으로 당겨져 방금 놓은 노드가 튀어 보임). 다음 변경 때 노드 기준으로 줄어든다
-  const holdRef = useRef({ nodes: null, widths: {} })
-  const layout = useMemo(
-    () => computeLayout(periods, nodes, holdRef.current.nodes === nodes ? holdRef.current.widths : {}),
-    [periods, nodes],
-  )
+  // - holdRef: 넓어진 학기에서 뒤 학기로 노드를 옮기면 앞 학기 너비를 붙잡아 둔다
+  //   (바로 줄면 뒤 학기가 왼쪽으로 당겨져 방금 놓은 노드가 튀어 보임).
+  //   그 학기 자체가 바뀔 때(노드를 넣거나 빼거나 옮기거나 지울 때)만 풀어서 노드 기준으로 줄인다
+  //   → 다른 학기에서 작업하는 동안 화면이 갑자기 당겨지지 않는다
+  const holdRef = useRef({ widths: {}, prevNodes: null, keep: null })
+  const layout = useMemo(() => {
+    const hold = holdRef.current
+    if (hold.prevNodes && hold.prevNodes !== nodes) {
+      for (const id of changedPeriodIds(hold.prevNodes, nodes)) {
+        if (!(hold.keep?.nodes === nodes && hold.keep.ids.includes(id))) delete hold.widths[id]
+      }
+    }
+    hold.prevNodes = nodes
+    return computeLayout(periods, nodes, hold.widths)
+  }, [periods, nodes])
   const layoutRef = useRef(layout)
   layoutRef.current = layout
 
@@ -269,7 +293,8 @@ export default function RoadmapPage() {
         widths[old.periodId] = cols[old.periodId].width
       }
     }
-    holdRef.current = { nodes: next, widths }
+    Object.assign(holdRef.current.widths, widths)
+    holdRef.current.keep = { nodes: next, ids: Object.keys(widths) }
     setNodes(next)
     if (!isDb) return
     moveNodes(moves).then((result) => {

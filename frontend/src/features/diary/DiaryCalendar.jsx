@@ -1,4 +1,5 @@
 import { toDateString } from './dateUtils.js'
+import { getWeekStart } from '../mypage/settingsStore.js'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -6,7 +7,10 @@ const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 // 미래 날짜는 누를 수 없다 (일기 작성 규칙과 같음)
 // activitiesByDate: { 'YYYY-MM-DD': [노드] } 그날 마감·목표일인 주요 활동 (있으면 날짜 위에 작은 깃발)
 export default function DiaryCalendar({ year, month, today, diaryDates, activitiesByDate = {}, onSelect }) {
-  const firstWeekday = new Date(year, month - 1, 1).getDay() // 1일의 요일 (0 = 일요일)
+  // 시작 요일: 마이페이지 '화면 설정'의 달력 시작 요일 (일요일 / 월요일)
+  const startIndex = getWeekStart() === 'mon' ? 1 : 0
+  const weekdays = [...WEEKDAYS.slice(startIndex), ...WEEKDAYS.slice(0, startIndex)]
+  const firstWeekday = (new Date(year, month - 1, 1).getDay() - startIndex + 7) % 7 // 1일 앞 빈칸 수
   const daysInMonth = new Date(year, month, 0).getDate()
 
   // 1일 앞의 빈칸 + 1일~말일
@@ -17,7 +21,7 @@ export default function DiaryCalendar({ year, month, today, diaryDates, activiti
 
   return (
     <div className="dp-calendar">
-      {WEEKDAYS.map((w) => (
+      {weekdays.map((w) => (
         <span key={w} className="dp-weekday">{w}</span>
       ))}
 

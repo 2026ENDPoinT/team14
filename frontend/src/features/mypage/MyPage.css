@@ -470,7 +470,14 @@
   color: #b59a55;
 }
 .mp-dialog {
-  width: min(440px, 100%);
+  width: min(476px, 100%); /* 가장 긴 직무 조합도 맨 위 한 줄에 들어가는 폭 */
+}
+/* 맨 위 '희망 직무 변경 · A → B' 를 한 줄로 */
+.mp-dialog__eyebrow {
+  overflow: hidden;
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .mp-dialog .dp-photo__title {
   margin-top: 10px;

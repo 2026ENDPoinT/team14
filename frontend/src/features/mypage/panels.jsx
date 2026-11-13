@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import PetImage from '../pet/PetImage.jsx'
-import { getStageByNumber, getStageProgress } from '../pet/petStages.js'
+import { getEnergyToNextStage, getStageByNumber, getStageInfo, getStageProgress } from '../pet/petStages.js'
 import { listDiaries, useDiaries } from '../diary/diaryStore.js'
 import { getTodayKST } from '../diary/dateUtils.js'
 import { Group, LinkRow, PanelTitle, Row, Segment, Toggle } from './ui.jsx'
@@ -11,9 +11,11 @@ import { JOB_TO_PET, PET_CHARACTERS } from '../home/petCharacter.js'
 import { useAuth } from '../auth/AuthProvider.jsx'
 import WithdrawDialog from './WithdrawDialog.jsx'
 import { NICKNAME_COST, NICKNAME_MAX } from '../profile/nickname.js'
+import { exportMyRecords } from './exportRecords.js'
+import { canNotify, showDiaryNotification } from '../diary/DiaryReminder.jsx'
 
 // 마이페이지 오른쪽 화면들. 왼쪽 메뉴에서 고른 것 하나만 보인다.
-// 모두 Mock 데이터 기반이며, 실제 저장·인증은 3번(인증·서비스) 연동 때 연결한다.
+// 닉네임·학년·이메일·희망 직무·일기·펫은 서버 값. 설정은 이 브라우저에 저장(settingsStore). 일기 알림은 브라우저 알림(DiaryReminder)
 
 // 펫 아이콘 동그라미 (학기 배지와 같은 연노랑)
 // ※ 나중에 단계에 맞는 펫 이미지(5가지 중 1개)가 들어갈 자리. 지금은 임시 아이콘(PetImage)
@@ -39,8 +41,8 @@ function ProfileBar({ profile, pet, action }) {
   )
 }
 
-// ── 계정 센터 (하위 화면: 프로필 / 연결된 계정 / 내 정보) ──
-export function AccountPanel({ profile, pet, notReady }) {
+// ── 계정 센터 (하위 화면: 프로필 / 연결된 계정) ──
+export function AccountPanel({ profile, pet }) {
   const [withdrawOpen, setWithdrawOpen] = useState(false) // 회원 탈퇴 확인 창
   // 로그아웃: 기존 AuthProvider의 logout. 성공하면 라우트 가드가 로그인 화면으로 보낸다
   const { logout } = useAuth()
@@ -68,25 +70,13 @@ export function AccountPanel({ profile, pet, notReady }) {
       <>
         <PanelTitle title="연결된 계정" onBack={back} />
         <Group>
-          <Row label="Google" hint={profile.loginProvider === 'google' ? profile.email : '연결 안 됨'}>
-            <span className="mp-chip">{profile.loginProvider === 'google' ? '연결됨' : '연결하기'}</span>
-          </Row>
+          <Row label="로그인 이메일" hint={profile.email || '알 수 없음'} />
         </Group>
+        {/* [미확정] 로그인 방식(이메일·Google) 표시는 프로필 조회에 정보가 없어 3번과 협의 필요 */}
+        <p className="rm-muted">이메일 또는 Google 계정으로 로그인한 주소예요.</p>
       </>
     )
   }
-  if (sub === 'data') {
-    return (
-      <>
-        <PanelTitle title="내 정보 및 권한" onBack={back} />
-        <Group>
-          <LinkRow icon="info" label="내 기록 내보내기" hint="일기·로드맵을 파일로 저장" onClick={notReady} />
-        </Group>
-        <p className="rm-muted">내 기록은 나만 볼 수 있어요. 다른 사용자에게 보이지 않아요.</p>
-      </>
-    )
-  }
-
   return (
     <>
       <PanelTitle title="계정 센터" desc="로그인 정보와 계정 설정을 한곳에서 관리해 보세요." />
@@ -102,7 +92,6 @@ export function AccountPanel({ profile, pet, notReady }) {
       </div>
       <Group title="계정 설정">
         <LinkRow icon="link" label="연결된 계정" onClick={() => setSub('connected')} />
-        <LinkRow icon="info" label="내 정보 및 권한" onClick={() => setSub('data')} />
       </Group>
       <Group>
         <LinkRow icon="logout" label="로그아웃" onClick={handleLogout} />
@@ -188,7 +177,6 @@ export function ProfilePanel({ profile, pet, onSave }) {
 function JobChangeDialog({ profile, newJob, onCancel, onConfirm }) {
   const [resetCourses, setResetCourses] = useState(null) // null: 아직 안 고름 / true: 재설정 / false: 그대로
   const step = resetCourses === null ? 1 : 2
-  const term = `${profile.grade}학년 ${profile.semester}학기`
   const oldPet = JOB_TO_PET[profile.desiredJob]
   const newPet = JOB_TO_PET[newJob]
 
@@ -196,7 +184,11 @@ function JobChangeDialog({ profile, newJob, onCancel, onConfirm }) {
     <div className="dp-modal" role="dialog" aria-modal="true" aria-label="희망 직무 변경">
       <div className="dp-modal__backdrop" onClick={onCancel} />
       <section className="dp-photo mp-dialog">
-        <p className="rm-eyebrow">
+        {/* 한 줄로 (아주 긴 직무 이름은 끝을 … 로 줄이고, 마우스를 올리면 전체가 보인다) */}
+        <p
+          className="rm-eyebrow mp-dialog__eyebrow"
+          title={`희망 직무 변경 · ${jobTitle(profile.desiredJob)} → ${jobTitle(newJob)}`}
+        >
           희망 직무 변경 · {jobTitle(profile.desiredJob)} → {jobTitle(newJob)}
         </p>
         <div className="mp-dialog__steps" aria-label={`${step}/2단계`}>
@@ -205,7 +197,7 @@ function JobChangeDialog({ profile, newJob, onCancel, onConfirm }) {
 
         {step === 1 && (
           <>
-            <h3 className="dp-photo__title">{term} 이후 과목을 희망 직무에 맞게 재설정하시겠습니까?</h3>
+            <h3 className="dp-photo__title">현재 학기 이후 과목을 희망 직무에 맞게 재설정하시겠습니까?</h3>
             <p className="rm-muted dp-photo__sub">이미 들은 과목과 지금 학기 과목은 그대로 남아요.</p>
             <div className="mp-dialog__choices">
               <button type="button" className="dp-btn dp-btn--soft" onClick={() => setResetCourses(false)}>아니오</button>
@@ -240,14 +232,26 @@ function JobChangeDialog({ profile, newJob, onCancel, onConfirm }) {
   )
 }
 
-// ── 알림 ──
+// ── 알림: 일기 쓰기 알림 (브라우저 알림, DiaryReminder.jsx가 시간에 맞춰 보냄) ──
+// 켜면 브라우저에 알림 권한을 묻는다. 사이트가 탭에 열려 있을 때만 알림이 온다.
 export function NoticePanel({ settings, update }) {
+  const supported = canNotify()
+  const [permission, setPermission] = useState(supported ? Notification.permission : 'unsupported')
+
+  async function toggleReminder(on) {
+    if (on && supported && Notification.permission === 'default') {
+      setPermission(await Notification.requestPermission())
+    }
+    update('diaryReminder', on)
+  }
+
+  const blocked = permission === 'denied'
   return (
     <>
-      <PanelTitle title="알림" desc="기록을 잊지 않도록 알려 드려요." />
+      <PanelTitle title="알림" desc="일기 쓰는 걸 잊지 않도록 알려 드려요." />
       <Group title="일기">
-        <Row label="일기 쓰기 알림" hint="매일 정한 시간에 알려 드려요">
-          <Toggle label="일기 쓰기 알림" on={settings.diaryReminder} onChange={(v) => update('diaryReminder', v)} />
+        <Row label="일기 쓰기 알림" hint="정한 시간까지 오늘 일기가 없으면 한 번 알려 드려요">
+          <Toggle label="일기 쓰기 알림" on={settings.diaryReminder} onChange={toggleReminder} />
         </Row>
         {settings.diaryReminder && (
           <Row label="알림 시간">
@@ -259,15 +263,17 @@ export function NoticePanel({ settings, update }) {
             />
           </Row>
         )}
+        {settings.diaryReminder && permission === 'granted' && (
+          <LinkRow icon="bell" label="테스트 알림 보내기" hint="알림이 어떻게 오는지 바로 확인" onClick={() => showDiaryNotification()} />
+        )}
       </Group>
-      <Group title="출석 · 회고">
-        <Row label="출석 알림" hint="오늘 출석을 아직 안 했을 때">
-          <Toggle label="출석 알림" on={settings.attendanceReminder} onChange={(v) => update('attendanceReminder', v)} />
-        </Row>
-        <Row label="학기 회고 알림" hint="학기가 끝날 때 돌아보기">
-          <Toggle label="학기 회고 알림" on={settings.reflectionReminder} onChange={(v) => update('reflectionReminder', v)} />
-        </Row>
-      </Group>
+      {!supported && <p className="rm-muted">이 브라우저는 알림을 지원하지 않아요.</p>}
+      {blocked && (
+        <p className="rm-muted">
+          브라우저에서 알림이 차단돼 있어요. 주소창 왼쪽 자물쇠(🔒) → 알림 → 허용으로 바꿔 주세요.
+        </p>
+      )}
+      <p className="rm-muted">※ 우리 사이트가 브라우저 탭에 열려 있을 때만 알림이 와요. 설정은 이 브라우저에 저장돼요.</p>
     </>
   )
 }
@@ -277,23 +283,14 @@ export function DisplayPanel({ settings, update }) {
   return (
     <>
       <PanelTitle title="화면 설정" />
+      <p className="rm-muted">※ 설정은 이 브라우저에 저장돼요.</p>
       <Group>
-        <Row label="시작 화면" hint="로그인하면 처음 보이는 화면">
-          <Segment
-            value={settings.startPage}
-            options={[['/', '홈'], ['/roadmap', '로드맵'], ['/diary', '일기']]}
-            onChange={(v) => update('startPage', v)}
-          />
-        </Row>
-        <Row label="달력 시작 요일">
+        <Row label="달력 시작 요일" hint="일기 달력이 시작하는 요일">
           <Segment
             value={settings.weekStart}
             options={[['sun', '일요일'], ['mon', '월요일']]}
             onChange={(v) => update('weekStart', v)}
           />
-        </Row>
-        <Row label="움직임 줄이기" hint="화면 애니메이션을 최소로">
-          <Toggle label="움직임 줄이기" on={settings.reduceMotion} onChange={(v) => update('reduceMotion', v)} />
         </Row>
       </Group>
     </>
@@ -307,7 +304,9 @@ export function ActivityPanel({ pet }) {
   const allDiaries = listDiaries('0000-01-01', today)
   const monthDiaries = allDiaries.filter((d) => d.date.startsWith(today.slice(0, 7)))
   const recent = [...allDiaries].reverse().slice(0, 3)
-  const stage = getStageByNumber(pet.stage)
+  // 단계: 누적 온기 기준 (서버 stage가 더 높으면 그 값 — 일기·HOME과 같은 규칙)
+  const stage = getStageByNumber(Math.max(pet.stage ?? 1, getStageInfo(pet.energy).stage))
+  const nextMin = getEnergyToNextStage(pet.energy) // 다음 단계 기준 (최고 단계면 null)
 
   return (
     <>
@@ -320,14 +319,14 @@ export function ActivityPanel({ pet }) {
 
       <Group title="나의 펫">
         <div className="mp-pet">
-          <Avatar stage={pet.stage} size={64} />
+          <Avatar stage={stage.stage} size={64} />
           <div className="mp-pet__info">
             <p className="mp-row__label">{stage.stage}단계 · {stage.name}</p>
             <div className="dy-bar" aria-hidden="true">
               <div className="dy-bar__fill" style={{ width: `${getStageProgress(pet.energy)}%` }} />
             </div>
             <p className="mp-row__hint">
-              {pet.energyToNextStage ? `다음 단계까지 온기 ${(pet.energyToNextStage - pet.energy).toLocaleString()}` : '최고 단계예요'}
+              {nextMin !== null ? `다음 단계까지 온기 ${(nextMin - pet.energy).toLocaleString()}` : '최고 단계예요'}
             </p>
           </div>
         </div>
@@ -356,14 +355,30 @@ function Stat({ label, value }) {
 }
 
 // ── 기록 관리 ──
-export function RecordsPanel({ notReady }) {
+export function RecordsPanel({ profile, showToast }) {
+  const [exporting, setExporting] = useState(false)
+
+  // 일기·로드맵을 PDF로 저장 (인쇄 창에서 'PDF로 저장' 선택)
+  async function handleExport() {
+    if (exporting) return
+    setExporting(true)
+    const result = await exportMyRecords(profile)
+    setExporting(false)
+    showToast(result.error ? `내보내지 못했어요. ${result.error.message}` : "인쇄 창에서 '대상: PDF로 저장'을 골라 주세요.")
+  }
+
   return (
     <>
       <PanelTitle title="기록 관리" />
       <Group>
         <LinkRow icon="activity" label="일기장 열기" to="/diary?from=mypage&tab=records" />
-        <LinkRow icon="archive" label="로드맵 보관함" hint="삭제한 학기의 활동·문서" onClick={notReady} />
-        <LinkRow icon="info" label="내 기록 내보내기" hint="일기·로드맵을 파일로 저장" onClick={notReady} />
+        <LinkRow icon="archive" label="로드맵 보관함" hint="로드맵 화면에서 보관함을 열어 보세요" to="/roadmap" />
+        <LinkRow
+          icon="info"
+          label={exporting ? '내보내는 중…' : '내 기록 내보내기'}
+          hint="일기·로드맵을 PDF 파일로 저장"
+          onClick={handleExport}
+        />
       </Group>
     </>
   )

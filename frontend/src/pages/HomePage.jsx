@@ -5,10 +5,10 @@ import PetImage from '../features/pet/PetImage.jsx'
 import { getEnergyToNextStage, getStageInfo, getStageProgress, MAX_STAGE } from '../features/pet/petStages.js'
 import { PET_CHARACTERS, petAssetUrl, resolvePetCharacter } from '../features/home/petCharacter.js'
 import { autoCheckIn } from '../features/home/homeActions.js'
-import { dropSeenRewards, finishReward, markRewardSeen, useRewardQueue } from '../features/home/rewardQueue.js'
+import { dropSeenRewards, finishReward, markRewardSeen, seenRewardIds, useRewardQueue } from '../features/home/rewardQueue.js'
 import { checkNickname, NICKNAME_COST, NICKNAME_MAX, nicknameLength, saveNickname } from '../features/profile/nickname.js'
 import GrowthDots from '../features/home/GrowthDots.jsx'
-import RewardBurst from '../features/home/RewardBurst.jsx'
+import WarmthEffect from '../features/diary/WarmthEffect.jsx'
 import HomeQuote from '../features/home/HomeQuote.jsx'
 import CareerEntryButton from '../features/career/CareerEntryButton.jsx'
 import '../features/home/Home.css'
@@ -17,31 +17,34 @@ import '../features/home/Home.css'
 // - 펫·온기는 서버 값(petStore → pets 테이블). 출석·일기 보상 결과로 바로 갱신된다.
 // - 성장 단계는 누적 온기(pet.energy)로 정한다. 온기를 써도 단계는 내려가지 않는다.
 // - 출석은 버튼 없이 로그인할 때(AuthProvider)·HOME에 들어올 때 자동으로 서버(check_in)에 요청한다.
-//   같은 사용자·날짜에는 요청 하나를 같이 쓴다. 서버가 지급을 확인했을 때만 연출
+//   같은 사용자·날짜에는 요청 하나를 같이 쓴다. 서버가 지급을 확인했을 때만 일기와 같은 연기 연출(온기 +100 획득!)
+// - 보상 연출: 서버가 지급을 확인한 보상만 대기열(rewardQueue)에서 하나씩 보여 준다 (화면 이동·다시 그리기에도 한 번)
 // - 위쪽 이름은 사용자 닉네임(profiles.nickname). 수정은 서버 RPC(change_nickname)만 — 첫 변경 무료, 이후 온기 300
 //   RPC가 없으면 "준비 중" 안내만 한다 (가짜 저장·차감 없음)
-// - 보상 연출: 서버가 지급을 확인한 보상만 대기열(rewardQueue)에서 하나씩 보여 준다
 export default function HomePage() {
   const { profile, status, applyProfile } = useAuth()
   const userId = status === 'ready' ? profile?.id : null
   const pet = usePet().pet ?? EMPTY_PET // 서버의 내 펫 (누적 온기·잔액). 출석·일기 보상 결과로 바로 갱신된다
   const [toast, setToast] = useState('')
   // 서버가 지급을 확인한 보상 연출 대기열 [{ id, amount }] — 보상이 겹쳐도 하나씩 차례로, 끝까지 재생한 뒤에 뺀다
-  const bursts = useRewardQueue()
+  // HOME을 연 시점에 이미 본 보상은 첫 화면부터 빼고 보여 준다 (다시 그려질 때 한 순간 깜빡이지 않게)
+  const [seenAtOpen] = useState(seenRewardIds)
+  const bursts = useRewardQueue().filter((reward) => !seenAtOpen.has(reward.id))
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [nameError, setNameError] = useState('')
   const [busy, setBusy] = useState(false)
   const inputRef = useRef(null)
   const hopRef = useRef(null)
-  const petRef = useRef(null) // 연출 시작 위치 (펫)
-  const warmthRef = useRef(null) // 연출 도착 위치 (온기 표시)
   const burstId = bursts[0]?.id
   const endBurst = useCallback(() => {
     if (burstId) finishReward(burstId)
   }, [burstId])
-  const seenBurst = useCallback(() => {
-    if (burstId) markRewardSeen(burstId)
+  // 연출 배지('온기 +100 획득!')가 나온 뒤(2.2초)면 '본 것'으로 친다 → 그 뒤 화면을 떠나도 다시 보여 주지 않음
+  useEffect(() => {
+    if (!burstId) return undefined
+    const timer = setTimeout(() => markRewardSeen(burstId), 2200)
+    return () => clearTimeout(timer)
   }, [burstId])
   // HOME을 열 때: 지난번에 충분히 본 연출(도중에 화면을 떠난 것)은 다시 보여 주지 않는다
   useEffect(() => {
@@ -134,8 +137,10 @@ export default function HomePage() {
 
   return (
     <div className="home-page">
+      {/* 출석 온기 획득 연출: 일기 저장 때와 같은 연기 + '온기 +100 획득!' (화면 전체) */}
+      {bursts[0] && <WarmthEffect key={bursts[0].id} amount={bursts[0].amount} onDone={endBurst} fullScreen />}
       {/* 보유 온기 (오른쪽 위): 햇살 아이콘 + "온기" + 서버에 저장된 잔액(warmth_balance) */}
-      <div className="hm-warmth" ref={warmthRef} role="group" aria-label={`보유 온기 ${balance.toLocaleString()}`}>
+      <div className="hm-warmth" role="group" aria-label={`보유 온기 ${balance.toLocaleString()}`}>
         <svg className="hm-warmth__icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
           <circle cx="12" cy="12" r="4" />
           <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" />
@@ -143,9 +148,6 @@ export default function HomePage() {
         <span className="hm-warmth__label" aria-hidden="true">온기</span>
         <span className="hm-warmth__num" aria-hidden="true">{balance.toLocaleString()}</span>
       </div>
-      {bursts[0] && (
-        <RewardBurst key={bursts[0].id} amount={bursts[0].amount} onDone={endBurst} onSeen={seenBurst} originRef={petRef} targetRef={warmthRef} />
-      )}
 
       {/* AI 진로 추천 (왼쪽 위, 온기와 대칭): 누르면 추천 화면을 전체 화면 팝업으로 연다 */}
       <CareerEntryButton />
@@ -190,7 +192,7 @@ export default function HomePage() {
       {/* 펫 캐릭터: 투명 PNG가 있으면 그 이미지, 없으면 대체 상태
           - 바깥(hop): 클릭 반응 / 안쪽(idle): 숨쉬기 반복 — 두 움직임이 섞이지 않게 요소를 나눔
           - key={imageUrl}: 성장 단계가 바뀌면 새 이미지가 짧게 페이드 인 */}
-      <div className="hm-pet" ref={petRef} data-character={character ?? 'none'} data-stage={stage}>
+      <div className="hm-pet" data-character={character ?? 'none'} data-stage={stage}>
         <button type="button" className="hm-pet__hop" ref={hopRef} onClick={hop} aria-label={`${petLabel} 쓰다듬기`}>
           <span className="hm-pet__idle">
             {imageUrl ? (
