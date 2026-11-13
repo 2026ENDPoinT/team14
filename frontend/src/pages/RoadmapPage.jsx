@@ -12,7 +12,7 @@ import { BASE_CATEGORIES, nodeCategoryId } from '../features/roadmap/nodeCategor
 import RoadmapTutorial from '../features/roadmap/tutorial/RoadmapTutorial.jsx'
 import { hasSeenRoadmapTutorial, markRoadmapTutorialSeen } from '../features/roadmap/tutorial/tutorialStorage.js'
 import { linkProblem } from '../features/roadmap/edgeRules.js'
-import { BASE_WIDTH, computeLayout, nextPosition, placeNode } from '../features/roadmap/layout.js'
+import { computeLayout, nextPosition, placeNode } from '../features/roadmap/layout.js'
 import {
   createEdge,
   createNode,
@@ -199,20 +199,17 @@ export default function RoadmapPage() {
     setTutorialOpen(false)
   }, [])
 
-  // 학기 컬럼 배치 (자동 확장): 노드 배치로부터 학기별 x·너비 계산
-  // keptWidths: 이번 세션에서 커졌던 너비. 노드를 빼내도 학기가 바로 줄지 않게 해서
-  //             뒤 학기·노드가 갑자기 왼쪽으로 튀지 않게 한다. (새로고침하면 다시 계산)
-  const [keptWidths, setKeptWidths] = useState({})
-  const layout = useMemo(() => computeLayout(periods, nodes, keptWidths), [periods, nodes, keptWidths])
-  useEffect(() => {
-    setKeptWidths((prev) => {
-      const grown = Object.entries(layout.cols).filter(
-        ([id, col]) => col.width > BASE_WIDTH && col.width > (prev[id] ?? 0),
-      )
-      if (grown.length === 0) return prev
-      return { ...prev, ...Object.fromEntries(grown.map(([id, col]) => [id, col.width])) }
-    })
-  }, [layout])
+  // 학기 컬럼 배치 (가로 자동 확장): 노드 배치로부터 학기별 x·너비를 매번 다시 계산한다
+  // - 노드를 오른쪽에 놓으면 그 학기가 넓어지고 뒤 학기는 밀린다. 노드를 빼거나 지우면 필요한 만큼으로 줄어든다
+  // - holdRef: 넓어진 학기에서 뒤 학기로 노드를 옮긴 직후에만 앞 학기 너비를 붙잡아 둔다
+  //   (바로 줄면 뒤 학기가 왼쪽으로 당겨져 방금 놓은 노드가 튀어 보임). 다음 변경 때 노드 기준으로 줄어든다
+  const holdRef = useRef({ nodes: null, widths: {} })
+  const layout = useMemo(
+    () => computeLayout(periods, nodes, holdRef.current.nodes === nodes ? holdRef.current.widths : {}),
+    [periods, nodes],
+  )
+  const layoutRef = useRef(layout)
+  layoutRef.current = layout
 
   const getBody = (nodeId) => documents[nodeId]?.content.body ?? ''
   // 캔버스가 불필요하게 다시 그려지지 않도록 useCallback으로 고정
@@ -258,12 +255,22 @@ export default function RoadmapPage() {
   // 로그인 상태(DB)면 끌어 놓은 자리를 바로 보여 주고 저장한다. 저장에 실패하면 그 노드들만 원래 자리로 되돌린다.
   const handleNodesMove = useCallback((moves) => {
     const before = nodesRef.current
-    setNodes((prev) =>
-      prev.map((n) => {
-        const move = moves.find((m) => m.id === n.id)
-        return move ? { ...n, periodId: move.periodId, position: move.position, status: 'placed' } : n
-      }),
-    )
+    const next = before.map((n) => {
+      const move = moves.find((m) => m.id === n.id)
+      return move ? { ...n, periodId: move.periodId, position: move.position, status: 'placed' } : n
+    })
+    // 뒤 학기로 옮겨 간 노드의 원래 학기 너비는 이번 한 번만 그대로 둔다 (놓은 자리가 왼쪽으로 튀지 않게)
+    const { cols, periods: ordered } = layoutRef.current
+    const order = (id) => ordered.findIndex((p) => p.id === id)
+    const widths = {}
+    for (const move of moves) {
+      const old = before.find((n) => n.id === move.id)
+      if (old?.status === 'placed' && cols[old.periodId] && order(old.periodId) < order(move.periodId)) {
+        widths[old.periodId] = cols[old.periodId].width
+      }
+    }
+    holdRef.current = { nodes: next, widths }
+    setNodes(next)
     if (!isDb) return
     moveNodes(moves).then((result) => {
       if (!result.error) return
