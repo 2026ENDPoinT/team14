@@ -80,7 +80,8 @@ export async function saveDiary({ date, content, mood = null, linkedNodeId = nul
     ;({ data, error } = await supabase.rpc('save_diary', params))
   }
   if (error) return { error: toServiceError(error, '일기를 저장하지 못했어요. 다시 시도해 주세요.') }
-  return { data: { diary: toDiary(data.diary), reward: data.reward, pet: toPet(data.pet) } }
+  // footprintReward: 오늘의 발자취 보상(+100, migration 20261114002900). 서버가 아직 주지 않으면 null
+  return { data: { diary: toDiary(data.diary), reward: data.reward, footprintReward: data.footprint_reward ?? null, pet: toPet(data.pet) } }
 }
 
 // 삭제: 해당 날짜 내 일기
