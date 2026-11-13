@@ -1,5 +1,5 @@
 import { isPill } from './layout.js'
-import { ddayInfo } from './dday.js'
+import { ddayInfo, usesSourceDeadline } from './dday.js'
 import { BASE_CATEGORIES, isCourseLinked, isMajorCategory, nodeCategoryId, nodeKindLabel } from './nodeCategories.js'
 import CategoryIcon from '../../components/CategoryIcon.jsx'
 import DeadlineBadge from '../explore/DeadlineBadge.jsx'
@@ -9,7 +9,8 @@ import { contestKindLabel, sourceName } from '../explore/contestInfo.js'
 // subtitle: 노드 문서의 첫 줄 (한 줄 부가 정보)
 // 왼쪽 점 = 완료 상태 표시등 (completed: true 노란색 / false 회색)
 // 종류 표시: 고른 카테고리 이름(categoryLabel, 세션 전용) → 온보딩 경험의 카테고리 → theme 이름 (nodeKindLabel)
-// D-DAY: dueDate가 있으면 오른쪽 위 작은 태그 (전공·학업 종류·교과목과 연결한 노드는 표시하지 않음. 값은 지우지 않음) (D-7~D-DAY 빨강 / 그 외 회색 / 지난 날짜·완료 노드는 흐리게)
+// D-DAY: dueDate가 있으면 오른쪽 위 작은 태그 (전공·학업 종류·교과목과 연결한 노드, 기회 탐색에서 가져온 노드는 표시하지 않음. 값은 지우지 않음)
+//   탐색 노드는 종류 자리의 원본 공고 마감 배지(DeadlineBadge)만 보여 준다 (D-7~D-DAY 빨강 / 그 외 회색 / 지난 날짜·완료 노드는 흐리게)
 // 종류 아이콘: 종류 이름 왼쪽. 기본 종류 키로 고르고, 사용자 정의 종류는 기반 종류(theme)의 아이콘 (components/CategoryIcon.jsx)
 // hideDot: 캔버스에서는 클릭 가능한 표시등(CompleteDot)을 따로 그리므로 숨긴다
 export default function NodeCard({
@@ -23,7 +24,7 @@ export default function NodeCard({
     `rm-theme-${node.theme}`,
     extra,
   ].join(' ')
-  const dday = isCourseLinked(node) || isMajorCategory(node) ? null : ddayInfo(node.dueDate)
+  const dday = isCourseLinked(node) || isMajorCategory(node) || usesSourceDeadline(node) ? null : ddayInfo(node.dueDate)
 
   return (
     <button
