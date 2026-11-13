@@ -5,8 +5,7 @@ import { supabase } from './supabaseClient.js'
 // - 보내는 글은 로그인한 본인 일기(RLS)에서 고른 것만, 길이를 잘라서 보낸다 (아래 LIMITS)
 // 결과: { data } 또는 { error: { code, message } }
 export const AI_LIMITS = {
-  minChars: 30, // 회고 질문: 일기 최소 글자
-  diaryText: 1500, // 회고 질문: 보내는 일기 최대 글자
+  diaryText: 1500, // 회고 질문: 보내는 발자취 최대 글자
   entries: 4, // 타임캡슐: 과거·최근 각각 최대 편수
   entryText: 400, // 타임캡슐: 한 편 최대 글자
   gapDays: 30, // 타임캡슐: 과거·최근 사이 최소 간격(일)
@@ -44,11 +43,9 @@ async function invoke(payload) {
   return { data: response.data }
 }
 
-// AI 회고 질문: 지금 쓰고 있는 일기 한 편 → [{ question, basis }] (최대 2개)
+// AI 회고 질문: 지금 쓰고 있는 '오늘의 발자취'(diaries.footprint) 글만 → [{ question, basis }] (최대 2개, 비어 있으면 basis '')
 export async function requestReflectQuestions({ date, content }) {
-  if ([...(content ?? '').trim()].length < AI_LIMITS.minChars) {
-    return { error: { code: 'TOO_SHORT', message: `일기를 ${AI_LIMITS.minChars}자 이상 쓰면 회고 질문을 받을 수 있어요.` } }
-  }
+  // 글자 수 조건 없음: 비어 있으면 서버가 일반 회고 질문을 만든다
   const result = await invoke({ mode: 'reflect', date, content: cut(content, AI_LIMITS.diaryText) })
   if (result.error) return result
   const questions = (result.data.questions ?? []).slice(0, 2)

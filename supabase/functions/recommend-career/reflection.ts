@@ -1,15 +1,14 @@
 // 일기 AI 모드 (recommend-career에 붙는 추가 모드. 기존 온보딩 추천·AI 길잡이와 따로 동작)
-// - reflect: 지금 쓰는 일기 한 편 → 그 일기에 실제로 적힌 경험에 근거한 회고 질문 1~2개
+// - reflect: 지금 쓰는 일기의 '오늘의 발자취'(공부·활동 기록) 글 → 그 글에 실제로 적힌 경험에 근거한 회고 질문 1~2개
 // - timecapsule: 과거 일기 몇 편 + 최근 일기 몇 편 → 실제 기록에 근거한 변화 비교 짧은 메시지
 // 공통: 입력은 프론트가 로그인한 본인 일기(RLS)에서 골라 보낸다. 결과·일기는 저장하지 않는다.
-// 근거 확인: 질문의 basis는 일기 원문에 그대로 있는 구절이어야 하고, 비교의 날짜는 보낸 기록의 날짜여야 한다.
+// 근거 확인: 질문의 basis는 일기 원문에 그대로 있는 구절이어야 하고(발자취가 비어 있으면 일반 질문, basis 없음), 비교의 날짜는 보낸 기록의 날짜여야 한다.
 
 export const REFLECTION_MODES = ['reflect', 'timecapsule'] as const
 export type ReflectionMode = (typeof REFLECTION_MODES)[number]
 
 export const REFLECTION_LIMITS = {
   diaryText: 1500, // reflect: 일기 한 편 최대 글자
-  minChars: 30, // reflect: 최소 글자 (프론트와 같음)
   entries: 4, // timecapsule: 과거·최근 각각 최대 편수
   entryText: 400, // timecapsule: 한 편 최대 글자
   gapDays: 30, // timecapsule: 과거·최근 기록 사이 최소 간격
@@ -41,7 +40,7 @@ export function parseReflectionInput(body: unknown): { input: ReflectionInput } 
     const date = clean(b.date, 10)
     const content = clean(b.content, REFLECTION_LIMITS.diaryText)
     if (!DATE.test(date)) return { error: '날짜가 올바르지 않습니다.' }
-    if ([...content].length < REFLECTION_LIMITS.minChars) return { error: `일기를 ${REFLECTION_LIMITS.minChars}자 이상 써 주세요.` }
+    // 글자 수 조건 없음: 비어 있으면 일반 회고 질문을 만든다
     return { input: { mode: 'reflect', date, content } }
   }
   if (b.mode === 'timecapsule') {
@@ -68,11 +67,18 @@ export function buildReflectionRequest(input: ReflectionInput) {
   const L = REFLECTION_LIMITS
   if (input.mode === 'reflect') {
     return {
-      system: `당신은 대학생이 쓴 하루 일기를 함께 돌아보는 회고 인터뷰어입니다.
-일기를 읽고, 적힌 구체적인 경험을 더 깊이 돌아볼 수 있는 질문을 1~2개 만드세요.
+      system: input.content
+        ? `당신은 대학생이 쓴 하루의 학업·프로젝트·활동 기록(발자취)을 함께 돌아보는 회고 인터뷰어입니다.
+기록을 읽고, 적힌 구체적인 공부·프로젝트·활동 경험을 더 깊이 돌아볼 수 있는 질문을 1~2개 만드세요.
+입력의 diary는 이 발자취 기록입니다. 기록이 짧아도 적힌 내용 안에서만 질문하세요.
 ${COMMON_RULES}
-- question: 일기 속 구체적인 경험 하나를 짚는 열린 질문 (${L.question}자 이내, 물음표로 끝냄)
-- basis: 그 질문의 근거가 된 일기 원문 구절을 그대로 복사 (${L.basis}자 이내, 원문과 한 글자도 다르면 안 됨)`,
+- question: 기록 속 구체적인 경험 하나를 짚는 열린 질문 (${L.question}자 이내, 물음표로 끝냄)
+- basis: 그 질문의 근거가 된 기록 원문 구절을 그대로 복사 (${L.basis}자 이내, 원문과 한 글자도 다르면 안 됨)`
+        : `당신은 대학생이 오늘 하루의 공부·활동·도전·배운 점을 돌아보도록 돕는 회고 인터뷰어입니다.
+아직 적은 기록이 없습니다. 오늘의 공부, 활동, 도전, 배운 점 등을 스스로 떠올려 볼 수 있는 일반적인 열린 질문을 1~2개 만드세요.
+- 사용자에 대해 아무것도 가정하지 마세요 (특정 과목·프로젝트·사건·감정을 지어내지 않기). 평가·훈계 없이 담백하고 따뜻한 한국어 존댓말로.
+- question: 열린 질문 (${L.question}자 이내, 물음표로 끝냄)
+- basis: 빈 문자열 ""`,
       user: JSON.stringify({ date: input.date, diary: input.content }),
       schema: {
         type: 'object',
@@ -131,7 +137,9 @@ export function validateReflectionOutput(raw: unknown, input: ReflectionInput) {
     const diary = squash(input.content)
     const questions = (Array.isArray(r.questions) ? r.questions : [])
       .map((q) => ({ question: clean(q?.question, L.question), basis: clean(q?.basis, L.basis) }))
-      .filter((q) => q.question.length >= 5 && q.basis.length >= 2 && diary.includes(squash(q.basis)))
+      // 기록이 있으면 근거 구절이 원문에 있어야 통과, 비어 있으면 일반 질문이라 근거 없음
+      .map((q) => (diary ? q : { ...q, basis: '' }))
+      .filter((q) => q.question.length >= 5 && (!diary || (q.basis.length >= 2 && diary.includes(squash(q.basis)))))
       .slice(0, 2)
     return questions.length > 0 ? { questions } : null
   }

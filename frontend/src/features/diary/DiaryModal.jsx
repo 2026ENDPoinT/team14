@@ -6,7 +6,8 @@ import { getTodayKST } from './dateUtils.js'
 import PhotoField from '../photos/PhotoField.jsx'
 import usePhotoDraft from '../photos/usePhotoDraft.js'
 import WarmthEffect from './WarmthEffect.jsx'
-import FootprintField from './FootprintField.jsx'
+import FootprintField, { FOOTPRINT_MAX } from './FootprintField.jsx'
+import { isFootprintReady } from '../../services/diary.js'
 import AiReflection from './AiReflection.jsx'
 import { PHOTO_MAX_COUNT } from '../../services/photos.js'
 import './DiaryModal.css'
@@ -255,14 +256,6 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
           {/* 게이지가 없을 때(지난 날짜·오늘 온기를 이미 받음)만 안내 한 줄 */}
           {!readOnly && !showGoal && (!isExisting || isToday) && <p className="rm-muted dm-hint">{rewardHint}</p>}
           {photoNotice && <p className="dm-hint is-error" role="alert">{photoNotice}</p>}
-          {/* AI 회고 인터뷰: 버튼을 눌렀을 때만, 답은 본문 끝에 [회고]로 덧붙임 (저장은 아래 저장 버튼) */}
-          {!readOnly && (
-            <AiReflection
-              date={date}
-              content={content}
-              onAppend={(text) => setContent((prev) => `${prev.trimEnd()}\n\n${text}`)}
-            />
-          )}
           {/* 읽기 상태: 저장된 사진 */}
           {readOnly && (photos.items.length > 0 || photos.loading || photos.loadError) && (
             <PhotoField draft={photos} readOnly />
@@ -277,6 +270,20 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
             nodeId={linkedNodeId}
             onNodeChange={setLinkedNodeId}
             readOnly={readOnly}
+            // AI 회고 인터뷰: '오늘의 발자취'(공부·활동 기록)만 AI에 보낸다. '오늘의 이야기'는 읽거나 보내지 않는다
+            // 답은 발자취 끝에 [회고]로 덧붙임 (저장은 아래 저장 버튼). 발자취 칸이 서버에 있을 때만
+            extra={!readOnly && isFootprintReady() ? (
+              <AiReflection
+                date={date}
+                content={footprint}
+                onAppend={(text) => {
+                  const next = `${footprint.trimEnd()}\n\n${text}`
+                  if ([...next].length > FOOTPRINT_MAX) return `발자취는 ${FOOTPRINT_MAX}자까지 쓸 수 있어요. 답을 줄여 주세요.`
+                  setFootprint(next)
+                  return null
+                }}
+              />
+            ) : null}
           />
         )}
 
