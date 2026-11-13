@@ -106,6 +106,7 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
     const writeText = textChanged || !photos.dirty
     let diaryId = stored?.id
     let reward = null
+    let footprintReward = null
     if (writeText) {
       const result = await saveDiary({ date, content, footprint, linkedNodeId })
       if (result.error) {
@@ -116,13 +117,16 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
       }
       diaryId = result.diary.id
       reward = result.reward
+      footprintReward = result.footprintReward
       setIsExisting(true)
       onChanged()
     }
     // 사진: 새 사진 올리기·지운 사진 삭제
     const photoResult = photos.dirty ? await photos.commit({ diaryId }) : { failed: 0 }
     setBusy(false)
-    if (reward?.rewarded) setReward(reward.amount)
+    // 받은 온기 연출: 일기(+200)와 발자취(+100) 보상은 따로 판정되고, 함께 받으면 합쳐서 보여 준다
+    const earned = (reward?.rewarded ? reward.amount : 0) + (footprintReward?.rewarded ? footprintReward.amount : 0)
+    if (earned > 0) setReward(earned)
     if (photoResult.failed > 0) {
       // 글은 저장됨. 실패한 사진만 표시해 두고 수정 상태를 유지한다 → '다시 시도'는 사진만 다시 올린다
       setSaveError(`${writeText ? '일기 글은 저장했어요. ' : ''}사진 ${photoResult.failed}장을 처리하지 못했어요. '다시 시도'를 누르면 그 사진만 다시 올려요. ${photoResult.message}`)
@@ -132,7 +136,7 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
     // 온기를 받았으면 연기 연출, 아니면 저장 안내 + 받지 못한 이유
     // (일기는 저장됐는데 보상 처리만 실패한 경우도 구분해서 알려 준다)
     if (!writeText) setToast('사진을 저장했어요.')
-    else if (reward?.rewarded) { /* 연출로 알림 */ }
+    else if (earned > 0) { /* 연출로 알림 */ }
     else if (reward?.error) setToast('일기는 저장했어요. 온기 지급은 실패했어요. 잠시 후 다시 확인해 주세요.')
     else setToast(`${stored ? '일기를 수정했어요.' : '일기를 저장했어요.'}${NO_REWARD_NOTE[reward?.reason] ?? ''}`)
     setIsExisting(true)
