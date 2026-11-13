@@ -93,3 +93,21 @@
     left: 16px;
   }
 }
+
+/* 홈 AI 추천 결과: 전체 직무 선택 및 저장 */
+.career-panel__save {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+}
+.career-panel__save:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+.career-panel__save-message {
+  margin: 12px 0 0;
+  color: var(--ob-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.career-panel__save-message[role="alert"] { color: #b42318; }
