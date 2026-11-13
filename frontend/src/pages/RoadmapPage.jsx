@@ -8,6 +8,7 @@ import InboxPanel from '../features/roadmap/InboxPanel.jsx'
 import AddNodeModal from '../features/roadmap/AddNodeModal.jsx'
 import NodeDetailModal from '../features/roadmap/NodeDetailModal.jsx'
 import NodeFilter from '../features/roadmap/NodeFilter.jsx'
+import CourseGuidePanel from '../features/courses/CourseGuidePanel.jsx'
 import { BASE_CATEGORIES, nodeCategoryId } from '../features/roadmap/nodeCategories.js'
 import RoadmapTutorial from '../features/roadmap/tutorial/RoadmapTutorial.jsx'
 import { hasSeenRoadmapTutorial, markRoadmapTutorialSeen } from '../features/roadmap/tutorial/tutorialStorage.js'
@@ -335,6 +336,11 @@ export default function RoadmapPage() {
 
   const handleLinkReject = useCallback((message) => setToast(message), [])
 
+  // '수강 필요'에서 추가한 과목 노드를 화면에 반영 (이미 있던 노드면 그 노드를 최신 값으로)
+  const handleCourseAdded = useCallback((node) => {
+    setNodes((prev) => (prev.some((n) => n.id === node.id) ? prev.map((n) => (n.id === node.id ? { ...n, ...node } : n)) : [...prev, node]))
+  }, [])
+
 
   const openAdd = () => {
     setDetailId(null)
@@ -604,6 +610,9 @@ export default function RoadmapPage() {
           selected={filterIds}
           onChange={setFilterIds}
         />
+
+        {/* 수강 필요: 놓친 저학년 필수·핵심 과목 안내, 보관함 추가·학기 배치 (features/courses) */}
+        <CourseGuidePanel nodes={nodes} periods={periods} layout={layout} enabled={isDb} onAdded={handleCourseAdded} onToast={setToast} />
 
         {/* 비어 있는 로드맵 안내 (누를 수 없는 안내 문구) */}
         {(periods.length === 0 || nodes.length === 0) && (

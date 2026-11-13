@@ -386,7 +386,7 @@ export function CareerStep({ selectedId, onSelect, onNext }) {
 }
 
 // ───── 5. 로드맵 구성 방식 ─────
-export function SetupStep({ mode, onSelect, hasRecommendation, saving, error, onFix, onConfirm }) {
+export function SetupStep({ mode, onSelect, hasRecommendation, preview, saving, error, onFix, onConfirm }) {
   return (
     <>
       <StepTitle>당신의 로드맵을 어떻게 시작할까요?</StepTitle>
@@ -408,6 +408,15 @@ export function SetupStep({ mode, onSelect, hasRecommendation, saving, error, on
         </div>
         {mode === 'auto' && !hasRecommendation && (
           <Hint>과목 추천 기능이 연결되기 전이라 지금은 추천 과목이 추가되지 않아요. 고른 이수 과목만 반영돼요.</Hint>
+        )}
+        {hasRecommendation && preview && (
+          <Hint>
+            {mode === 'auto' && preview.recommended > 0 && `남은 학년 추천 과목 ${preview.recommended}개를 권장 학기에 넣어요. `}
+            {mode === 'inbox' && preview.recommended > 0 && `남은 학년 추천 과목 ${preview.recommended}개를 보관함에 넣어요. `}
+            {preview.missed > 0
+              ? `저학년에 아직 듣지 않은 필수·핵심 과목 ${preview.missed}개는 로드맵의 '수강 필요'에서 알려 드려요.`
+              : ''}
+          </Hint>
         )}
 
         {error && (
