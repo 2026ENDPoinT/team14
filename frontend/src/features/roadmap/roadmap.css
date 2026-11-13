@@ -1453,3 +1453,10 @@
     top: 132px;
   }
 }
+
+/* 학기 외 타임라인 칸(휴학·군휴학·교환학생) 배지: 이름이 길어 글자를 줄인다 */
+.rm-column__badge.is-text {
+  font-size: 13px;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}

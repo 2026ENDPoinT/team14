@@ -4,7 +4,7 @@ import { ConnectIcon, NodeIcon, PlusIcon, SemesterIcon } from './icons.jsx'
 const ITEMS = [
   { id: 'node', label: '활동 추가', hint: '학기나 보관함에 새 활동을 만들어요', Icon: NodeIcon },
   { id: 'connect', label: '연결 모드', hint: '활동은 그대로 두고 관계선만 이어요', Icon: ConnectIcon },
-  { id: 'semester', label: '학기 추가 (준비 중)', hint: '아직 준비 중인 기능이에요', Icon: SemesterIcon },
+  { id: 'semester', label: '학기 추가', hint: '휴학·군휴학·교환학생을 타임라인에 넣어요', Icon: SemesterIcon },
 ]
 
 // 오른쪽 아래 + 버튼과 보관함 버튼.

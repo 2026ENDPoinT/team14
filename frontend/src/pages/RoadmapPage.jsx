@@ -6,6 +6,7 @@ import RoadmapCanvas from '../features/roadmap/RoadmapCanvas.jsx'
 import FabMenu from '../features/roadmap/FabMenu.jsx'
 import InboxPanel from '../features/roadmap/InboxPanel.jsx'
 import AddNodeModal from '../features/roadmap/AddNodeModal.jsx'
+import AddPeriodModal from '../features/roadmap/AddPeriodModal.jsx'
 import NodeDetailModal from '../features/roadmap/NodeDetailModal.jsx'
 import NodeFilter from '../features/roadmap/NodeFilter.jsx'
 import AiGuideButton from '../features/career/guide/AiGuideButton.jsx'
@@ -31,7 +32,12 @@ import {
   setNodeCompleted,
   updateEdge,
 } from '../services/api.js'
+import { insertPeriod } from '../services/periods.js'
+import { deleteWithPhotos } from '../services/photos.js'
 import '../features/roadmap/roadmap.css'
+
+// 노드 삭제 + 그 노드의 첨부 사진 파일 정리 (사진 연결 행은 DB에서 함께 지워진다)
+const deleteNodeAndPhotos = (nodeId) => deleteWithPhotos({ nodeId }, () => deleteNode(nodeId))
 
 const UNDO_MS = 5000 // 실행 취소 안내가 보이는 시간. 이 시간이 지나면 삭제를 DB에 저장한다
 
@@ -84,6 +90,7 @@ export default function RoadmapPage() {
   const [fabOpen, setFabOpen] = useState(false) // + 메뉴
   const [inboxOpen, setInboxOpen] = useState(false) // 노드 보관함
   const [addOpen, setAddOpen] = useState(false) // 노드 생성 창
+  const [periodOpen, setPeriodOpen] = useState(false) // 학기 추가 창
   const [detailId, setDetailId] = useState(null) // 상세 창에 열린 노드 id
   const [toast, setToast] = useState('') // 안내 문구, 또는 { text, undo } (실행 취소 버튼이 있는 삭제 안내)
   const [dropPeriodId, setDropPeriodId] = useState(null) // 노드를 끄는 동안 강조할 학기
@@ -409,8 +416,21 @@ export default function RoadmapPage() {
       setConnectMode(true)
       return
     }
-    // SEMESTER는 다음 작업(TASKS 1-10)에서 구현
-    setToast('학기 추가는 준비 중이에요.')
+    // 학기 추가: 로그인한 내 로드맵(DB)에서만
+    if (!isDb) return setToast('로그인하면 학기를 추가할 수 있어요.')
+    setDetailId(null)
+    setPeriodOpen(true)
+  }
+
+  // 학기 추가 저장: 서버가 끼워 넣기·순서 변경을 한 번에 하고 내 학기 전체를 돌려준다
+  // 노드는 학기 id로 붙어 있어 그대로 따라 움직인다. 반환: 성공 null / 실패 오류 문구
+  const handleAddPeriod = async (input) => {
+    const result = await insertPeriod(input)
+    if (result.error) return `학기를 추가하지 못했어요. ${result.error.message}`
+    setPeriods(result.data.periods)
+    setPeriodOpen(false)
+    setToast(`${result.data.period.name}을(를) 타임라인에 추가했어요.`)
+    return null
   }
 
   // categoryId·detailId·categoryLabel: ADD NODE에서 고른 카테고리·세부 활동 (상세 창 종류 수정과 같은 값)
@@ -538,7 +558,7 @@ export default function RoadmapPage() {
   // DB면 DB에서 지운 뒤에만 화면에서 없애고 상세 창을 닫는다 (노드 문서·연결선은 DB에서 함께 삭제)
   const handleDeleteNode = async (nodeId) => {
     if (isDb) {
-      const result = await deleteNode(nodeId)
+      const result = await deleteNodeAndPhotos(nodeId)
       if (result.error) return setToast(`삭제하지 못했어요. ${result.error.message}`)
     }
     removeNode(nodeId)
@@ -565,7 +585,7 @@ export default function RoadmapPage() {
   // 실행 취소 시간이 지난 삭제를 DB에 저장한다. 실패하면 지우기 전 상태로 되돌린다.
   const commitDelete = useCallback(async (undo) => {
     pendingDeletes.current.delete(undo.node.id)
-    const result = await deleteNode(undo.node.id)
+    const result = await deleteNodeAndPhotos(undo.node.id)
     if (result.error) {
       restoreDeleted(undo)
       setToast(`삭제하지 못해 되돌렸어요. ${result.error.message}`)
@@ -578,7 +598,7 @@ export default function RoadmapPage() {
   useEffect(() => () => {
     for (const [nodeId, { timer }] of pendingDeletes.current) {
       clearTimeout(timer)
-      deleteNode(nodeId)
+      deleteNodeAndPhotos(nodeId)
     }
     pendingDeletes.current.clear()
   }, [])
@@ -748,6 +768,13 @@ export default function RoadmapPage() {
           onAddCustomCategory={addCustomCategory}
         />
 
+        <AddPeriodModal
+          open={periodOpen}
+          periods={periods}
+          onClose={() => setPeriodOpen(false)}
+          onSubmit={handleAddPeriod}
+        />
+
         <NodeDetailModal
           node={detailNode}
           body={getBody(detailId)}
@@ -758,6 +785,7 @@ export default function RoadmapPage() {
           onOpenNode={openDetail}
           customCategories={customCategories}
           onAddCustomCategory={addCustomCategory}
+          photosEnabled={isDb}
         />
 
         {guideOpen && (

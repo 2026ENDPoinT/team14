@@ -1,9 +1,11 @@
 import { supabase } from './supabaseClient.js'
 import { toPet, toServiceError } from './rewards.js'
+import { deleteWithPhotos } from './photos.js'
 
 // 일기 서비스 (docs/API.md 4.6, docs/backend-diary-reward.md)
 // - 작성·수정은 save_diary RPC로만 한다. 일기 저장과 보상 판정이 한 트랜잭션이라 저장이 실패하면 보상도 없다.
 // - 삭제는 본인 일기만 (RLS). 받은 보상 이력은 지우지 않는다.
+// - 사진은 photos 테이블·Storage에 따로 저장한다 (services/photos.js). diaries.photo_urls는 쓰지 않는다.
 
 // DB diaries 행 → 화면용
 function toDiary(row) {
@@ -68,8 +70,12 @@ export async function saveDiary({ date, content, mood = null, linkedNodeId = nul
 export async function deleteDiary(date) {
   const sessionError = await requireSession()
   if (sessionError) return { error: sessionError }
-  const { data, error } = await supabase.from('diaries').delete().eq('date', date).select('id')
-  if (error) return { error: toServiceError(error, '일기를 삭제하지 못했어요.') }
-  if (data.length === 0) return { error: { code: 'NOT_FOUND', message: '삭제할 일기가 없어요.' } }
-  return { data: { deleted: date } }
+  // 첨부 사진: 연결 행은 DB에서 함께 지워지고, 파일은 삭제가 성공한 뒤 지운다 (services/photos.js)
+  const { data: row } = await supabase.from('diaries').select('id').eq('date', date).maybeSingle()
+  return deleteWithPhotos({ diaryId: row?.id }, async () => {
+    const { data, error } = await supabase.from('diaries').delete().eq('date', date).select('id')
+    if (error) return { error: toServiceError(error, '일기를 삭제하지 못했어요.') }
+    if (data.length === 0) return { error: { code: 'NOT_FOUND', message: '삭제할 일기가 없어요.' } }
+    return { data: { deleted: date } }
+  })
 }
