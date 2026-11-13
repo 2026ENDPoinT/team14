@@ -472,3 +472,49 @@
     transition: none;
   }
 }
+
+/* ───── 왼쪽 위: 사용법(?) 버튼 + Momentree 로고 ─────
+   로고는 로그인 화면 이름(.lg-name)과 같은 둥근 글꼴·색, 크기만 작게. 누르면 새로고침 */
+.hm-topleft {
+  position: absolute;
+  top: 26px;
+  left: 28px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hm-topleft .hm-help {
+  position: static; /* 로고 왼쪽에 나란히 (원래는 왼쪽 위에 따로 떠 있음) */
+}
+.hm-logo {
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: 'Nunito', var(--rm-font, sans-serif);
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 30px;
+  letter-spacing: -0.01em;
+  color: #555;
+  text-shadow: 1px 1px 0 #fff;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.hm-logo:hover {
+  opacity: 0.75;
+}
+.hm-logo:focus-visible {
+  outline: 2px solid #dca36c;
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+@media (max-width: 900px) {
+  .hm-topleft {
+    top: 86px;
+    left: 16px;
+  }
+  .hm-logo {
+    font-size: 18px;
+  }
+}
