@@ -4,7 +4,8 @@ import { EMPTY_PET, usePet } from '../features/pet/petStore.js'
 import { useAuth } from '../features/auth/AuthProvider.jsx'
 import { JOB_TO_PET, PET_CHARACTERS } from '../features/home/petCharacter.js'
 import { updateMyDesiredJob } from '../services/api.js'
-import { mockProfile, mockSettings } from '../features/mypage/myPageMock.js'
+import { mockProfile } from '../features/mypage/myPageMock.js'
+import { loadSettings, saveSettings } from '../features/mypage/settingsStore.js'
 import { Icon } from '../features/mypage/ui.jsx'
 import {
   AccountPanel, ActivityPanel, DisplayPanel, NoticePanel, ProfilePanel, RecordsPanel,
@@ -20,15 +21,15 @@ const MENU_GROUPS = [
   {
     title: '내 계정',
     items: [
-      { key: 'account', icon: 'account', label: '계정 센터', desc: '프로필, 연결된 계정, 내 정보, 로그아웃', keywords: '로그인 로그아웃 탈퇴 구글 닉네임 학년' },
+      { key: 'account', icon: 'account', label: '계정 센터', desc: '프로필, 연결된 계정, 로그아웃', keywords: '로그인 로그아웃 탈퇴 구글 닉네임 학년' },
     ],
   },
   {
     title: '나의 사용 방식',
     items: [
       { key: 'profile', icon: 'profile', label: '프로필 편집', keywords: '닉네임 이름 학년 직무 희망 아이콘' },
-      { key: 'notice', icon: 'bell', label: '알림', keywords: '일기 출석 회고 시간' },
-      { key: 'display', icon: 'display', label: '화면 설정', keywords: '시작 화면 요일 애니메이션 움직임' },
+      { key: 'notice', icon: 'bell', label: '알림', keywords: '일기 알림 시간' },
+      { key: 'display', icon: 'display', label: '화면 설정', keywords: '달력 시작 요일' },
     ],
   },
   {
@@ -51,13 +52,21 @@ export default function MyPage() {
   })
   const [query, setQuery] = useState('')
   const [profile, setProfile] = useState(mockProfile)
-  const [settings, setSettings] = useState(mockSettings)
+  const [settings, setSettings] = useState(loadSettings) // 이 브라우저에 저장된 설정
   const [toast, setToast] = useState('')
   const pet = usePet().pet ?? EMPTY_PET // 서버의 내 펫 (누적 온기·잔액)
-  // 로그인했으면 희망 직무는 DB 프로필(interests 첫 번째 = 대표 직무) 값을 쓴다. 나머지 항목은 아직 Mock
+  // 로그인했으면 닉네임·학년·이메일·희망 직무(interests 첫 번째 = 대표 직무)는 DB 프로필 값을 쓴다
   const auth = useAuth()
   const signedIn = auth.status === 'ready'
-  const shownProfile = signedIn ? { ...profile, desiredJob: auth.profile.interests?.[0] ?? null } : profile
+  const shownProfile = signedIn
+    ? {
+        ...profile,
+        nickname: auth.profile.nickname || '이름 없음',
+        grade: auth.profile.grade ?? profile.grade,
+        email: auth.profile.email ?? '',
+        desiredJob: auth.profile.interests?.[0] ?? null,
+      }
+    : profile
 
   useEffect(() => {
     if (!toast) return
@@ -65,18 +74,28 @@ export default function MyPage() {
     return () => clearTimeout(timer)
   }, [toast])
 
-  // 설정 한 개 바꾸기 (지금은 화면에서만 바뀌고 저장되지 않음)
-  const update = (key, value) => setSettings((s) => ({ ...s, [key]: value }))
-  const notReady = () => setToast('준비 중인 기능이에요.')
+  // 설정 한 개 바꾸기 → 이 브라우저에 저장 (계정별 저장은 서버 준비 후)
+  const update = (key, value) => {
+    setSettings((s) => {
+      const next = { ...s, [key]: value }
+      saveSettings(next)
+      return next
+    })
+  }
   // choices: 희망 직무를 바꿨을 때만 { resetCourses }
+  // ※ 닉네임·학년 저장 함수(services)가 아직 없어, 로그인 상태에서는 저장된 척하지 않고 안내만 한다
   // - 로그인했으면 희망 직무를 DB(profiles.interests)에 저장하고, 성공했을 때만 화면·HOME에 반영한다.
   //   HOME 펫 종류는 희망 직무로 정해지므로 저장만 하면 펫도 바뀐다. 온기·성장 단계는 그대로.
   // - '미정' 등 펫이 정해지지 않는 직무는 이전 펫을 저장할 곳(pets.type)이 아직 없어 막는다.
   // ※ 과목 재설정은 실제로는 서버 RPC로 처리해야 한다. (지금은 Mock: 안내만)
   async function saveProfile(next, choices) {
     if (!choices) {
+      if (signedIn) {
+        setToast('닉네임·학년 저장은 아직 준비 중이에요.')
+        return
+      }
       setProfile(next)
-      setToast('프로필을 저장했어요.')
+      setToast('프로필을 저장했어요. (예시 화면이라 저장되지 않아요)')
       return
     }
     const newPet = JOB_TO_PET[next.desiredJob]
@@ -96,7 +115,7 @@ export default function MyPage() {
     const samePet = JOB_TO_PET[shownProfile.desiredJob] === newPet
     const parts = ['희망 직무를 바꿨어요.']
     parts.push(samePet ? `펫은 그대로 ${PET_CHARACTERS[newPet].name}예요.` : `펫이 ${PET_CHARACTERS[newPet].name}(${PET_CHARACTERS[newPet].label})로 바뀌었어요.`)
-    if (choices.resetCourses) parts.push('이후 과목을 다시 짤게요.')
+    if (choices.resetCourses) parts.push('과목 재설정은 아직 준비 중이라 로드맵은 그대로예요.')
     if (!signedIn) parts.push('(예시 화면이라 저장되지 않아요)')
     setToast(parts.join(' '))
   }
@@ -110,7 +129,7 @@ export default function MyPage() {
     }))
     .filter((g) => g.items.length > 0)
 
-  const panelProps = { profile: shownProfile, pet, settings, update, notReady }
+  const panelProps = { profile: shownProfile, pet, settings, update, showToast: setToast }
 
   return (
     <div className="diary-page">

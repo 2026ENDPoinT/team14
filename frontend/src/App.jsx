@@ -12,6 +12,7 @@ import MyPage from './pages/MyPage.jsx'
 import GlobalNav from './components/GlobalNav.jsx'
 import { AuthProvider, useAuth } from './features/auth/AuthProvider.jsx'
 import { RequireOnboarded, RequireOnboardingPending } from './features/auth/RouteGuards.jsx'
+import DiaryReminder from './features/diary/DiaryReminder.jsx'
 
 // 개발용 미리보기 화면: 로컬 개발 서버(npm run dev)에서만 쓴다.
 // 배포 빌드에서는 import.meta.env.DEV가 false라 이 코드와 라우트가 통째로 빠진다 → 주소가 열리지 않는다.
@@ -24,6 +25,7 @@ export default function App() {
   return (
     <AuthProvider>
       <AppNav />
+      <DiaryReminder /> {/* 일기 쓰기 브라우저 알림 (화면에 그리는 것 없음) */}
 
       <Routes>
         <Route path="/" element={<RequireOnboarded><HomePage /></RequireOnboarded>} />

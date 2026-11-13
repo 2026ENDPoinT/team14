@@ -14,11 +14,7 @@ export const mockProfile = {
 
 // 알림·화면 설정 기본값
 export const mockSettings = {
-  diaryReminder: true,
+  diaryReminder: false, // 켤 때 브라우저 알림 권한을 묻는다
   diaryReminderTime: '21:00',
-  attendanceReminder: true,
-  reflectionReminder: false,
-  startPage: '/',
   weekStart: 'sun', // 'sun' | 'mon'
-  reduceMotion: false,
 }
