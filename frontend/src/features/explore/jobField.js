@@ -178,3 +178,68 @@ export function classifyFields(title) {
 export function fieldLabelsOf(title) {
   return classifyFields(title).map((field) => FIELD_LABELS[field])
 }
+
+// ───── 기술 뉴스 전용 판정 (관심 분야 배지·정렬, 제목 앞 [분야]) ─────
+// 기술 뉴스는 제품·업계 소식이 많아 일반 분류보다 엄격하게 본다.
+// - 'AI agent', 'AI model', 'OpenAI', 'ChatGPT', 'GPT'처럼 AI 서비스 소식에 두루 쓰이는 표현, 'database'처럼
+//   여러 뜻으로 쓰이는 단어는 강한 근거로 세지 않는다 (NEWS_WEAK_WORDS).
+//   · 'AI'가 들어 있는 표현(AI agents 등)은 따로 점수를 주지 않는다 → 그 안의 'AI' 한 단어(약한 근거 1점)로만 센다
+//   · 'OpenAI', 'ChatGPT', 'GPT', '생성형'은 여러 개가 나와도 합쳐서 약한 근거 1점
+//   → 'LLM', 'machine learning', 'neural network'처럼 모델·학습을 직접 가리키는 단어가 있어야 AI·머신러닝으로 본다.
+// - 나머지 규칙은 classifyFields와 같다: 강한 근거 2점·약한 근거 1점, 1등이 2점 이상이고 하나뿐일 때만 그 분야.
+// - 판단하기 어려우면 빈 배열 → 화면은 [기타]도 '관심 분야'도 붙이지 않는다.
+export const NEWS_WEAK_WORDS = {
+  ai: ['AI 에이전트', 'AI agent', 'AI agents', 'AI 모델', 'AI model', 'AI models', 'AI 개발', 'OpenAI', 'ChatGPT', 'GPT', '생성형'],
+  // 'an open database of ~'처럼 자료 모음을 뜻하는 경우가 많다 → PostgreSQL·MySQL 같은 구체적인 기술이 있어야 백엔드
+  backend: ['database', 'databases', '데이터베이스'],
+}
+const hasAiToken = (word) => /(^|[^A-Za-z])AI([^A-Za-z]|$)/.test(word)
+
+function newsScores(title) {
+  const text = String(title ?? '')
+  const scores = {}
+  for (const rule of RULES) {
+    const demoted = NEWS_WEAK_WORDS[rule.field] ?? []
+    const strongWords = FIELD_KEYWORDS[rule.field].strong
+    let score = rule.weak.filter((p) => p.test(text)).length
+    let general = 0 // 낮춘 일반 표현(OpenAI, GPT, database 등)은 여러 개여도 합쳐서 1점까지만
+    rule.strong.forEach((pattern, i) => {
+      if (!pattern.test(text)) return
+      const word = strongWords[i]
+      if (!demoted.includes(word)) score += 2
+      else if (!hasAiToken(word)) general = 1
+    })
+    score += general
+    if (score > 0) scores[rule.field] = score
+  }
+  return scores
+}
+
+// 백엔드가 '필요 없다'는 표현: 백엔드 분류 근거에서 뺀다 (예: 'no back end needed', 'without a backend', 'backend-free')
+// 제목에서 이 부분만 지우고 나머지로 판단한다 → 다른 분명한 근거가 있으면 그 분야, 없으면 라벨·배지 없음
+const NO_BACKEND_PATTERNS = [
+  /(?<![A-Za-z0-9])no[\s-]+back[\s-]?ends?(?:[\s-]+(?:needed|required|necessary))?(?![A-Za-z0-9])/gi,
+  /(?<![A-Za-z0-9])without[\s-]+(?:a[\s-]+|any[\s-]+|the[\s-]+)?back[\s-]?ends?(?![A-Za-z0-9])/gi,
+  /(?<![A-Za-z0-9])back[\s-]?end[\s-]?(?:free|less)(?![A-Za-z0-9])/gi,
+  /(?<![A-Za-z0-9])(?:no[\s-]+need[\s-]+for|(?:do|does|did)(?:n't|[\s-]+not)[\s-]+need)[\s-]+(?:a[\s-]+|any[\s-]+|the[\s-]+)?back[\s-]?ends?(?![A-Za-z0-9])/gi,
+  /백엔드[\s]*(?:없이|없는|불필요|필요\s*없)/g,
+]
+const withoutNoBackend = (text) => NO_BACKEND_PATTERNS.reduce((t, pattern) => t.replace(pattern, ' '), text)
+
+// 기술 뉴스 제목 → 분명한 분야 키 목록 (없으면 [])
+export function newsFieldsOf(title) {
+  const text = withoutNoBackend(String(title ?? ''))
+  const explicit = explicitFields(text)
+  if (explicit.length === 2) return explicit
+  const scores = newsScores(text)
+  for (const field of explicit) scores[field] = (scores[field] ?? 0) + 1
+  const [first, second] = Object.entries(scores).sort((a, b) => b[1] - a[1])
+  if (!first || first[1] < 2 || (second && second[1] === first[1])) return []
+  return [first[0]]
+}
+
+// 기술 뉴스가 내 희망 직무와 맞는지 (직무가 없거나 '아직 정하지 않음'이면 항상 false)
+export function newsMatchesJob(title, job) {
+  if (!job || job === 'undecided') return false
+  return newsFieldsOf(title).includes(job)
+}
