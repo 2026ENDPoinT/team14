@@ -29,7 +29,7 @@ const MENU_GROUPS = [
     items: [
       { key: 'profile', icon: 'profile', label: '프로필 편집', keywords: '닉네임 이름 학년 직무 희망 아이콘' },
       { key: 'notice', icon: 'bell', label: '알림', keywords: '일기 알림 시간' },
-      { key: 'display', icon: 'display', label: '화면 설정', keywords: '달력 시작 요일' },
+      { key: 'display', icon: 'display', label: '화면 설정', keywords: '달력 시작 요일 테마 라이트 다크 화면 모드' },
     ],
   },
   {

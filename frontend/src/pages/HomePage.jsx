@@ -5,7 +5,6 @@ import PetImage from '../features/pet/PetImage.jsx'
 import { getEnergyToNextStage, getStageInfo, getStageProgress, MAX_STAGE } from '../features/pet/petStages.js'
 import { PET_CHARACTERS, petAssetName, petAssetUrl, petSadAssetUrl, resolvePetCharacter } from '../features/home/petCharacter.js'
 import { petFrames } from '../features/home/petFrames.js'
-import { jobTitle } from '../features/mypage/jobGroups.js'
 import PetSprite from '../features/home/PetSprite.jsx'
 import { autoCheckIn } from '../features/home/homeActions.js'
 import { dropSeenRewards, finishReward, markRewardSeen, seenRewardIds, useRewardQueue } from '../features/home/rewardQueue.js'
@@ -90,7 +89,7 @@ export default function HomePage() {
   }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
   const closeTour = useCallback(() => {
     setTourOpen(false)
-    setHoldRewards(false) // 이제 미뤄 둔 출석 연출을 보여 준다
+      setHoldRewards(false)
   }, [])
 
   // 펫 클릭 반응: 살짝 통통 튀고 0.5초 안에 제자리로 (포인트·성장 변화 없음)
@@ -128,9 +127,6 @@ export default function HomePage() {
   const frames = sadUrl ? [] : baseFrames // 시무룩한 그림에는 깜빡임 프레임이 없다
   // 위쪽 이름: 사용자 닉네임 (펫 이름 아님). HOME은 프로필 확인이 끝난 뒤에만 그려진다(RouteGuards)
   const nickname = profile?.nickname?.trim() || ''
-  // 닉네임 아래 희망 직무: 사용자가 실제로 고른 값(profiles.interests 첫 번째, 마이페이지와 같은 값). 펫 종류로 추정하지 않는다
-  const desiredJob = profile?.interests?.[0]
-  const desiredJobLabel = desiredJob && desiredJob !== 'undecided' && jobTitle(desiredJob) !== '선택 안 함' ? jobTitle(desiredJob) : '희망 직무 미정'
   // 펫 이미지 설명용 (화면에 이름으로 보이지 않음)
   const petLabel = character ? PET_CHARACTERS[character].label : '새싹' // 희망 직무 미정이면 새싹
   // 온기 잔액: 서버 pets.warmth_balance (누적 온기 energy와 별개 — 온기를 쓰면 잔액만 줄어든다)
@@ -188,15 +184,7 @@ export default function HomePage() {
       </div>
       <HomeTutorial open={tourOpen} onClose={closeTour} />
       {/* 출석 온기 획득 연출: 일기 저장 때와 같은 연기 + '온기 +100 획득!' (화면 전체) */}
-      {bursts[0] && (
-        <WarmthEffect
-          key={bursts[0].id}
-          amount={bursts[0].amount}
-          title={bursts[0].id.startsWith('attendance:') ? '출석!' : ''}
-          onDone={endBurst}
-          fullScreen
-        />
-      )}
+      {bursts[0] && <WarmthEffect key={bursts[0].id} amount={bursts[0].amount} onDone={endBurst} fullScreen />}
       {/* 보유 온기 (오른쪽 위): 햇살 아이콘 + "온기" + 서버에 저장된 잔액(warmth_balance) */}
       <div className="hm-warmth" role="group" aria-label={`보유 온기 ${balance.toLocaleString()}`}>
         <svg className="hm-warmth__icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
@@ -237,7 +225,6 @@ export default function HomePage() {
         ) : (
           <>
             <h1 className={`hm-name__text ${nickname ? '' : 'is-empty'}`}>{nickname || '닉네임을 정해 주세요'}</h1>
-            <p className="hm-name__job">{desiredJobLabel}</p>
             <button type="button" className="hm-name__edit" aria-label="닉네임 수정" title="닉네임 수정" onClick={startEdit}>
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4" />
