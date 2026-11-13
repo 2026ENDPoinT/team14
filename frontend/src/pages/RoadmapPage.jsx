@@ -34,10 +34,12 @@ import {
 } from '../services/api.js'
 import { insertPeriod } from '../services/periods.js'
 import { deleteWithPhotos } from '../services/photos.js'
+import { deleteWithAttachments } from '../services/attachments.js'
 import '../features/roadmap/roadmap.css'
 
-// 노드 삭제 + 그 노드의 첨부 사진 파일 정리 (사진 연결 행은 DB에서 함께 지워진다)
-const deleteNodeAndPhotos = (nodeId) => deleteWithPhotos({ nodeId }, () => deleteNode(nodeId))
+// 노드 삭제 + 그 노드의 사진·첨부 파일 정리 (연결 행은 DB에서 함께 지워진다)
+const deleteNodeAndPhotos = (nodeId) =>
+  deleteWithAttachments(nodeId, () => deleteWithPhotos({ nodeId }, () => deleteNode(nodeId)))
 
 const UNDO_MS = 5000 // 실행 취소 안내가 보이는 시간. 이 시간이 지나면 삭제를 DB에 저장한다
 

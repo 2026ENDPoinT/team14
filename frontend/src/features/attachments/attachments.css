@@ -1,0 +1,123 @@
+/* 활동 상세 링크·파일 첨부 */
+.at {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.at-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.at-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  background: #fbfaf8;
+  font-size: 13px;
+}
+.at-item.is-failed {
+  border: 2px solid #d93a3f;
+}
+.at-item.is-uploading {
+  opacity: 0.6;
+}
+.at-icon {
+  flex: none;
+}
+.at-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--rm-text, #222);
+  font-weight: 700;
+  text-align: left;
+}
+a.at-name {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.at-name--btn {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.at-size {
+  flex: none;
+  color: var(--rm-muted, #888);
+  font-size: 11px;
+}
+.at-badge {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+.at-badge.is-error {
+  background: #d93a3f;
+}
+.at-remove {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: #333;
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+}
+.at-actions,
+.at-link-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.at-add {
+  height: 36px;
+  padding: 0 14px;
+  border: 1.5px dashed #d6d3cc;
+  border-radius: 18px;
+  background: #fbfaf8;
+  color: #555;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.at-add:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.at-link-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.at-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--rm-muted, #888);
+  line-height: 1.5;
+}
+.at-note.is-error {
+  color: #c0392b;
+  font-weight: 700;
+}
