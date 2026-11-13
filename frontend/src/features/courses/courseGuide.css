@@ -1,0 +1,164 @@
+/* 로드맵 '수강 필요' 안내: 왼쪽 위 종류 필터(.rm-filter, top 24px) 바로 아래 */
+.cg {
+  position: absolute;
+  top: 70px;
+  left: 32px;
+  z-index: 22;
+  font-family: inherit;
+}
+.cg__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  color: #333;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cg.is-open .cg__toggle {
+  background: #f6d878;
+}
+.cg__count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  background: #d93a3f;
+  color: #fff;
+  font-size: 11px;
+}
+.cg__panel {
+  margin-top: 8px;
+  width: 340px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 16px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.14);
+  font-size: 13px;
+  color: #333;
+}
+.cg__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 15px;
+}
+.cg__close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+.cg__lead,
+.cg__sub {
+  margin: 0 0 10px;
+  color: #888;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.cg__sub {
+  margin-top: 14px;
+  font-weight: 700;
+  color: #555;
+}
+.cg__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cg__item {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f7f6f3;
+}
+.cg__title {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 700;
+}
+.cg__term {
+  flex: none;
+  color: #999;
+  font-size: 11px;
+  font-weight: 600;
+}
+.cg__reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.cg__reason {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  color: #666;
+}
+.cg__reason.is-required {
+  background: #fdeaea;
+  color: #c0392b;
+}
+.cg__reason.is-core {
+  background: #fdf3d4;
+  color: #8a6400;
+}
+.cg__actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.cg__btn,
+.cg__select {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid #e3e0d8;
+  border-radius: 15px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cg__btn:disabled,
+.cg__select:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.cg__state {
+  margin: 8px 0 0;
+  color: #4a8a4a;
+  font-size: 12px;
+  font-weight: 700;
+}
+@media (max-width: 640px) {
+  /* 좁은 화면에서는 종류 필터가 top 84px로 내려간다 → 그 아래 */
+  .cg {
+    top: 130px;
+    left: 12px;
+  }
+  .cg__panel {
+    width: calc(100vw - 32px);
+  }
+}
