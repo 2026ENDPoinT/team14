@@ -829,3 +829,168 @@
     height: 46px;
   }
 }
+
+
+/* ================================================================
+   Campus Tree dark mode — diary modal & footprint polish (dark2 v8)
+   Source-matched against DiaryModal.css and Footprint.css.
+   Scopes: the diary modal only; light mode stays untouched.
+   ================================================================ */
+:root[data-ct-theme="dark"] .diary-page .dp-modal {
+  --dy-ink: #f1f0ec;
+  --rm-muted: #bbc7d6;
+  --rm-field: #344255;
+  --rm-accent-dot: #e1b967;
+}
+:root[data-ct-theme="dark"] .diary-page .dp-modal__backdrop {
+  background: rgba(8, 13, 22, .67);
+}
+:root[data-ct-theme="dark"] .diary-page .dp-modal__card.dm-card {
+  background: linear-gradient(145deg, #303e50, #253140);
+  border: 1px solid #607085;
+  box-shadow: 0 24px 68px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .045);
+  color: #f2f0ec;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card :is(.rm-eyebrow, .dp-modal__sub, .dm-act__kind, .dm-count, .dm-story__hint, .dm-goal__label, .fp-card__optional, .fp-note, .fp-linked__label) {
+  color: #c0cad7;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card :is(.dm-story__title, .fp-card__title, .dp-modal__title, .dm-goal__num, .fp-text) {
+  color: #f4f1eb;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .dm-act {
+  background: #35465a;
+  border: 1px solid #56677d;
+  box-shadow: none;
+  color: #edf0f3;
+}
+/* Previously translucent white glass panels; replace the entire background. */
+:root[data-ct-theme="dark"] .diary-page .dm-card .dm-story,
+:root[data-ct-theme="dark"] .diary-page .dm-card .fp-card {
+  background: linear-gradient(145deg, #344255, #2c394b);
+  border: 1px solid #65748a;
+  box-shadow: 0 7px 22px rgba(5, 9, 17, .24), inset 0 1px 0 rgba(255, 255, 255, .04);
+  color: #f4f1eb;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card :is(.dm-story__input, .fp-input) {
+  background: linear-gradient(140deg, #283546, #303e50);
+  color: #f2f4f7;
+  border: 1px solid #556981;
+  box-shadow: 0 5px 16px rgba(0, 0, 0, .23);
+  caret-color: #e5bb70;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card :is(.dm-story__input, .fp-input)::placeholder {
+  color: #b9c7d8;
+  opacity: 1;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card :is(.dm-story__input, .fp-input):focus {
+  border-color: #e1b967;
+  outline: 2px solid rgba(225, 185, 103, .55);
+  outline-offset: 2px;
+  box-shadow: 0 7px 20px rgba(0, 0, 0, .3);
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .dm-photo-btn {
+  background: #46576b;
+  color: #f0e4c9;
+  border: 1px solid #728096;
+  box-shadow: none;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .dm-photo-btn:hover {
+  background: #5a6c82;
+  color: #fff4da;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .fp-card__title svg {
+  color: #a6d0a5;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .fp-chip {
+  background: #45556a;
+  border: 1px solid #708198;
+  box-shadow: none;
+  color: #f3f4f5;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .fp-chip:hover:not(.is-active) {
+  background: #596b82;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .fp-chip.is-active {
+  background: #dcb56b;
+  border-color: #efce8f;
+  color: #242d3a;
+  box-shadow: none;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .fp-node {
+  background: #354456;
+  border: 1px solid #53667e;
+  color: #f2f3f5;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .fp-node:hover {
+  background: #445771;
+  border-color: #9baec7;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .fp-node.is-selected {
+  background: #584b33;
+  border-color: #dcb56b;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .fp-node__title {
+  color: #f2f3f5;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .fp-node__place {
+  color: #c0cad7;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .fp-linked__name {
+  background: #5e5033;
+  color: #ffe5ae;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .fp-linked__remove {
+  color: #f3c4c6;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .fp-linked__remove:hover {
+  color: #fff;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .dp-story {
+  color: #e3e8ef;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .dm-goal__track {
+  stroke: rgba(209, 220, 232, .26);
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .dm-goal.is-done .dm-goal__num {
+  color: #26303a;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .dp-text-btn,
+:root[data-ct-theme="dark"] .diary-page .dm-card .dp-btn:not(.dp-btn--accent) {
+  background: #435369;
+  border: 1px solid #657990;
+  box-shadow: none;
+  color: #f3f3f4;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .dp-text-btn:hover,
+:root[data-ct-theme="dark"] .diary-page .dm-card .dp-btn:not(.dp-btn--accent):hover:not(:disabled) {
+  background: #586c84;
+  color: #fff;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .dp-btn--accent {
+  background: linear-gradient(100deg, #e8c779, #d4a953);
+  border: 1px solid #efcf8e;
+  color: #24303a;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, .22);
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .dp-btn--accent:hover:not(:disabled) {
+  background: linear-gradient(100deg, #f2d68e, #e1b968);
+  color: #202631;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .rm-icon-btn {
+  background: #425168;
+  color: #f2d4d5;
+  border-color: #68788e;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .rm-icon-btn:hover {
+  background: #62414b;
+  color: #ffe1e3;
+}
+:root[data-ct-theme="dark"] .diary-page .dm-card .dp-save-error,
+:root[data-ct-theme="dark"] .diary-page .dm-card .dm-hint.is-error {
+  color: #ffc5c7;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-ct-theme="dark"] .diary-page .dm-card :is(.dm-photo-btn,.fp-chip,.fp-node) {
+    transition: none;
+  }
+}
