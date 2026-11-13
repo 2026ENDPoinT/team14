@@ -902,9 +902,8 @@ export default function RoadmapPage() {
         )}
 
 
-        {/* 왼쪽 상단 도구: 수강 필요 → AI 길잡이 → 사용법 다시 보기 */}
+        {/* 상단 도구 (왼쪽 위): AI 길잡이 · 사용법 다시 보기 — 예전 종류 필터 자리 */}
         <div className="rm-filter rm-tools">
-          <CourseGuidePanel nodes={nodes} periods={periods} layout={layout} enabled={isDb} onAdded={handleCourseAdded} onToast={setToast} />
           <AiGuideButton open={guideOpen} onClick={() => setGuideOpen(true)} />
           {/* 튜토리얼 다시 보기 (기록과 상관없이 언제든 열린다) */}
           <button
@@ -918,6 +917,8 @@ export default function RoadmapPage() {
           </button>
         </div>
 
+        {/* 수강 필요: 놓친 저학년 필수·핵심 과목 안내, 보관함 추가·학기 배치 (features/courses) */}
+        <CourseGuidePanel nodes={nodes} periods={periods} layout={layout} enabled={isDb} onAdded={handleCourseAdded} onToast={setToast} />
 
         {/* 비어 있는 로드맵 안내 (누를 수 없는 안내 문구) */}
         {(periods.length === 0 || nodes.length === 0) && (
