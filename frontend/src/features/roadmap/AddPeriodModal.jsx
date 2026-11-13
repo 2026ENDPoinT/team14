@@ -2,17 +2,18 @@ import { useEffect, useState } from 'react'
 import Modal from './Modal.jsx'
 import { CloseIcon } from './icons.jsx'
 import { periodLabel } from './layout.js'
-import { PERIOD_TYPES } from '../../services/periods.js'
+import { CUSTOM_NAME_MAX, PERIOD_TYPES } from '../../services/periods.js'
 
 const END = 'end'
 
 // 학기 추가 창 (+ 메뉴의 '학기 추가')
-// - 종류: 휴학 · 군휴학 · 교환학생 / 위치: 어떤 학기 바로 뒤, 또는 맨 끝
+// - 종류: 휴학 · 군휴학 · 교환학생 · 기타(이름 직접 입력, 1~10자) / 위치: 어떤 학기 바로 뒤, 또는 맨 끝
 // - 저장 요청마다 요청 id를 함께 보낸다. 같은 선택으로 다시 누르면(재시도) 같은 id라 서버에서 중복으로 만들지 않는다.
 // props: open, periods(순서대로), onClose, onSubmit({ type, afterPeriodId, requestId }) → 성공 null / 실패 오류 문구
 export default function AddPeriodModal({ open, periods, onClose, onSubmit }) {
   const [type, setType] = useState('leave')
   const [after, setAfter] = useState(END)
+  const [name, setName] = useState('') // 기타일 때 이름
   const [requestId, setRequestId] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
@@ -23,6 +24,7 @@ export default function AddPeriodModal({ open, periods, onClose, onSubmit }) {
     if (!open) return
     setType('leave')
     setAfter(END)
+    setName('')
     setRequestId(crypto.randomUUID())
     setSaving(false)
     setSaveError('')
@@ -36,7 +38,10 @@ export default function AddPeriodModal({ open, periods, onClose, onSubmit }) {
   }
 
   // 미리보기: 앞 학기 → 새 칸 → 뒤 학기
-  const label = PERIOD_TYPES.find((t) => t.type === type)?.label
+  const isCustom = type === 'custom'
+  const trimmed = name.trim()
+  const nameError = isCustom && !trimmed ? '이름을 입력해 주세요.' : ''
+  const label = isCustom ? trimmed || '이름' : PERIOD_TYPES.find((t) => t.type === type)?.label
   const index = after === END ? sorted.length - 1 : sorted.findIndex((p) => p.id === after)
   const prev = sorted[index]
   const next = sorted[index + 1]
@@ -44,10 +49,10 @@ export default function AddPeriodModal({ open, periods, onClose, onSubmit }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (saving) return
+    if (saving || nameError) return
     setSaving(true)
     setSaveError('')
-    const error = await onSubmit({ type, afterPeriodId: after === END ? null : after, requestId })
+    const error = await onSubmit({ type, afterPeriodId: after === END ? null : after, requestId, name: isCustom ? trimmed : null })
     setSaving(false)
     if (error) setSaveError(error) // 선택은 그대로, 같은 요청 id로 다시 시도
   }
@@ -84,6 +89,23 @@ export default function AddPeriodModal({ open, periods, onClose, onSubmit }) {
           </div>
         </div>
 
+        {isCustom && (
+          <label className="rm-field">
+            <span className="rm-eyebrow">이름</span>
+            <input
+              className="rm-input"
+              value={name}
+              maxLength={CUSTOM_NAME_MAX}
+              placeholder="예: 계절학기, 인턴십, 어학연수"
+              aria-label="기타 이름"
+              onChange={(e) => choose(setName)(e.target.value)}
+            />
+            <p className={`rm-field-note ${nameError ? 'is-error' : ''}`}>
+              {nameError || `${[...trimmed].length}/${CUSTOM_NAME_MAX}자`}
+            </p>
+          </label>
+        )}
+
         <label className="rm-field">
           <span className="rm-eyebrow">위치</span>
           <select className="rm-input rm-select" value={after} onChange={(e) => choose(setAfter)(e.target.value)}>
@@ -97,7 +119,7 @@ export default function AddPeriodModal({ open, periods, onClose, onSubmit }) {
         </label>
 
         {saveError && <p className="rm-field-note is-error" role="alert">{saveError}</p>}
-        <button type="submit" className="rm-primary-btn" disabled={saving || !requestId}>
+        <button type="submit" className="rm-primary-btn" disabled={saving || !requestId || Boolean(nameError)}>
           {saving ? '저장 중…' : saveError ? '다시 시도' : '추가하기'}
         </button>
       </form>
