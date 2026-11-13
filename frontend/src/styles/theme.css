@@ -348,7 +348,7 @@
   color: #f2f0eb;
   box-shadow: 0 12px 30px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.045);
 }
-:root[data-ct-theme="dark"] .diary-page :is(.dp-title, .dp-cal-head__title, .dp-stat__prompt, .dp-modal__title, .dp-photo__title, .mm-month__label strong) {
+:root[data-ct-theme="dark"] .diary-page :is(.dp-title, .dp-cal-head__title, .dp-modal__title, .dp-photo__title, .mm-month__label strong) {
   color: #f4f0e9;
 }
 :root[data-ct-theme="dark"] .diary-page :is(.dp-lead, .dp-legend, .dp-weekday, .dp-stat__label, .dp-stat__hint, .dp-foot, .dp-modal__sub, .dp-photo__sub, .dp-photo__note, .dp-warmth__mark) {

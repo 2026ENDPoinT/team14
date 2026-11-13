@@ -6,6 +6,7 @@ import MonthPicker from '../features/diary/MonthPicker.jsx'
 import HighlightTimeline from '../features/diary/HighlightTimeline.jsx'
 import { groupByDate, activityDate, useActivities } from '../features/diary/activities.js'
 import { listDiaries, useDiaries } from '../features/diary/diaryStore.js'
+import TimeCapsule from '../features/diary/TimeCapsule.jsx'
 import { EMPTY_PET, usePet } from '../features/pet/petStore.js'
 import { getStageByNumber, getStageInfo, PET_STAGES } from '../features/pet/petStages.js'
 
@@ -20,22 +21,6 @@ import '../features/diary/Highlights.css'
 
 const PICKER_YEARS = 6 // 휠에서 올해부터 몇 년 전까지 고를 수 있는지 (추억 보관소와 같음)
 
-// 왼쪽 카드에 무작위로 보여 줄 작성 유도 질문
-const PROMPTS = [
-  '오늘은 어떤 하루를 보냈나요?',
-  '오늘 가장 기억에 남는 순간은 언제였나요?',
-  '오늘 나를 웃게 한 일이 있었나요?',
-  '오늘 새로 알게 된 것이 있나요?',
-  '오늘 조금 아쉬웠던 일은 무엇인가요?',
-  '오늘 고마웠던 사람이 있나요?',
-  '내일의 나에게 하고 싶은 말이 있나요?',
-  '오늘 수업이나 활동에서 무엇을 느꼈나요?',
-]
-// 지금과 다른 질문 하나를 고른다
-function pickPrompt(current) {
-  const others = PROMPTS.filter((p) => p !== current)
-  return others[Math.floor(Math.random() * others.length)]
-}
 
 // 탭마다 주소가 따로 있다 (상단 메뉴의 하위 탭 '일기 쓰기 · 추억 보관소'와 같은 주소)
 const TABS = [
@@ -44,7 +29,7 @@ const TABS = [
 ]
 
 // 추억 보관소 = 일기장 + 주요 활동 (/memories, /diary 모두 이 화면)
-// - 일기 탭(처음 화면): 왼쪽 소개·질문·온기 / 오른쪽 달력. 날짜를 누르면 그날 일기 팝업
+// - 일기 탭(처음 화면): 왼쪽 소개·AI 타임캡슐·온기 / 오른쪽 달력. 날짜를 누르면 그날 일기 팝업
 //   주요 활동의 마감·목표일인 날짜에는 작은 깃발이 붙고, 팝업에 "이날의 활동"이 함께 보인다.
 // - 주요 활동 탭: 로드맵의 주요 활동을 학기별로 (카드를 누르면 그날 일기로, 날짜가 없으면 로드맵으로)
 // /diary = 일기 탭, /memories = 추억 보관소(주요 활동) 탭. ?date=2026-11-08 이 있으면 일기 탭에서 그 날짜 팝업을 연다
@@ -73,7 +58,6 @@ export default function MemoriesPage() {
   }) // 보고 있는 달
   const [, setVersion] = useState(0) // 저장·삭제 후 달력을 다시 그리기 위한 값
   const [pickerOpen, setPickerOpen] = useState(false) // 연·월 빠른 선택 휠
-  const [prompt, setPrompt] = useState(() => pickPrompt(null)) // 들어올 때마다 무작위 질문
   const closePicker = useCallback(() => setPickerOpen(false), [])
 
   // 내 일기·펫 (서버). 불러오거나 저장하면 다시 그려진다
@@ -189,22 +173,8 @@ export default function MemoriesPage() {
             <li><span className="dp-legend__flag" aria-hidden="true">⚑</span>활동 마감·목표일</li>
           </ul>
 
-          {/* 작성 유도 질문 (↻ 를 누르면 다른 질문) */}
-          <div className="dp-stat">
-            <div className="dp-stat__top">
-              <p className="dp-stat__label">오늘의 질문</p>
-              <button
-                type="button"
-                className="rm-icon-btn dp-stat__refresh"
-                aria-label="다른 질문 보기"
-                onClick={() => setPrompt((p) => pickPrompt(p))}
-              >
-                <RefreshIcon />
-              </button>
-            </div>
-            <p className="dp-stat__prompt">{prompt}</p>
-            <p className="dp-stat__hint">하루 한 줄도 충분해요.</p>
-          </div>
+          {/* AI 타임캡슐: 과거의 나 돌아보기 (버튼을 눌렀을 때만 AI 호출) */}
+          <TimeCapsule diaries={listDiaries('0000-01-01', '9999-12-31')} ready={diaryData.status === 'ready'} />
 
           {/* 펫 온기: 전체(최종 단계 5,000)까지 얼마나 찼는지 + 단계 기준선 */}
           <div className="dp-warmth">
@@ -304,15 +274,6 @@ export default function MemoriesPage() {
         />
       )}
     </div>
-  )
-}
-
-function RefreshIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" />
-    </svg>
   )
 }
 

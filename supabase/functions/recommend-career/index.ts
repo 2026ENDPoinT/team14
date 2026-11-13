@@ -31,6 +31,13 @@ import {
   parseGuideInput,
   validateGuideOutput,
 } from './guide.ts'
+import {
+  buildReflectionRequest,
+  parseReflectionInput,
+  REFLECTION_MODES,
+  type ReflectionInput,
+  validateReflectionOutput,
+} from './reflection.ts'
 
 // 무료 한도가 있는 Flash-Lite 모델. 앞의 모델이 없거나(404), 한도를 넘었거나(429),
 // Gemini 서버가 일시적으로 응답하지 못하면(500·502·503·504, 시간 초과·네트워크 오류) 다음 모델을 쓴다.
@@ -205,6 +212,76 @@ async function handleGuide(body: unknown) {
   return fail(502, 'AI_ERROR', '사용할 수 있는 AI 모델이 없습니다.')
 }
 
+// 일기 AI 모드(reflect·timecapsule, reflection.ts) 처리 (로그인 확인은 끝난 상태). 저장하지 않는다.
+// 같은 Secret(GEMINI_API_KEY)·모델 순서·재시도 규칙을 쓴다.
+async function askGeminiReflection(model: string, apiKey: string, input: ReflectionInput) {
+  const req = buildReflectionRequest(input)
+  const response = await fetch(`${API_BASE}/${model}:generateContent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+    signal: AbortSignal.timeout(GUIDE_TIMEOUT_MS),
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: req.system }] },
+      contents: [{ role: 'user', parts: [{ text: req.user }] }],
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: req.maxTokens,
+        responseMimeType: 'application/json',
+        responseSchema: req.schema,
+      },
+    }),
+  })
+  if (!response.ok) {
+    await response.body?.cancel()
+    return { status: response.status }
+  }
+  const data = await response.json()
+  const text = (data?.candidates?.[0]?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? '').join('')
+  try {
+    return { status: 200, result: validateReflectionOutput(JSON.parse(text), input) }
+  } catch {
+    return { status: 200, result: null }
+  }
+}
+
+async function handleReflection(body: unknown) {
+  const parsed = parseReflectionInput(body)
+  if ('error' in parsed) return fail(400, 'VALIDATION_ERROR', parsed.error)
+  const input = parsed.input
+
+  const apiKey = (Deno.env.get('GEMINI_API_KEY') ?? '').trim()
+  if (!apiKey) return fail(500, 'SERVER_ERROR', 'AI 설정이 없습니다.')
+
+  let lastStatus = 0
+  for (const model of MODELS) {
+    let answer
+    try {
+      answer = await askGeminiReflection(model, apiKey, input)
+    } catch {
+      console.error(`recommend-career(${input.mode}): ${model} 요청 실패(시간 초과·네트워크) → 다음 모델`)
+      lastStatus = 504
+      continue
+    }
+    lastStatus = answer.status
+    if (TRY_NEXT.has(answer.status)) {
+      console.error(`recommend-career(${input.mode}): ${model} HTTP ${answer.status} → 다음 모델`)
+      continue
+    }
+    if (answer.status !== 200) {
+      console.error(`recommend-career(${input.mode}): ${model} HTTP ${answer.status}`)
+      return fail(502, 'AI_ERROR', 'AI 응답을 받지 못했습니다.')
+    }
+    if (!answer.result) {
+      console.error(`recommend-career(${input.mode}): ${model} 응답 검증 실패`)
+      return fail(502, 'AI_ERROR', '기록에 근거한 AI 결과를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.')
+    }
+    return json({ mode: input.mode, ...answer.result, model, createdAt: new Date().toISOString() })
+  }
+  if (lastStatus === 429) return fail(429, 'RATE_LIMITED', 'AI 사용 한도를 넘었습니다. 잠시 후 다시 시도해 주세요.')
+  if (lastStatus >= 500) return fail(502, 'AI_ERROR', 'AI 서버가 잠시 응답하지 않습니다.')
+  return fail(502, 'AI_ERROR', '사용할 수 있는 AI 모델이 없습니다.')
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (request.method !== 'POST') return fail(405, 'VALIDATION_ERROR', 'POST만 지원합니다.')
@@ -229,8 +306,11 @@ Deno.serve(async (request) => {
   } catch {
     return fail(400, 'VALIDATION_ERROR', '요청 형식이 올바르지 않습니다.')
   }
+  // 일기 AI 모드 (reflect·timecapsule) → 그 밖의 mode는 기존 AI 길잡이
+  const mode = (body as { mode?: unknown })?.mode
+  if ((REFLECTION_MODES as readonly unknown[]).includes(mode)) return handleReflection(body)
   // AI 길잡이 모드
-  if ((body as { mode?: unknown })?.mode !== undefined) return handleGuide(body)
+  if (mode !== undefined) return handleGuide(body)
   const raw = (body as { keywords?: unknown })?.keywords
   if (!Array.isArray(raw) || raw.length === 0 || raw.length > MAX_KEYWORDS) {
     return fail(400, 'VALIDATION_ERROR', `keywords는 1~${MAX_KEYWORDS}개여야 합니다.`)
