@@ -1,7 +1,8 @@
 import { supabase } from './supabaseClient.js'
 import { toPet } from './rewards.js'
 
-// 닉네임 변경 (RPC change_nickname, docs/backend-pet-home.md 9장 — 아직 서버에 없음)
+// 닉네임 변경 (RPC change_nickname, docs/backend-pet-home.md 9장, migration 20261114002500)
+// profiles.nickname은 직접 UPDATE할 수 없다 (컬럼 권한 회수). 이 RPC로만 바꾼다.
 // 서버가 한 트랜잭션으로: 닉네임 검사(1~8자) → 같은 이름이면 그대로(차감 없음)
 //   → 첫 실제 변경은 무료, 이후 변경마다 온기 300 차감(잔액 부족이면 아무것도 바꾸지 않음) → 저장
 // 화면에서 온기를 빼거나 닉네임을 직접 profiles에 쓰지 않는다.
@@ -13,6 +14,7 @@ const MESSAGES = {
   INSUFFICIENT_WARMTH: '온기가 부족해요. 닉네임 변경에는 온기 300이 필요해요.',
   VALIDATION_ERROR: '닉네임은 1~8자로 입력해 주세요.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
+  NOT_FOUND: '프로필을 찾을 수 없어요. 다시 로그인해 주세요.',
 }
 
 export async function changeNickname(nickname) {

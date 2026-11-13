@@ -473,6 +473,9 @@
   font-weight: 600;
   color: #b59a55;
 }
+.mp-field__note.is-error {
+  color: #c0392b; /* 저장 실패 원인 */
+}
 .mp-dialog {
   width: min(476px, 100%); /* 가장 긴 직무 조합도 맨 위 한 줄에 들어가는 폭 */
 }

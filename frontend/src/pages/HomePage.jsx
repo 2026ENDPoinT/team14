@@ -154,13 +154,9 @@ export default function HomePage() {
     const result = await saveNickname(draft, { current: nickname, applyProfile })
     setBusy(false)
     if (result.error) {
-      if (result.code === 'VALIDATION_ERROR') {
-        setNameError(result.error)
-        return
-      }
-      // 저장되지 않았으므로 화면의 닉네임·온기도 그대로 둔다
-      setEditing(false)
-      setToast(`${result.error} 닉네임이 바뀌지 않았어요.`)
+      // 저장되지 않았으므로 화면의 닉네임·온기는 그대로 두고, 편집창과 입력값도 그대로 둔 채 원인을 보여 준다
+      // (온기 부족·서버 오류 등도 입력 검증 오류와 같이 입력칸 아래에 표시 → 고쳐서 다시 저장할 수 있다)
+      setNameError(result.code === 'VALIDATION_ERROR' ? result.error : `${result.error} 닉네임이 바뀌지 않았어요.`)
       return
     }
     setEditing(false)
@@ -215,7 +211,9 @@ export default function HomePage() {
               <button type="button" className="hm-text-btn" onClick={() => setEditing(false)}>취소</button>
               <button type="submit" className="hm-text-btn is-strong" disabled={busy}>저장</button>
             </div>
-            <p className="hm-name__note">{nameError || `첫 변경은 무료, 이후 변경마다 온기 ${NICKNAME_COST}`}</p>
+            <p className={`hm-name__note ${nameError ? 'is-error' : ''}`} role={nameError ? 'alert' : undefined}>
+              {nameError || `첫 변경은 무료, 이후 변경마다 온기 ${NICKNAME_COST}`}
+            </p>
           </form>
         ) : (
           <>
