@@ -1305,6 +1305,33 @@
   color: var(--rm-text);
   background: #fff;
 }
+/* 튜토리얼 다시 보기 (종류 필터·AI 길잡이 옆 작은 원, 같은 높이·그림자) */
+.rm-help {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #f7f7f7;
+  box-shadow: var(--rm-shadow);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  color: #6f6f6f;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+.rm-help:hover {
+  color: var(--rm-text);
+  background: #fff;
+}
+.rm-help:focus-visible {
+  outline: 2px solid var(--rm-text);
+  outline-offset: 2px;
+}
 .rm-filter__btn.is-active {
   background: var(--rm-text);
   color: #fff;
