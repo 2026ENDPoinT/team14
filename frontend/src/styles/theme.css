@@ -243,7 +243,7 @@
 :root[data-ct-theme="dark"] .mp-row--link.is-danger :is(.mp-row__label,.mp-row__icon) { color: var(--ct-danger-fg); }
 :root[data-ct-theme="dark"] .mp-search input::placeholder { color: var(--ct-soft); }
 /* Roadmap: toolbars, node actions, dialogs, form inputs */
-:root[data-ct-theme="dark"] :is(.rm-modal__card,.rm-inbox__card,.rm-filter,.rm-toast) {
+:root[data-ct-theme="dark"] :is(.rm-modal__card,.rm-inbox__card,.rm-filter:not(.rm-tools),.rm-toast) {
   background-color: var(--ct-surface);
   color: var(--ct-text);
   border-color: var(--ct-border);
@@ -829,3 +829,6 @@
     height: 46px;
   }
 }
+
+/* 추억보관소 '활동 마감·목표일' 깃발: 다크에선 원 배경이 밝아지므로 깃발 글자를 어둡게 (범례·달력 날짜 깃발 공통) */
+:root[data-ct-theme="dark"] :is(.dp-legend__flag, .dp-day__act) { color: var(--ct-bg); }
