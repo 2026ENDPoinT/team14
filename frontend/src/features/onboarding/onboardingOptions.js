@@ -159,7 +159,8 @@ export const CAREERS = [
 ]
 
 // 로드맵 구성 방식
-// auto: 추천 과목을 권장 학기에 배치 / manual: 추천 과목을 만들지 않음 (이수 과목·경험만 저장)
+// auto: 추천 과목을 권장 학기에 배치 / inbox: 추천 과목을 보관함에 담기 (작업표 4-6, complete_onboarding roadmap_mode)
+// 어느 쪽이든 이수 과목은 권장 학기, 경험은 보관함에 저장된다.
 export const SETUP_MODES = [
   {
     key: 'auto',
@@ -167,8 +168,8 @@ export const SETUP_MODES = [
     description: '관심 분야와 교과과정을 바탕으로 추천 과목을 학기별로 배치해 드려요.',
   },
   {
-    key: 'manual',
+    key: 'inbox',
     title: '직접 구성하기',
-    description: '추천 과목을 자동으로 추가하지 않고, 필요한 활동을 직접 선택하고 배치할 수 있어요.',
+    description: '추천 과목을 학기에 넣지 않고 보관함에 담아 둬요. 필요한 과목을 골라 직접 배치할 수 있어요.',
   },
 ]
