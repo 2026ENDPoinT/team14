@@ -25,7 +25,7 @@ const MENUS = [
   { to: '/', label: '홈', icon: 'home', match: (p) => p === '/' },
   { to: '/roadmap', label: '로드맵', icon: 'roadmap', match: (p) => p.startsWith('/roadmap') },
   { to: '/explore', label: '기회 탐색', icon: 'explore', match: (p) => p.startsWith('/explore') },
-  { to: '/diary', label: '일기', icon: 'diary', match: (p) => p.startsWith('/diary') || p.startsWith('/memories') },
+  { to: '/diary', label: '추억보관소', icon: 'diary', match: (p) => p.startsWith('/diary') || p.startsWith('/memories') },
   { to: '/mypage', label: '마이페이지', icon: 'mypage', match: (p) => p.startsWith('/mypage') },
 ]
 

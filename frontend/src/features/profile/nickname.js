@@ -7,6 +7,8 @@ import { setPetFromServer } from '../pet/petStore.js'
 // - 저장·차감은 서버 RPC(change_nickname)만. 성공 응답을 받은 뒤에만 화면(프로필·온기)을 바꾼다
 export const NICKNAME_MAX = 8
 export const NICKNAME_COST = 300 // 첫 실제 변경은 무료, 이후 변경마다
+// 서버 RPC(change_nickname)가 배포됐는지. 아직 없음 → 저장 시 '준비 중' 안내 (배포되면 true로: HOME 튜토리얼 문구도 바뀜)
+export const NICKNAME_SERVER_READY = false
 
 export const nicknameLength = (name) => [...String(name ?? '').trim()].length
 
