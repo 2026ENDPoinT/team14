@@ -338,8 +338,8 @@ export function DisplayPanel({ settings, update }) {
       <Group title="테마">
         <Row label="화면 모드" hint="선택한 모드는 홈·로드맵·일기·탐색 등 전체 화면에 적용돼요.">
           <Segment
-            value={settings.theme === 'dark' ? 'dark' : 'light'}
-            options={[[ 'light', '☀ 라이트' ], [ 'dark', '☾ 다크' ]]}
+            value={['dark', 'sunset'].includes(settings.theme) ? settings.theme : 'light'}
+            options={[[ 'light', '☀ 라이트' ], [ 'dark', '☾ 다크' ], [ 'sunset', '🌇 노을' ]]}
             onChange={(v) => update('theme', v)}
           />
         </Row>
