@@ -356,7 +356,7 @@ export function CareerAiStep({
 }
 
 // ───── 4. 희망 직무: 대표 1개 (필수, 건너뛰기 없음) ─────
-export function CareerStep({ selectedId, onSelect, onNext }) {
+export function CareerStep({ selectedId, onSelect, onNext, onStartBasic }) {
   const selected = CAREERS.find((c) => c.id === selectedId)
   return (
     <>
@@ -378,6 +378,13 @@ export function CareerStep({ selectedId, onSelect, onNext }) {
             ‘{selected.title}’ 직무는 추천 데이터가 아직 연결되지 않아 지금은 저장할 수 없어요.
           </Hint>
         )}
+        {/* 직무를 정하지 못했어도 시작할 수 있다: 전공 교과목 중심 기본 로드맵 (희망 직무는 나중에 마이페이지에서) */}
+        {onStartBasic && (
+          <div className="ob-undecided">
+            <span>아직 관심 분야를 정하지 못했나요?</span>
+            <button type="button" className="ob-undecided__btn" onClick={onStartBasic}>기본 로드맵으로 시작하기</button>
+          </div>
+        )}
       </div>
       {/* 직무를 하나 골라야 다음으로 갈 수 있다 ('아직 정하지 않음'도 하나의 선택지) */}
       <ActionBar onConfirm={onNext} disabled={!selectedId} />
@@ -386,7 +393,7 @@ export function CareerStep({ selectedId, onSelect, onNext }) {
 }
 
 // ───── 5. 로드맵 구성 방식 ─────
-export function SetupStep({ mode, onSelect, hasRecommendation, preview, saving, error, onFix, onConfirm }) {
+export function SetupStep({ undecided = false, mode, onSelect, hasRecommendation, preview, saving, error, onFix, onConfirm }) {
   return (
     <>
       <StepTitle>당신의 로드맵을 어떻게 시작할까요?</StepTitle>
@@ -406,6 +413,9 @@ export function SetupStep({ mode, onSelect, hasRecommendation, preview, saving, 
             </button>
           ))}
         </div>
+        {undecided && (
+          <Hint>희망 직무 없이 전공 교과목 중심의 기본 로드맵으로 시작해요. 직무는 나중에 마이페이지에서 언제든 고를 수 있어요.</Hint>
+        )}
         {mode === 'auto' && !hasRecommendation && (
           <Hint>과목 추천 기능이 연결되기 전이라 지금은 추천 과목이 추가되지 않아요. 고른 이수 과목만 반영돼요.</Hint>
         )}

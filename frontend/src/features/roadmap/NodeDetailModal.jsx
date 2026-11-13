@@ -4,7 +4,7 @@ import { CloseIcon, TrashIcon } from './icons.jsx'
 import { BASE_CATEGORIES, courseOptions, nodeCategoryId, nodeCourseKey, nodeDetailId } from './nodeCategories.js'
 import { isCourse } from './layout.js'
 import CategoryPicker from './CategoryPicker.jsx'
-import { ddayInfo } from './dday.js'
+import { ddayInfo, usesSourceDeadline } from './dday.js'
 import DeadlineBadge from '../explore/DeadlineBadge.jsx'
 import { contestKindLabel, sourceName } from '../explore/contestInfo.js'
 import PhotoField from '../photos/PhotoField.jsx'
@@ -45,7 +45,8 @@ export default function NodeDetailModal({
   const course = category.id === 'major' && courseKey ? courseOptions().find((c) => c.key === courseKey) ?? null : null
   // 실제 교과목이거나 지금 고른 종류가 기본 '전공·학업'(키 major)이면 D-DAY를 다루지 않는다
   // (사용자 정의 종류는 이름·기반 theme과 상관없이 마감일을 쓸 수 있다)
-  const noDueDate = shown ? isCourse(shown) || category.id === 'major' : false
+  // 기회 탐색에서 가져온 노드(공모전·대외활동·채용)는 원본 공고 마감일만 쓴다 → 개인 목표일 입력칸을 보여 주지 않고 저장하지도 않는다
+  const noDueDate = shown ? isCourse(shown) || category.id === 'major' || usesSourceDeadline(shown) : false
 
   // 다른 노드를 열 때만 입력값을 새로 채운다 (저장 후에는 그대로 유지)
   useEffect(() => {
@@ -130,6 +131,7 @@ export default function NodeDetailModal({
     }
     setSaving(false)
     setSaved(true)
+    onClose() // 저장 버튼으로 모두 저장되면 상세 창을 닫고 로드맵으로 (캔버스 화면 위치는 그대로라 그 학기가 보인다)
   }
 
   const handleDelete = () => {

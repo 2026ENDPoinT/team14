@@ -12,8 +12,10 @@ import { checkNickname, NICKNAME_COST, NICKNAME_MAX, nicknameLength, saveNicknam
 import GrowthDots from '../features/home/GrowthDots.jsx'
 import WarmthEffect from '../features/diary/WarmthEffect.jsx'
 import HomeQuote from '../features/home/HomeQuote.jsx'
+import PetEffects from '../features/home/PetEffects.jsx'
+import { daysSince, getPreviousVisitDate } from '../services/lastVisit.js'
 import HomeTutorial from '../features/home/tutorial/HomeTutorial.jsx'
-import { hasSeenHomeTutorial, markHomeTutorialSeen } from '../features/home/tutorial/homeTutorialStorage.js'
+import { recordAutoTutorial, shouldAutoStartTutorial } from '../features/tutorial/autoTutorial.js'
 import '../features/home/Home.css'
 
 // 펫 HOME (/) — Figma HOME 화면: 은은한 크림 배경, 위쪽 가운데 펫 이름, 가운데 펫, 아래 점선 성장 표시
@@ -32,7 +34,11 @@ export default function HomePage() {
   // 서버가 지급을 확인한 보상 연출 대기열 [{ id, amount }] — 보상이 겹쳐도 하나씩 차례로, 끝까지 재생한 뒤에 뺀다
   // HOME을 연 시점에 이미 본 보상은 첫 화면부터 빼고 보여 준다 (다시 그려질 때 한 순간 깜빡이지 않게)
   const [seenAtOpen] = useState(seenRewardIds)
-  const bursts = useRewardQueue().filter((reward) => !seenAtOpen.has(reward.id))
+  const queued = useRewardQueue().filter((reward) => !seenAtOpen.has(reward.id))
+  // HOME 튜토리얼 상태. 자동 튜토리얼을 열 예정이거나 보는 중이면 보상 연출을 잠시 미뤄 둔다 (튜토리얼 → 출석 연출 순서)
+  const [tourOpen, setTourOpen] = useState(false)
+  const [holdRewards, setHoldRewards] = useState(false) // 자동 튜토리얼을 열 때 true (아래 효과)
+  const bursts = holdRewards || tourOpen ? [] : queued
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [nameError, setNameError] = useState('')
@@ -40,6 +46,10 @@ export default function HomePage() {
   const inputRef = useRef(null)
   const hopRef = useRef(null)
   const spriteRef = useRef(null) // 펫 부분 애니메이션 (눈 깜빡임·손 흔들기 프레임이 있을 때만)
+  const [soilKey, setSoilKey] = useState(0) // 새싹을 누를 때마다 +1 → 흙 알갱이 효과 다시 재생
+  // 오래 못 본 펫: 지난 접속(서버 출석 기록, 오늘 제외)에서 7일 이상 지났으면 춥고 슬픈 모습.
+  // 펫을 한 번 쓰다듬으면(클릭) 풀린다. 보상·출석 규칙과는 무관 (읽기만 함)
+  const [cold, setCold] = useState(false)
   const burstId = bursts[0]?.id
   const endBurst = useCallback(() => {
     if (burstId) finishReward(burstId)
@@ -61,37 +71,43 @@ export default function HomePage() {
   useEffect(() => {
     if (userId) autoCheckIn(userId)
   }, [userId])
-
-  // HOME 튜토리얼: 처음 쓰는 사용자에게 한 번만 자동으로. 출석 결과(보상 연출)를 먼저 보여 준 뒤에 연다
-  // - 자동으로 열 때 '봤음'으로 기록 → 도중에 나가도 다시 강제로 띄우지 않는다 (왼쪽 위 ? 버튼으로 다시 보기)
-  const [tourOpen, setTourOpen] = useState(false)
-  const [tourWaiting, setTourWaiting] = useState(false)
+  // 지난 접속 확인: 오늘 출석 기록과 섞이지 않게 '오늘 이전' 기록만 본다 → 출석 처리 순서와 상관없이 판정
+  // 기록이 없으면(새 사용자 등) 평소 모습
   useEffect(() => {
-    if (!userId || hasSeenHomeTutorial()) return undefined
+    if (!userId) return undefined
     let alive = true
-    let timer
-    autoCheckIn(userId).promise.finally(() => {
-      if (alive) timer = setTimeout(() => setTourWaiting(true), 600)
+    getPreviousVisitDate().then((date) => {
+      const days = daysSince(date)
+      if (alive && days !== null && days >= 7) setCold(true)
     })
     return () => {
       alive = false
-      clearTimeout(timer)
     }
   }, [userId])
+
+  // HOME 튜토리얼: 신규 가입 후 HOME 첫 방문에만 자동으로 먼저 연다 (서버 프로필 home_tutorial_seen=false, features/tutorial/autoTutorial.js)
+  // 출석 보상 연출은 튜토리얼을 닫은 뒤에 나온다 (튜토리얼 → 출석 연출 순서)
+  // - 자동으로 여는 순간 서버에 '봤음' 저장 → 도중에 나가도, 다른 기기·재로그인에서도 다시 강제로 띄우지 않는다 (왼쪽 위 ? 버튼으로 다시 보기)
+  // - ? 버튼으로 다시 볼 때도 튜토리얼이 열려 있는 동안에는 보상 연출을 미룬다
   useEffect(() => {
-    if (!tourWaiting || bursts.length > 0) return
-    setTourWaiting(false)
-    markHomeTutorialSeen()
-    setTourOpen(true)
-  }, [tourWaiting, bursts.length])
+    if (!userId || !shouldAutoStartTutorial(profile, 'home')) return undefined
+    setHoldRewards(true)
+    const timer = setTimeout(() => {
+      recordAutoTutorial(profile, 'home', applyProfile)
+      setTourOpen(true)
+    }, 600)
+    return () => clearTimeout(timer)
+  }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
   const closeTour = useCallback(() => {
-    markHomeTutorialSeen()
     setTourOpen(false)
+      setHoldRewards(false)
   }, [])
 
   // 펫 클릭 반응: 살짝 통통 튀고 0.5초 안에 제자리로 (포인트·성장 변화 없음)
   // Web Animations API라 React 다시 그리기가 없고, 연속 클릭하면 이전 동작을 멈추고 처음부터 다시 재생한다.
   function hop() {
+    if (assetName === 'sprout') setSoilKey((k) => k + 1)
+    setCold(false) // 쓰다듬어 주면 다시 괜찮아져요
     spriteRef.current?.react() // 프레임이 있으면 짧게 손 흔들기(없으면 눈 깜빡임). 프레임이 없으면 아무것도 안 함
     const el = hopRef.current
     if (!el?.animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
@@ -120,7 +136,7 @@ export default function HomePage() {
   // 위쪽 이름: 사용자 닉네임 (펫 이름 아님). HOME은 프로필 확인이 끝난 뒤에만 그려진다(RouteGuards)
   const nickname = profile?.nickname?.trim() || ''
   // 펫 이미지 설명용 (화면에 이름으로 보이지 않음)
-  const petLabel = character ? PET_CHARACTERS[character].label : '내 펫'
+  const petLabel = character ? PET_CHARACTERS[character].label : '새싹' // 희망 직무 미정이면 새싹
   // 온기 잔액: 서버 pets.warmth_balance (누적 온기 energy와 별개 — 온기를 쓰면 잔액만 줄어든다)
   const balance = pet.warmth ?? 0
   const growthLabel = maxed
@@ -156,13 +172,9 @@ export default function HomePage() {
     const result = await saveNickname(draft, { current: nickname, applyProfile })
     setBusy(false)
     if (result.error) {
-      if (result.code === 'VALIDATION_ERROR') {
-        setNameError(result.error)
-        return
-      }
-      // 저장되지 않았으므로 화면의 닉네임·온기도 그대로 둔다
-      setEditing(false)
-      setToast(`${result.error} 닉네임이 바뀌지 않았어요.`)
+      // 저장되지 않았으므로 화면의 닉네임·온기는 그대로 두고, 편집창과 입력값도 그대로 둔 채 원인을 보여 준다
+      // (온기 부족·서버 오류 등도 입력 검증 오류와 같이 입력칸 아래에 표시 → 고쳐서 다시 저장할 수 있다)
+      setNameError(result.code === 'VALIDATION_ERROR' ? result.error : `${result.error} 닉네임이 바뀌지 않았어요.`)
       return
     }
     setEditing(false)
@@ -171,8 +183,13 @@ export default function HomePage() {
 
   return (
     <div className="home-page">
-      {/* HOME 사용법 다시 보기 (왼쪽 위 작은 버튼) */}
-      <button type="button" className="hm-help" onClick={() => setTourOpen(true)} aria-label="HOME 사용법 보기" title="HOME 사용법 보기">?</button>
+      {/* 왼쪽 위: HOME 사용법 다시 보기(?) + 서비스 로고(로그인 화면과 같은 글꼴, 누르면 새로고침) */}
+      <div className="hm-topleft">
+        <button type="button" className="hm-help" onClick={() => setTourOpen(true)} aria-label="HOME 사용법 보기" title="HOME 사용법 보기">?</button>
+        <button type="button" className="hm-logo" onClick={() => window.location.reload()} aria-label="Momentree 새로고침" title="새로고침">
+          Momentree
+        </button>
+      </div>
       <HomeTutorial open={tourOpen} onClose={closeTour} />
       {/* 출석 온기 획득 연출: 일기 저장 때와 같은 연기 + '온기 +100 획득!' (화면 전체) */}
       {bursts[0] && <WarmthEffect key={bursts[0].id} amount={bursts[0].amount} onDone={endBurst} fullScreen />}
@@ -209,7 +226,9 @@ export default function HomePage() {
               <button type="button" className="hm-text-btn" onClick={() => setEditing(false)}>취소</button>
               <button type="submit" className="hm-text-btn is-strong" disabled={busy}>저장</button>
             </div>
-            <p className="hm-name__note">{nameError || `첫 변경은 무료, 이후 변경마다 온기 ${NICKNAME_COST}`}</p>
+            <p className={`hm-name__note ${nameError ? 'is-error' : ''}`} role={nameError ? 'alert' : undefined}>
+              {nameError || `첫 변경은 무료, 이후 변경마다 온기 ${NICKNAME_COST}`}
+            </p>
           </form>
         ) : (
           <>
@@ -226,7 +245,7 @@ export default function HomePage() {
       {/* 펫 캐릭터: 투명 PNG가 있으면 그 이미지, 없으면 대체 상태
           - 바깥(hop): 클릭 반응 / 안쪽(idle): 숨쉬기 반복 — 두 움직임이 섞이지 않게 요소를 나눔
           - key={imageUrl}: 성장 단계가 바뀌면 새 이미지가 짧게 페이드 인 */}
-      <div className="hm-pet" data-character={character ?? 'none'} data-stage={stage}>
+      <div className={`hm-pet ${cold ? 'is-cold' : ''}`} data-character={character ?? 'none'} data-stage={stage}>
         <button type="button" className="hm-pet__hop" ref={hopRef} onClick={hop} aria-label={`${petLabel} 쓰다듬기`}>
           <span className="hm-pet__idle">
             {imageUrl ? (
@@ -240,6 +259,8 @@ export default function HomePage() {
               </span>
             )}
           </span>
+          {/* 펫 위 효과: 새싹 흙 알갱이 · 오래 못 본 뒤 눈물·바람 (원본 그림은 그대로) */}
+          <PetEffects hostRef={hopRef} assetName={assetName} soilKey={soilKey} cold={cold} />
         </button>
       </div>
 

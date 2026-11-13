@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Controls, ReactFlow, ViewportPortal, applyNodeChanges } from '@xyflow/react'
+import { Controls, ReactFlow, ViewportPortal, applyNodeChanges, useReactFlow } from '@xyflow/react'
 import '@xyflow/react/dist/base.css' // React Flow 동작에 필요한 최소 스타일 (디자인은 roadmap.css)
 import TimelineNode from './TimelineNode.jsx'
 import GoalNode from './GoalNode.jsx'
@@ -13,10 +13,10 @@ import useWheelZoom from './useWheelZoom.js'
 import { TrashIcon } from './icons.jsx'
 import { routeBetween, routeEdges, routeToPoint } from './edgeRouting.js'
 import { linkProblem } from './edgeRules.js'
-import { CANVAS_HEIGHT, TIMELINE_Y, cardSize, dropPeriodFor, findSwapTarget, initialViewport, nodeBox, planDrop } from './layout.js'
+import { CANVAS_HEIGHT, TIMELINE_Y, cardSize, dropPeriodFor, findSwapTarget, isMemo, initialViewport, nodeBox, planDrop } from './layout.js'
 
 // React Flow에 등록할 노드·연결선 종류 (컴포넌트 밖에 두어야 매번 새로 만들지 않는다)
-const nodeTypes = { timeline: TimelineNode, card: CardNode, goal: GoalNode }
+const nodeTypes = { timeline: TimelineNode, card: CardNode, goal: GoalNode } // 메모도 card (CardNode가 메모 위젯을 그린다)
 const edgeTypes = { roadmap: RoadmapEdge }
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 1.6
@@ -61,6 +61,8 @@ export default function RoadmapCanvas({
   dropPeriodId, onDropTargetChange, // 드래그 중 강조할 학기 (보관함 드래그와 함께 쓰려고 페이지에서 관리)
   connectMode, onEdgeCreate, onEdgeReconnect, onLinkReject, // 관계선 만들기·끝점 옮기기
   visibleIds = null, // 종류 필터로 보이는 노드 id (Set). null이면 전체
+  focusNodeId = null, onFocusDone, // 방금 만든 노드: 화면 밖이면 그 노드가 가운데 오게 이동
+  getMemo = () => null, onMemoSave, onMemoResize, // 메모 노드 내용 { title, body, color, width, height, fontSize } · 자동 저장 · 크기 바꾸기
   goalJob = '', onGoalClick, // 프로필 희망 직무. 일반 학기/활동 노드와 분리된 고정형 종착점
 }) {
   const width = layout.width + 330
@@ -68,6 +70,34 @@ export default function RoadmapCanvas({
   const [startViewport] = useState(() => initialViewport(window.innerWidth, window.innerHeight, layout, nodes)) // 첫 진입 화면 위치
   const [resetKey, setResetKey] = useState(0) // 원래 위치로 되돌리기용
   const wrapRef = useRef(null)
+  const { getViewport, setCenter, screenToFlowPosition } = useReactFlow()
+
+  // 새 노드로 화면 이동: 노드의 학기(periodId)·학기 기준 좌표로 캔버스 위치를 구하고(nodeBox),
+  // 지금 화면에 다 보이면 그대로, 아니면 배율은 그대로 두고 노드가 가운데 오게 옮긴다 (fitView 아님)
+  useEffect(() => {
+    if (!focusNodeId) return undefined
+    const node = nodes.find((n) => n.id === focusNodeId)
+    const box = node ? nodeBox(node, layout) : null
+    if (!box) {
+      onFocusDone?.()
+      return undefined
+    }
+    const raf = requestAnimationFrame(() => {
+      const rect = wrapRef.current?.getBoundingClientRect()
+      const { x, y, zoom } = getViewport()
+      if (rect) {
+        const left = rect.left + x + box.x * zoom
+        const top = rect.top + y + box.y * zoom
+        const right = left + box.w * zoom
+        const bottom = top + box.h * zoom
+        // 상단 메뉴·필터(위)와 + 버튼·보관함(아래)에 가리지 않는 영역
+        const inView = left >= rect.left + 40 && right <= rect.right - 40 && top >= rect.top + 120 && bottom <= rect.bottom - 120
+        if (!inView) setCenter(box.x + box.w / 2, box.y + box.h / 2, { zoom, duration: 450 })
+      }
+      onFocusDone?.()
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [focusNodeId, nodes, layout]) // eslint-disable-line react-hooks/exhaustive-deps
   const extent = useMemo(() => [[-600, -400], [width + 600, CANVAS_HEIGHT + 400]], [width]) // 화면 이동 가능 범위
   useWheelZoom(wrapRef, { minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM, extent })
   const [draggingId, setDraggingId] = useState(null) // 끌고 있는 노드 (연결선 애니메이션 끔, 가지선 잠시 숨김)
@@ -106,6 +136,16 @@ export default function RoadmapCanvas({
       .map((n) => {
         const box = nodeBox(n, layout)
         if (!box) return null
+        if (isMemo(n)) {
+          // 메모 노드: 일반 카드와 같은 'card' 노드 (드롭 연결·CONNECT·관계선·가지선 같은 규칙). 그리는 모양만 메모 위젯
+          return {
+            id: n.id,
+            type: 'card',
+            position: { x: box.x, y: box.y },
+            data: { node: n, memo: getMemo(n.id), onSave: onMemoSave, onDelete: onNodeDelete, onResize: onMemoResize },
+            style: { pointerEvents: 'all' },
+          }
+        }
         return {
           id: n.id,
           type: 'card',
@@ -128,7 +168,7 @@ export default function RoadmapCanvas({
       zIndex: 3,
     }] : []
     return [background, ...cards, ...goal]
-  }, [nodes, layout, width, getSubtitle, handleCardClick, onToggleComplete, visibleIds, goalJob, onGoalClick])
+  }, [nodes, layout, width, getSubtitle, handleCardClick, onToggleComplete, visibleIds, getMemo, onMemoSave, onNodeDelete, onMemoResize, goalJob, onGoalClick])
 
   // React Flow가 드래그 위치·크기 측정값을 기록할 수 있도록 노드를 상태로 관리한다.
   // 데이터가 바뀌면 다시 만들되, 이미 측정한 크기(measured)는 이어서 쓴다.
@@ -178,21 +218,25 @@ export default function RoadmapCanvas({
 
   // 끄는 노드 중심이 다른 카드 안쪽에 들어갔는지 (연결 후보)
   // 캔버스 좌표로 비교하므로 확대·축소·화면 이동과 상관없다. liveBoxes는 화면에 그려진 카드만이라 필터로 숨긴 노드는 제외
+  // - 큰 노드(메모)는 중심이 작은 과목 카드에 잘 안 들어가므로, 마우스 포인터가 대상 카드 안에 있어도 후보로 본다
   const findDropLink = useCallback(
-    (flowNode) => {
+    (flowNode, event) => {
       const me = boxAt(flowNode.position, flowNode.data.node)
       const cx = me.x + me.w / 2
       const cy = me.y + me.h / 2
+      const screen = event && pointOf(event)
+      const pointer = screen ? screenToFlowPosition({ x: screen.x, y: screen.y }) : null
+      const inside = (b, x, y) => x > b.x + DROP_INSET && x < b.x + b.w - DROP_INSET && y > b.y + DROP_INSET && y < b.y + b.h - DROP_INSET
       for (const [id, b] of liveBoxes) {
         if (id === flowNode.id) continue
-        if (cx > b.x + DROP_INSET && cx < b.x + b.w - DROP_INSET && cy > b.y + DROP_INSET && cy < b.y + b.h - DROP_INSET) {
+        if (inside(b, cx, cy) || (pointer && inside(b, pointer.x, pointer.y))) {
           const problem = linkProblem(edges, flowNode.id, id) // 자기 자신·중복(방향 무관) 검사
           return { id, valid: !problem, problem }
         }
       }
       return null
     },
-    [liveBoxes, edges],
+    [liveBoxes, edges, screenToFlowPosition],
   )
 
   const onNodeDragStart = useCallback((event, flowNode) => {
@@ -220,7 +264,7 @@ export default function RoadmapCanvas({
       const swap = findSwapTarget(flowNode.data.node, flowNode.position, nodes, layout, canSwapWith)
       setSwapId(swap?.id ?? null)
       // 자리 교환 대상이 없고, 다른 카드 위면 연결 후보 강조 (학기 강조는 끈다)
-      const candidate = swap ? null : findDropLink(flowNode)
+      const candidate = swap ? null : findDropLink(flowNode, event)
       setDropLink((prev) => (prev?.id === candidate?.id && prev?.valid === candidate?.valid ? prev : candidate))
       if (candidate) {
         onDropTargetChange(null)
@@ -248,7 +292,7 @@ export default function RoadmapCanvas({
       }
       // ③ 다른 카드 위 → 관계선 (② 자리 교환 대상이 있으면 planDrop이 처리). 클릭·손떨림(4px 이하)은 제외
       const swap = findSwapTarget(flowNode.data.node, flowNode.position, nodes, layout, canSwapWith)
-      const candidate = !swap && draggedRef.current ? findDropLink(flowNode) : null
+      const candidate = !swap && draggedRef.current ? findDropLink(flowNode, event) : null
       if (candidate) {
         if (candidate.valid) onEdgeCreate(flowNode.id, candidate.id)
         else onLinkReject(candidate.problem)

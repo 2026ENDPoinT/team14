@@ -1,14 +1,18 @@
 // 로드맵 캔버스 크기·좌표 계산 (화면 배치 전용 값)
 
 // 학기 컬럼 너비 (가로 자동 확장)
-// - 기본 800: 일반 카드(226) 3개가 한 줄에 나란히 들어가는 너비 (3×226 + 사이 16×2 + 오른쪽 여백 48 = 758)
+// - 기본 1000: 일반 카드(226) 3개가 넉넉한 간격(64)으로 한 줄에 들어가는 너비 (3×226 + 64×2 + 오른쪽 여백 48 = 854)
 // - 노드를 오른쪽으로 놓으면 그 노드 오른쪽 끝 + 여백까지 학기가 넓어지고(최대 3배), 뒤 학기들은 그만큼 오른쪽으로 밀린다
 // - 노드를 빼거나 지우면 다시 필요한 만큼으로 줄어든다 (노드보다 좁아지지는 않음)
-export const BASE_WIDTH = 800
-export const MAX_WIDTH = 2400 // 학기 컬럼 최대 너비 (기본의 3배)
+export const BASE_WIDTH = 1000 // 학기 기본 너비 (800 → 1000: 학기 안 가로 여유)
+export const MAX_WIDTH = 3000 // 학기 컬럼 최대 너비 (기본의 3배)
 // 학기 오른쪽 여백: 노드는 (학기 너비 - EDGE)까지만 놓인다.
 // 48 = 다음 학기 배지 반지름 32 + 최소 간격 16 → 다음 학기 배지와 자동으로 16px 이상 떨어진다
 const EDGE = 48
+// 학기 안 가로 여유 (교과목이 학기 선에 촘촘히 붙어 보이지 않게)
+export const COURSE_START = 132 // 학기 선 → 첫 교과목 카드 (배지 오른쪽 끝에서 100px)
+export const COURSE_GAP = 90 // 타임라인 위 교과목 카드 사이
+const TRAIL_PAD = 132 // 마지막 카드 → 다음 학기 선 (다음 학기 배지 왼쪽 끝까지 100px)
 export const CANVAS_LEFT = 120 // 첫 학기 원의 x 위치
 export const TIMELINE_Y = 200 // 가로 타임라인의 y 위치
 export const CANVAS_HEIGHT = 900
@@ -53,9 +57,25 @@ export function isPill(node) {
 
 const PILL_SIZE = { w: 166, h: 84 }
 const CARD_SIZE = { w: 226, h: 120 }
+export const MEMO_SIZE = { w: 260, h: 220 } // 메모 노드 기본 크기: 일반 활동 카드보다 조금 크게 (긴 글은 안에서 스크롤)
+export const MEMO_MIN = { w: 220, h: 160 }
+export const MEMO_MAX = { w: 600, h: 500 }
+// 메모 크기: 사용자가 바꾼 크기(node.size, node_documents.content.width·height)가 있으면 그것, 없으면 기본
+export function memoSizeOf(content) {
+  const clamp = (v, min, max, d) => (Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : d)
+  return { w: clamp(content?.width, MEMO_MIN.w, MEMO_MAX.w, MEMO_SIZE.w), h: clamp(content?.height, MEMO_MIN.h, MEMO_MAX.h, MEMO_SIZE.h) }
+}
+
+// 메모 노드: 캔버스에 내용이 늘 보이는 자유 메모 (nodes.category_key = 'memo', 내용·색·크기는 node_documents.content)
+// 배치·겹침·학기 너비·관계선·가지선은 일반 활동 노드와 같은 규칙 (크기만 사용자가 바꿀 수 있다)
+export const MEMO_KEY = 'memo'
+export function isMemo(node) {
+  return node?.categoryId === MEMO_KEY
+}
 
 // 지금 그려지는 카드 크기 (충돌 검사·위치 계산·연결선이 모두 이 값을 쓴다)
 export function cardSize(node) {
+  if (isMemo(node)) return node.size ?? MEMO_SIZE
   return isPill(node) ? PILL_SIZE : CARD_SIZE
 }
 
@@ -69,7 +89,7 @@ export function periodLabel(period) {
 // ───────── 학기 컬럼 배치 (자동 확장) ─────────
 
 // 학기마다 x 위치와 너비를 계산한다. 데이터에 저장하지 않고 노드 배치로부터 계산한다.
-// 너비 = max(기본 800, 학기 안 노드의 가장 오른쪽 끝 + 여백, 잠깐 붙잡아 둔 너비)
+// 너비 = max(기본 1000, 학기 안 노드의 가장 오른쪽 끝 + 여백, 잠깐 붙잡아 둔 너비)
 // - keptWidths: { periodId: 너비 } 노드를 넓어진 학기에서 뒤 학기로 옮긴 직후에만 앞 학기 너비를 붙잡아 둔다
 //   (바로 줄면 방금 놓은 노드가 왼쪽으로 튀어 보이므로). 다음 변경 때 노드 기준으로 다시 줄어든다 (RoadmapPage)
 // 결과: { periods(순서대로), cols: { periodId: { x, width } }, width(캔버스 전체 너비) }
@@ -78,9 +98,10 @@ export function computeLayout(periods, nodes, keptWidths = {}) {
   const cols = {}
   let x = CANVAS_LEFT
   for (const period of sorted) {
+    // 마지막 카드 오른쪽에 TRAIL_PAD만큼 비워 둔다 → 다음 학기 배지와 100px 이상 떨어진다
     const rights = nodes
       .filter((n) => n.status === 'placed' && n.periodId === period.id && n.position)
-      .map((n) => n.position.x + cardSize(n).w + EDGE)
+      .map((n) => n.position.x + cardSize(n).w + TRAIL_PAD)
     const width = Math.max(BASE_WIDTH, keptWidths[period.id] ?? 0, ...rights)
     cols[period.id] = { x, width }
     x += width
@@ -133,16 +154,17 @@ export function findPeriodAt(x, y, layout) {
   }) ?? null
 }
 
-const GAP = 16 // 노드 사이(그리고 배지·타임라인과의) 최소 간격
+const GAP = 16 // 노드 사이(그리고 배지·타임라인과의) 최소 간격 — 사용자가 직접 끌어 놓을 때
+export const AUTO_GAP = 64 // 자동 배치(새 노드·새 교과목) 때 카드 사이 간격: 촘촘해 보이지 않게
 const BADGE_SIZE = 64 // 학기 원형 배지 지름
 const MIN_Y = TIMELINE_Y + GAP // 일반 노드의 윗변은 타임라인 선보다 이만큼 아래에 있어야 한다
 const SNAP = 24 // 교과목 노드 중심이 선 위쪽이거나 선 아래 이 거리 안이면 선 위에 딱 맞춘다
 const STEP = 8 // 빈자리 탐색 간격(px)
 
-function overlaps(a, b) {
+function overlaps(a, b, gap = GAP) {
   return (
-    a.x < b.x + b.w + GAP && a.x + a.w + GAP > b.x &&
-    a.y < b.y + b.h + GAP && a.y + a.h + GAP > b.y
+    a.x < b.x + b.w + gap && a.x + a.w + gap > b.x &&
+    a.y < b.y + b.h + gap && a.y + a.h + gap > b.y
   )
 }
 
@@ -156,7 +178,7 @@ const clamp = (v, min, max) => Math.min(Math.max(v, min), max)
 // 영역 안에서 놓은 자리(target)와 가장 가까운 빈자리를 찾는다. 없으면 null
 // area: 카드 왼쪽 위 꼭짓점이 놓일 수 있는 범위 { minX, maxX, minY, maxY }
 // maxDist: 이 거리보다 먼 자리는 찾지 않음
-function findFree(target, size, area, obstacles, maxDist = Infinity) {
+function findFree(target, size, area, obstacles, maxDist = Infinity, gap = GAP) {
   if (area.maxX < area.minX || area.maxY < area.minY) return null
   // 놓은 자리를 영역 안으로 당긴 점을 기준으로 8px 격자를 만든다 (경계 밖으로 삐져나오면 안쪽으로 보정)
   const baseX = clamp(target.x, area.minX, area.maxX)
@@ -177,7 +199,7 @@ function findFree(target, size, area, obstacles, maxDist = Infinity) {
   candidates.sort((a, b) => a.d - b.d)
   for (const c of candidates) {
     const box = { x: c.x, y: c.y, ...size }
-    if (obstacles.every((o) => !overlaps(box, o))) return box
+    if (obstacles.every((o) => !overlaps(box, o, gap))) return box
   }
   return null
 }
@@ -191,7 +213,8 @@ function findFree(target, size, area, obstacles, maxDist = Infinity) {
 //   전공·학업 노드는 선 위에서는 작은 카드, 선 아래에서는 일반 카드 → 놓을 자리의 크기로 계산하고 카드 중심을 기준으로 맞춘다
 // - 놓은 자리에서 가장 가까운 빈자리 (최대 너비까지). 지금 너비를 넘으면 그만큼 학기가 넓어진다
 //   (예전에는 지금 너비 안의 빈자리를 먼저 찾아서, 오른쪽에 놓아도 안쪽·아래 줄로 당겨지고 학기가 넓어지지 않았다)
-export function placeNode(node, topLeft, nodes, layout) {
+// options.gap: 다른 카드와의 최소 간격 (기본 16 = 직접 끌어 놓기, 자동 배치는 AUTO_GAP)
+export function placeNode(node, topLeft, nodes, layout, { gap = GAP } = {}) {
   const { w, h } = cardSize(node) // 끄는 동안의 크기
   const cx = topLeft.x + w / 2
   const cy = topLeft.y + h / 2
@@ -219,14 +242,14 @@ export function placeNode(node, topLeft, nodes, layout) {
     const size = PILL_SIZE
     const lineY = TIMELINE_Y - size.h / 2
     const target = { x: cx - size.w / 2, y: lineY }
-    box = findFree(target, size, { ...xRange(maxWidth, size), minY: lineY, maxY: lineY }, obstacles)
+    box = findFree(target, size, { ...xRange(maxWidth, size), minY: lineY, maxY: lineY }, obstacles, Infinity, gap)
   }
   // 그 밖의 경우(또는 선 위에 자리가 없을 때): 타임라인 선 아래 (교과목은 작은 카드, 나머지는 일반 카드)
   if (!box) {
-    const size = isCourse(node) ? PILL_SIZE : CARD_SIZE
+    const size = isCourse(node) ? PILL_SIZE : isMemo(node) ? MEMO_SIZE : CARD_SIZE
     const target = { x: cx - size.w / 2, y: cy - size.h / 2 }
     const yRange = { minY: MIN_Y, maxY: CANVAS_HEIGHT - size.h }
-    box = findFree(target, size, { ...xRange(maxWidth, size), ...yRange }, obstacles)
+    box = findFree(target, size, { ...xRange(maxWidth, size), ...yRange }, obstacles, Infinity, gap)
   }
   if (!box) return null
 
@@ -234,6 +257,146 @@ export function placeNode(node, topLeft, nodes, layout) {
     periodId: period.id,
     position: { x: Math.round(box.x - col.x), y: Math.round(box.y) },
   }
+}
+
+// 같은 학기 안 두 노드가 겹치는지 (학기 기준 좌표, 최소 간격 GAP 포함) — 메모 크기 바꾸기 확인용
+export function nodesOverlap(a, b) {
+  if (!a.position || !b.position) return false
+  return overlaps({ ...a.position, ...cardSize(a) }, { ...b.position, ...cardSize(b) })
+}
+export const MIN_NODE_Y = TIMELINE_Y + 16 // 선 아래 노드 윗변의 최소 y (placeNode의 MIN_Y와 같은 값)
+
+// ───────── 새 일반 활동의 기본 위치 (활동 추가 창에서 학기를 골랐을 때만) ─────────
+// 드래그·보관함 배치는 placeNode 그대로 (사용자가 놓은 자리 존중). 이미 저장된 노드 좌표는 바꾸지 않는다.
+// 교과목·전공·학업 노드는 예전 규칙 그대로 (선 위에 놓일 수 있는 노드).
+// 일반 활동은 학기 가지선이 다른 카드와 이어진 것처럼 보이지 않게:
+//   ① 다른 카드와 40px 이상 띄운다 (드래그는 16px)
+//   ② 타임라인 위 교과목 카드 바로 밑에 붙지 않는다: 선 아래로 충분히 내려가고, 교과목 카드와 겹치는 세로줄이면 더 내려간다
+//   ③ 새 카드의 가지선(줄기 → 카드 왼쪽 가로선)이 다른 카드를 지나가지 않고, 다른 카드의 가지선도 새 카드를 지나가지 않게
+const CREATE_GAP = AUTO_GAP
+const CREATE_MIN_Y = TIMELINE_Y + PILL_SIZE.h / 2 + 64 // 선 위 카드 아래 끝 + 64
+const UNDER_PILL_Y = TIMELINE_Y + PILL_SIZE.h / 2 + 120 // 교과목 카드와 같은 세로줄이면 이만큼 더 아래
+const CREATE_MIN_X = 96 // 학기 기준: 가지선 줄기(배지 오른쪽 48 + 줄기 간격 28)보다 오른쪽
+const BRANCH_CLEAR = 12 // 가지선 가로줄과 카드 사이 최소 거리
+
+const near = (a, b, gap) =>
+  a.x < b.x + b.w + gap && a.x + a.w + gap > b.x && a.y < b.y + b.h + gap && a.y + a.h + gap > b.y
+
+export function placeNewNode(node, periodId, nodes, layout) {
+  const col = layout.cols[periodId]
+  if (!col) return null
+  const start = nextPosition(nodes, periodId)
+  if (canSitOnLine(node)) return placeNode(node, { x: col.x + start.x, y: start.y }, nodes, layout, { gap: AUTO_GAP })
+
+  const size = CARD_SIZE
+  const others = nodes
+    .filter((n) => n.status === 'placed' && n.periodId === periodId && n.id !== node.id)
+    .map((n) => ({ node: n, box: nodeBox(n, layout) }))
+    .filter((o) => o.box)
+  const pills = others.filter((o) => isOnLine(o.node)).map((o) => o.box)
+  const cards = others.filter((o) => !isOnLine(o.node)).map((o) => o.box) // 가지선이 있는 카드
+  const badge = badgeBox(col)
+  const maxX = col.x + Math.max(MAX_WIDTH, col.width) - EDGE - size.w
+  const minX = col.x + CREATE_MIN_X
+  const maxY = CANVAS_HEIGHT - size.h
+
+  const ok = (box) => {
+    if (near(box, badge, CREATE_GAP)) return false
+    if ([...pills, ...cards].some((o) => near(box, o, CREATE_GAP))) return false
+    // 교과목 카드와 같은 세로줄(좌우 24px 여유)이면 더 아래로
+    if (pills.some((p) => box.x < p.x + p.w + 24 && box.x + box.w + 24 > p.x) && box.y < UNDER_PILL_Y) return false
+    const ty = box.y + box.h / 2
+    for (const c of cards) {
+      const cy = c.y + c.h / 2
+      // 다른 카드의 가지선 가로줄(줄기 → 그 카드 왼쪽)이 새 카드를 지나감
+      if (box.x < c.x && box.y - BRANCH_CLEAR < cy && cy < box.y + box.h + BRANCH_CLEAR) return false
+      // 새 카드의 가지선 가로줄이 다른 카드를 지나감
+      if (c.x < box.x && c.y - BRANCH_CLEAR < ty && ty < c.y + c.h + BRANCH_CLEAR) return false
+    }
+    return true
+  }
+
+  // 기본 시작점(기존 카드 아래쪽)에서 가까운 자리부터
+  const target = { x: Math.max(minX, col.x + start.x), y: Math.max(CREATE_MIN_Y, start.y) }
+  const candidates = []
+  for (let x = minX; x <= maxX; x += STEP) {
+    for (let y = CREATE_MIN_Y; y <= maxY; y += STEP) {
+      candidates.push({ x, y, d: Math.hypot(x - target.x, (y - target.y) * 1.5) }) // 같은 거리면 가로보다 세로 이동을 덜 선호
+    }
+  }
+  candidates.sort((a, b) => a.d - b.d)
+  for (const c of candidates) {
+    const box = { x: c.x, y: c.y, ...size }
+    if (ok(box)) return { periodId, position: { x: Math.round(c.x - col.x), y: Math.round(c.y) } }
+  }
+  // 조건에 맞는 자리가 없으면 예전 규칙(가까운 빈자리)
+  return placeNode(node, { x: col.x + start.x, y: start.y }, nodes, layout)
+}
+
+// ───────── 새 일반 활동을 위해 교과목을 오른쪽으로 밀기 ─────────
+// 새 일반 활동 카드와 그 가지선(카드 왼쪽 55px의 줄기 + 여유) 위쪽 타임라인에 교과목 카드가 있으면
+// 학기 가지선이 교과목에서 내려와 새 활동과 이어진 것처럼 보인다.
+// → 그 자리(lane)에 걸치거나 그보다 오른쪽에 있는 타임라인 위 카드(교과목·전공·학업)를 순서 그대로 한 묶음으로
+//   lane 오른쪽 끝 너머까지 같은 거리만큼 민다. lane보다 왼쪽에 있는 카드는 그대로.
+// 결과: { placement, moves }  moves = [{ id, periodId, position }] (저장할 교과목 위치. 없으면 빈 배열)
+// 학기 너비·뒤 학기 위치·선은 노드 위치로 다시 계산되므로 따로 옮길 필요가 없다.
+const LANE_LEFT = 95 // 새 카드 왼쪽으로 비워 둘 거리 (가지선 줄기 55 + 여유 40)
+export function planNewNodeSpace(node, periodId, nodes, layout) {
+  if (canSitOnLine(node)) return { placement: placeNewNode(node, periodId, nodes, layout), moves: [] }
+  const onLine = (n) => n.status === 'placed' && n.periodId === periodId && isOnLine(n)
+  const pills = nodes.filter(onLine).sort((a, b) => a.position.x - b.position.x)
+  // 새 카드 자리: 교과목은 밀어낼 것이므로 장애물에서 빼고 찾는다
+  const placement = placeNewNode(node, periodId, nodes.filter((n) => !onLine(n)), layout)
+  if (!placement || placement.periodId !== periodId || pills.length === 0) return { placement, moves: [] }
+
+  const laneStart = placement.position.x - LANE_LEFT
+  const laneEnd = placement.position.x + CARD_SIZE.w + AUTO_GAP
+  const first = pills.findIndex((p) => p.position.x + PILL_SIZE.w > laneStart)
+  if (first < 0) return { placement, moves: [] }
+  const group = pills.slice(first)
+  let shift = Math.max(0, laneEnd - group[0].position.x)
+  if (shift === 0) return { placement, moves: [] }
+
+  // 민 자리에서 다른 카드(선 아래 카드·새 카드)와 겹치면 더 민다 (학기 기준 좌표로 비교)
+  const rel = (n) => ({ x: n.position.x, y: n.position.y, ...cardSize(n) })
+  const fixed = [
+    ...nodes.filter((n) => n.status === 'placed' && n.periodId === periodId && !onLine(n)).map(rel),
+    { x: placement.position.x, y: placement.position.y, ...CARD_SIZE },
+  ]
+  for (let i = 0; i < 400; i += 1) {
+    const hit = group.some((p) => fixed.some((f) => overlaps({ x: p.position.x + shift, y: p.position.y, ...PILL_SIZE }, f)))
+    if (!hit) break
+    shift += STEP
+  }
+  const moves = group.map((p) => ({ id: p.id, periodId, position: { x: Math.round(p.position.x + shift), y: p.position.y } }))
+  return { placement, moves }
+}
+
+// ───────── 타임라인 위 교과목 간격 맞추기 (불러올 때) ─────────
+// 예전 규칙으로 촘촘하게 저장된 교과목을 널널하게: 학기마다 '타임라인 위에 있는 교과목'만
+// (originKey 'course:' = 온보딩이 자동으로 놓은 과목, 선 위 = 자동 배치 자리) 순서 그대로 오른쪽으로만 민다.
+//   첫 카드는 학기 선에서 COURSE_START 이상, 카드 사이는 COURSE_GAP 이상. 이미 넉넉하면 움직이지 않는다.
+// 건드리지 않는 것: 일반 활동·사용자가 만든 전공·학업 노드·선 아래로 옮긴 교과목 (수동 배치로 본다).
+//   밀린 교과목이 이런 카드와 겹치면 겹치지 않을 때까지 더 민다.
+// 결과: 저장할 [{ id, periodId, position }] (바꿀 것이 없으면 빈 배열)
+export function respaceCourses(periods, nodes) {
+  const moves = []
+  for (const period of periods) {
+    const inPeriod = nodes.filter((n) => n.status === 'placed' && n.periodId === period.id && n.position)
+    const courses = inPeriod.filter((n) => isCourse(n) && isOnLine(n)).sort((a, b) => a.position.x - b.position.x)
+    if (courses.length === 0) continue
+    const fixed = inPeriod
+      .filter((n) => !courses.includes(n))
+      .map((n) => ({ x: n.position.x, y: n.position.y, ...cardSize(n) }))
+    let cursor = COURSE_START
+    for (const c of courses) {
+      let x = Math.max(c.position.x, cursor)
+      for (let i = 0; i < 600 && fixed.some((f) => overlaps({ x, y: c.position.y, ...PILL_SIZE }, f)); i += 1) x += STEP
+      if (x !== c.position.x) moves.push({ id: c.id, periodId: period.id, position: { x, y: c.position.y } })
+      cursor = x + PILL_SIZE.w + COURSE_GAP
+    }
+  }
+  return moves
 }
 
 // ───────── 타임라인 위 자리 교환 ─────────

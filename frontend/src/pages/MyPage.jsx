@@ -84,7 +84,8 @@ export default function MyPage() {
     })
   }
   // choices: 희망 직무를 바꿨을 때만 { resetCourses }
-  // ※ 닉네임·학년 저장 함수(services)가 아직 없어, 로그인 상태에서는 저장된 척하지 않고 안내만 한다
+  // - 닉네임: 서버 RPC change_nickname으로만 저장 (features/profile/nickname.js). 학년 저장은 아직 준비 중
+  // 결과: { ok } 또는 { error } — 프로필 편집 창이 실패 원인을 입력칸 아래에 보여 주고 입력값은 그대로 둔다
   // - 로그인했으면 희망 직무를 DB(profiles.interests)에 저장하고, 성공했을 때만 화면·HOME에 반영한다.
   //   HOME 펫 종류는 희망 직무로 정해지므로 저장만 하면 펫도 바뀐다. 온기·성장 단계는 그대로.
   // - '미정' 등 펫이 정해지지 않는 직무는 이전 펫을 저장할 곳(pets.type)이 아직 없어 막는다.
@@ -97,17 +98,17 @@ export default function MyPage() {
         const saved = await saveNickname(next.nickname, { current: shownProfile.nickname, applyProfile: auth.applyProfile })
         if (saved.error) {
           setToast(`${saved.error} 닉네임이 바뀌지 않았어요.`)
-          return
+          return { error: saved.error }
         }
         const parts = []
         if (saved.ok) parts.push(saved.message)
         if (Number(next.grade) !== Number(shownProfile.grade)) parts.push('학년 저장은 아직 준비 중이에요.')
         setToast(parts.length ? parts.join(' ') : '바뀐 내용이 없어요.')
-        return
+        return { ok: true }
       }
       setProfile(next)
       setToast('프로필을 저장했어요. (예시 화면이라 저장되지 않아요)')
-      return
+      return { ok: true }
     }
     // 저장 규칙은 desiredJob.js (AI 길잡이와 같이 쓴다)
     const saved = await saveDesiredJob(shownProfile.desiredJob, next.desiredJob, { signedIn, applyProfile: auth.applyProfile })

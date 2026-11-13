@@ -5,13 +5,14 @@
 // - 4단계(최대)면 모든 점이 진하고 끝의 두 원이 채워진다
 const DOT_X = [558, 578, 598, 618, 638, 656, 676, 696, 716, 736, 756, 776, 794, 814, 834]
 const ROW_Y = 713.5
+// viewBox 가로 499.5~927.5: 그림 범위(508.5~918.5)의 가운데 713.5가 viewBox 가운데 → 화면 가운데에 정렬
 
 export default function GrowthDots({ progress, maxed, label }) {
   const filled = maxed ? DOT_X.length : Math.round((Math.min(100, Math.max(0, progress)) / 100) * DOT_X.length)
   return (
     <svg
       className="hm-growth"
-      viewBox="500 688 428 72"
+      viewBox="499.5 688 428 72"
       role="img"
       aria-label={label}
       data-filled={filled}

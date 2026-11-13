@@ -151,6 +151,7 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
   "content": "오늘은...",
   "photoUrls": [],
   "linkedNodeId": null,
+  "footprint": "자료구조 3장 복습",
   "createdAt": "2026-11-09T12:00:00+09:00",
   "updatedAt": "2026-11-09T12:00:00+09:00"
 }
@@ -158,6 +159,8 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 - 사용자당 **날짜별 일기 1개** (`(user_id, date)` 유일). 같은 날 재작성은 수정으로 처리.
 - `mood` 값 목록 `[미확정]`
 - `photoUrls`: 사진 첨부는 단계적 적용, MVP에서는 빈 배열 가능
+- `footprint`: '오늘의 발자취' (공부·활동 기록, 선택 작성, 2000자까지). 없으면 `""`. 보상 글자 수에는 넣지 않는다.
+- `linkedNodeId`: 발자취와 연결한 내 로드맵 노드 (선택). 노드가 삭제되면 `null`
 
 ### Pet (`pets`)
 ```json
@@ -479,7 +482,7 @@ selectCourses({
 
 ```json
 // 작성/수정 요청 (date: "2026-11-09")
-{ "date": "2026-11-09", "mood": "happy", "content": "오늘은...", "linkedNodeId": null }
+{ "date": "2026-11-09", "mood": "happy", "content": "오늘은...", "linkedNodeId": null, "footprint": "자료구조 3장 복습" }
 // 결과 (오늘 날짜 일기를 처음으로 공백 포함 20자 이상 저장 또는 수정)
 {
   "diary": { /* Diary */ },
@@ -495,6 +498,8 @@ selectCourses({
 - 보상은 일기 날짜가 **서버가 계산한 오늘(Asia/Seoul)** 일 때만 지급한다. 과거 날짜 일기는 저장만 한다.
 - 미래 날짜 일기는 쓸 수 없다. (`VALIDATION_ERROR`)
 - 본문은 5000자까지 저장한다.
+- 발자취(`footprint`)는 선택이며 2000자까지. 보내지 않으면(`null`) 기존 발자취를 그대로 둔다. 보상 판정(20자)은 본문(`content`)만 센다.
+- 연결 노드(`linkedNodeId`)는 내 노드만 가능 (아니면 `NOT_FOUND`). 보내지 않으면 연결을 끊는다.
 
 ### 4.7 펫
 

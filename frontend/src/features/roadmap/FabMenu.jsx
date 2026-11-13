@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react'
-import { ConnectIcon, NodeIcon, PlusIcon, SemesterIcon } from './icons.jsx'
+import { ConnectIcon, MemoIcon, NodeIcon, PlusIcon, SemesterIcon } from './icons.jsx'
 
 const ITEMS = [
   { id: 'node', label: '활동 추가', hint: '학기나 보관함에 새 활동을 만들어요', Icon: NodeIcon },
+  { id: 'memo', label: '메모 추가', hint: '캔버스에 늘 보이는 자유 메모를 붙여요', Icon: MemoIcon },
   { id: 'connect', label: '연결 모드', hint: '활동은 그대로 두고 관계선만 이어요', Icon: ConnectIcon },
   { id: 'semester', label: '학기 추가', hint: '휴학·군휴학·교환학생을 타임라인에 넣어요', Icon: SemesterIcon },
 ]

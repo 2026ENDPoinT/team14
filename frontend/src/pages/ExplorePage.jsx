@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import DeadlineBadge from '../features/explore/DeadlineBadge.jsx'
+import PlacePeriodModal from '../features/explore/PlacePeriodModal.jsx'
+import { AUTO_GAP, computeLayout, nextPosition, placeNode } from '../features/roadmap/layout.js'
 import { addBlockReason, sourceName } from '../features/explore/contestInfo.js'
 import { pickCsJobs } from '../features/explore/csJobFilter.js'
 import { FIELD_LABELS, fieldLabelsOf, newsFieldsOf, newsMatchesJob } from '../features/explore/jobField.js'
@@ -11,8 +13,10 @@ import {
   addJobPostingToRoadmap,
   getMyContestNodeIds,
   getMyJobPostingNodeIds,
+  getRoadmap,
   getTechArticle,
   isSupabaseConfigured,
+  moveNodes,
   listOpenContests,
   listOpenJobPostings,
 } from '../services/api.js'
@@ -102,21 +106,76 @@ export default function ExplorePage() {
     return () => { cancelled = true }
   }, [])
 
-  const handleAdd = useCallback(async (kind, id) => {
+  // [내 로드맵에 추가] → 학기 고르기 창 → 그 학기의 빈자리에 바로 배치 (노드 보관함을 거치지 않음)
+  // 저장 순서: ① 기존 공고 추가 RPC(공고 제목·기관·마감일·원문 링크를 그대로 담은 노드, 같은 공고면 기존 노드)
+  //           ② 기존 노드 이동 저장(moveNodes)으로 학기·위치 배치. 둘 다 성공해야 '추가됨'
+  const [placing, setPlacing] = useState(null) // { kind, id, title }
+  const [roadmap, setRoadmap] = useState({ loading: false, error: '', periods: [], nodes: [] })
+  const [toast, setToast] = useState('')
+  useEffect(() => {
+    if (!toast) return undefined
+    const timer = setTimeout(() => setToast(''), 2400)
+    return () => clearTimeout(timer)
+  }, [toast])
+
+  const openPlace = useCallback((kind, item) => {
+    setPlacing({ kind, id: item.id, title: item.title })
+    setRoadmap((r) => ({ ...r, loading: true, error: '' }))
+    getRoadmap().then((res) => {
+      if (res.error) setRoadmap({ loading: false, error: `학기 목록을 불러오지 못했어요. ${res.error.message}`, periods: [], nodes: [] })
+      else setRoadmap({ loading: false, error: '', periods: res.data.periods, nodes: res.data.nodes })
+    })
+  }, [])
+
+  // 반환: 오류 문구 또는 null (성공하면 창을 닫는다)
+  const handleAdd = useCallback(async (periodId) => {
+    if (!placing) return null
+    const { kind, id } = placing
     const key = `${kind}:${id}`
-    if (pendingRef.current.has(key)) return
+    if (pendingRef.current.has(key)) return null // 연속 클릭: 같은 공고를 두 번 만들지 않음
     pendingRef.current.add(key)
     setPending((p) => ({ ...p, [key]: true }))
     setErrors((e) => ({ ...e, [key]: null }))
-    const result = await ADD_TO_ROADMAP[kind](id)
-    pendingRef.current.delete(key)
-    setPending((p) => ({ ...p, [key]: false }))
-    if (result.error) {
-      setErrors((e) => ({ ...e, [key]: result.error.message }))
-      return
+    const done = (problem) => {
+      pendingRef.current.delete(key)
+      setPending((p) => ({ ...p, [key]: false }))
+      return problem
     }
-    setAddedNodes((m) => ({ ...m, [key]: result.data.nodeId }))
-  }, [])
+
+    // 빈자리 계산: 고른 학기의 기존 노드와 겹치지 않는 곳 (필요하면 학기 가로 너비가 늘어난다)
+    const { periods, nodes } = roadmap
+    const layout = computeLayout(periods, nodes)
+    const col = layout.cols[periodId]
+    if (!col) return done('학기를 다시 골라 주세요.')
+
+    const result = await ADD_TO_ROADMAP[kind](id)
+    if (result.error) return done(result.error.message)
+    const nodeId = result.data.nodeId
+    const existing = nodes.find((n) => n.id === nodeId)
+    if (existing?.status === 'placed') {
+      // 이미 로드맵에 놓인 같은 공고: 새로 만들거나 옮기지 않는다
+      setAddedNodes((m) => ({ ...m, [key]: nodeId }))
+      setToast('이미 로드맵에 있는 공고예요.')
+      setPlacing(null)
+      return done(null)
+    }
+    const draft = { id: nodeId, status: 'stored', theme: 'free' }
+    const others = nodes.filter((n) => n.id !== nodeId)
+    const start = nextPosition(others, periodId)
+    const placement = placeNode(draft, { x: col.x + start.x, y: start.y }, others, layout, { gap: AUTO_GAP })
+    if (!placement || placement.periodId !== periodId) {
+      return done('이 학기에 놓을 빈자리가 없어요. 노드 보관함에 넣어 두었어요.')
+    }
+    const moved = await moveNodes([{ id: nodeId, periodId, position: placement.position }])
+    if (moved.error) return done(`학기에 놓지 못했어요(노드 보관함에 있어요). ${moved.error.message}`)
+
+    setAddedNodes((m) => ({ ...m, [key]: nodeId }))
+    setRoadmap((r) => ({ ...r, nodes: [...others, { ...draft, ...existing, status: 'placed', periodId, position: placement.position }] }))
+    const period = periods.find((p) => p.id === periodId)
+    setToast(`${period?.name ?? '고른 학기'}에 추가했어요.`)
+    setPlacing(null)
+    return done(null)
+  }, [placing, roadmap])
 
   // 카드의 [내 로드맵에 추가] 영역 (대외활동·채용 공통)
   const addButton = (kind, item, blockReason) => {
@@ -127,7 +186,7 @@ export default function ExplorePage() {
         pending={pending[key]}
         error={errors[key]}
         blockReason={blockReason}
-        onAdd={() => handleAdd(kind, item.id)}
+        onAdd={() => openPlace(kind, item)}
       />
     )
   }
@@ -214,7 +273,7 @@ export default function ExplorePage() {
                   <DeadlineBadge deadline={c.deadline} status={c.sourceStatus} />
                   {c.matchesInterest && <span className="ex-interest">관심 분야</span>}
                 </div>
-                <a className="ex-card__title" href={c.url} target="_blank" rel="noopener noreferrer"><FieldTitle title={c.title} /></a>
+                <a className="ex-card__title" href={c.url} target="_blank" rel="noopener noreferrer"><FieldTitle title={c.title} hideOther /></a>
                 <p className="ex-card__sub">{sourceName(c.source)} · 마감 {c.deadline ?? '정보 없음'}</p>
                 {addButton('contest', c, addBlockReason({ deadline: c.deadline, status: c.sourceStatus }))}
               </li>
@@ -283,16 +342,29 @@ export default function ExplorePage() {
           </ul>
         </section>
       </main>
+
+      <PlacePeriodModal
+        open={Boolean(placing)}
+        title={placing?.title ?? ''}
+        periods={roadmap.periods}
+        loading={roadmap.loading}
+        loadError={roadmap.error}
+        onClose={() => setPlacing(null)}
+        onConfirm={handleAdd}
+      />
+      <div className={`rm-toast ${toast ? 'is-visible' : ''}`} role="status">{toast}</div>
     </div>
   )
 }
 
 // 제목 앞에 직무 분야 [분야명]을 붙여 보여 준다. (저장된 제목은 그대로, 화면에서만 붙임)
 // 분야가 둘이면 [백엔드] [프론트엔드]처럼 나란히 붙인다
-function FieldTitle({ title }) {
+// hideOther: 판단이 어려울 때 붙는 [기타]만 숨긴다 (공모전·대외활동 카드). 다른 분야 라벨과 원문 제목은 그대로
+function FieldTitle({ title, hideOther = false }) {
+  const labels = fieldLabelsOf(title).filter((label) => !(hideOther && label === FIELD_LABELS.other))
   return (
     <>
-      {fieldLabelsOf(title).map((label) => (
+      {labels.map((label) => (
         <span key={label} className="ex-field" data-field={label}>[{label}] </span>
       ))}
       {title}

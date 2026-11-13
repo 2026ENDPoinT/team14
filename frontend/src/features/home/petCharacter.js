@@ -47,9 +47,11 @@ export function resolvePetCharacter(pet, interests = []) {
 const files = import.meta.glob('../../assets/pets/*.png', { eager: true, import: 'default' })
 const ASSETS = Object.fromEntries(Object.entries(files).map(([path, url]) => [path.split('/').pop().replace('.png', ''), url]))
 
+// 1단계이거나 펫 종류가 정해지지 않았으면(희망 직무 미정) 새싹.
+// 펫 종류는 서버 프로필의 희망 직무(profiles.interests)로 정해지므로, 직무를 고르는 순간 누적 온기에 맞는 단계의 동물로 바뀐다
 export function petAssetName(character, stage) {
-  if (stage <= 1) return 'sprout'
-  return character ? `${character}-${stage}` : null
+  if (stage <= 1 || !character) return 'sprout'
+  return `${character}-${stage}`
 }
 
 // 이미지 주소 (아직 파일이 없으면 null)
