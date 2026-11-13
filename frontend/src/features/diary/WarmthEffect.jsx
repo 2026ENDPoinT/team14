@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import './WarmthEffect.css'
 
 // 온기(보상) 획득 연출
 // 1) 0~2초: 따뜻한 연기가 동글동글 몽실몽실 피어오름
-// 2) 2초: '온기 +200 획득!' 배지가 뿅 나타남
+// 2) 2초: '온기 +{amount} 획득!' 배지가 뿅 나타남 (일기 +200, 출석 +100)
 // 3) 3.6초: 사라지고 onDone 호출
-// amount는 서버(지금은 Mock) 결과 값을 그대로 보여 준다. 화면에서 온기를 직접 더하지 않는다.
+// amount는 서버 결과 값을 그대로 보여 준다. 화면에서 온기를 직접 더하지 않는다.
+// fullScreen: HOME처럼 화면 전체를 덮을 때 true (기본은 감싼 팝업 카드만 덮는다)
 
 // 연기 방울: x(가로 위치), s(크기), d(시작 지연), dx(흔들림)
 const PUFFS = [
@@ -22,7 +24,7 @@ const PUFFS = [
 // 배지 주변으로 튀는 작은 점 (각도)
 const SPARKS = [0, 50, 110, 170, 230, 290]
 
-export default function WarmthEffect({ amount, onDone }) {
+export default function WarmthEffect({ amount, onDone, fullScreen = false }) {
   const [phase, setPhase] = useState('smoke') // 'smoke' → 'pop' → 'leave'
 
   useEffect(() => {
@@ -33,7 +35,7 @@ export default function WarmthEffect({ amount, onDone }) {
   }, [onDone])
 
   return (
-    <div className={`wm-overlay ${phase === 'leave' ? 'is-leaving' : ''}`} role="status" aria-live="polite">
+    <div className={`wm-overlay ${fullScreen ? 'wm-overlay--page' : ''} ${phase === 'leave' ? 'is-leaving' : ''}`} role="status" aria-live="polite">
       <div className="wm-stage">
         <span className="wm-glow" aria-hidden="true" />
         {PUFFS.map((p, i) => (
