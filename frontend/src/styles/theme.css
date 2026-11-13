@@ -775,14 +775,15 @@
   min-width: 0;
   white-space: nowrap;
   padding: 9px 12px;
-  border: 1px solid #53647a;
+  /* 라이트 모드처럼 글자만 (상자 배경·테두리·그림자 없음). 크기·여백은 그대로 두어 위치가 바뀌지 않게 */
+  border: 1px solid transparent;
   border-radius: 13px;
-  background: #303d4f;
+  background: transparent;
   color: #f4f0e8;
   font-size: 13px;
   font-weight: 750;
   line-height: 1.25;
-  box-shadow: 0 5px 14px rgba(0,0,0,.25);
+  box-shadow: none;
 }
 :root[data-ct-theme="dark"] .roadmap-page .rm-fab__icon {
   box-sizing: border-box;
@@ -800,8 +801,8 @@
 }
 :root[data-ct-theme="dark"] .roadmap-page .rm-fab__item:hover:not(:disabled) .rm-fab__label,
 :root[data-ct-theme="dark"] .roadmap-page .rm-fab__item:focus-visible .rm-fab__label {
-  background: #43536a;
-  border-color: #d8b46d;
+  background: transparent;
+  border-color: transparent;
   color: #fff;
 }
 :root[data-ct-theme="dark"] .roadmap-page .rm-fab__item:hover:not(:disabled) .rm-fab__icon,
