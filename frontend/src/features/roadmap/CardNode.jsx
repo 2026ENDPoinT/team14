@@ -1,7 +1,8 @@
 import { useContext } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import NodeCard from './NodeCard.jsx'
-import { cardSize } from './layout.js'
+import MemoNode from './MemoNode.jsx'
+import { cardSize, isMemo } from './layout.js'
 import { LinkContext } from './linkContext.js'
 
 // React Flow에 올리는 노드 카드 + 완료 상태 표시등.
@@ -17,6 +18,41 @@ export default function CardNode({ data }) {
     isTarget && target.drop ? 'is-drop' : '', // 일반 드래그 연결 후보: 은은한 강조
     connectMode ? 'nodrag' : '', // CONNECT 모드: 카드를 끌면 이동 대신 관계선 그리기 (클릭은 그대로)
   ].join(' ')
+  const connectHandle = connectMode && (
+    <button
+      type="button"
+      className="rm-link-handle nodrag nopan"
+      aria-label={`${node.title}에서 관계선 연결하기`}
+      title="끌어서 다른 활동에 놓으면 연결돼요"
+      onPointerDown={(e) => startConnect(e, node.id)}
+    />
+  )
+  const dropLabel = isTarget && target.drop && (
+    <span className={`rm-link-label ${target.valid ? '' : 'is-invalid'}`} aria-hidden="true">
+      {target.valid ? '놓으면 연결' : '이미 연결됨'}
+    </span>
+  )
+
+  // 메모 노드: 같은 연결점·드롭 연결·CONNECT 규칙, 완료 표시등은 없다
+  if (isMemo(node)) {
+    return (
+      <>
+        <Handle type="target" position={Position.Left} className="rm-handle" isConnectable={false} />
+        <MemoNode
+          node={node}
+          memo={data.memo}
+          onSave={data.onSave}
+          onDelete={data.onDelete}
+          onResize={data.onResize}
+          linkClass={linkClass}
+          onConnectPointerDown={connectMode ? (e) => startConnectDrag(e, node.id) : undefined}
+        />
+        {dropLabel}
+        {connectHandle}
+        <Handle type="source" position={Position.Bottom} className="rm-handle" isConnectable={false} />
+      </>
+    )
+  }
   return (
     <>
       <Handle type="target" position={Position.Left} className="rm-handle" isConnectable={false} />

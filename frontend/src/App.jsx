@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import HomePage from './pages/HomePage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
+import LandingPage from './pages/LandingPage.jsx'
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx'
 import OnboardingPage from './pages/OnboardingPage.jsx'
 import DiaryPage from './pages/DiaryPage.jsx'
@@ -19,7 +20,7 @@ import DiaryReminder from './features/diary/DiaryReminder.jsx'
 const AiCareerPreview = import.meta.env.DEV ? lazy(() => import('./dev/AiCareerPreview.jsx')) : null
 
 // 주소(URL)와 페이지 연결. 경로는 SPEC.md 2장 기준
-// 접근 규칙: 비로그인 → /login, 온보딩 미완료 → /onboarding, 완료 → 내부 화면
+// 접근 규칙: 비로그인 → /login (첫 화면 '/'만 서비스 소개 /welcome), 온보딩 미완료 → /onboarding, 완료 → 내부 화면
 // /login, /reset-password는 가드 없이 연다 (Google·이메일 인증·재설정 링크 처리를 방해하지 않도록)
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
 
       <Routes>
         <Route path="/" element={<RequireOnboarded><HomePage /></RequireOnboarded>} />
+        <Route path="/welcome" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/onboarding" element={<RequireOnboardingPending><OnboardingPage /></RequireOnboardingPending>} />
@@ -48,7 +50,7 @@ export default function App() {
 
 // 공통 상단 메뉴: 로그인하고 온보딩을 마친 사용자에게만, 로그인·비밀번호 재설정·온보딩 화면에서는 숨긴다
 // (접근 규칙 자체는 라우트 가드가 정한다. 여기서는 메뉴를 보일지만 결정)
-const NAV_HIDDEN_PATHS = ['/login', '/reset-password', '/onboarding']
+const NAV_HIDDEN_PATHS = ['/welcome', '/login', '/reset-password', '/onboarding']
 function AppNav() {
   const { status, profile, recovery } = useAuth()
   const { pathname } = useLocation()

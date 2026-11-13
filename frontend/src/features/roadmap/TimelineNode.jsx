@@ -34,6 +34,10 @@ export default function TimelineNode({ data }) {
         {branches.map((b) => (
           <path key={b.id} className="rm-branch" data-node={b.id} d={b.d} style={{ d: `path("${b.d}")` }} />
         ))}
+        {/* 가지선 시작점: 타임라인 위 작은 점 (줄기가 여럿이 함께 쓰면 하나만) — 관계선과 구분되게 */}
+        {[...new Set(branches.map((b) => b.sx))].map((x) => (
+          <circle key={x} className="rm-branch__root" cx={x} cy={TIMELINE_Y} r="3" />
+        ))}
       </svg>
     </div>
   )

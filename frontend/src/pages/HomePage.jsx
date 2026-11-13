@@ -14,7 +14,7 @@ import GrowthDots from '../features/home/GrowthDots.jsx'
 import WarmthEffect from '../features/diary/WarmthEffect.jsx'
 import HomeQuote from '../features/home/HomeQuote.jsx'
 import HomeTutorial from '../features/home/tutorial/HomeTutorial.jsx'
-import { hasSeenHomeTutorial, markHomeTutorialSeen } from '../features/home/tutorial/homeTutorialStorage.js'
+import { recordAutoTutorial, shouldAutoStartTutorial } from '../features/tutorial/autoTutorial.js'
 import '../features/home/Home.css'
 
 // 펫 HOME (/) — Figma HOME 화면: 은은한 크림 배경, 위쪽 가운데 펫 이름, 가운데 펫, 아래 점선 성장 표시
@@ -34,9 +34,9 @@ export default function HomePage() {
   // HOME을 연 시점에 이미 본 보상은 첫 화면부터 빼고 보여 준다 (다시 그려질 때 한 순간 깜빡이지 않게)
   const [seenAtOpen] = useState(seenRewardIds)
   const queued = useRewardQueue().filter((reward) => !seenAtOpen.has(reward.id))
-  // HOME 튜토리얼 상태. 튜토리얼을 아직 안 봤거나 보는 중이면 보상 연출을 잠시 미뤄 둔다 (튜토리얼 → 출석 연출 순서)
+  // HOME 튜토리얼 상태. 자동 튜토리얼을 열 예정이거나 보는 중이면 보상 연출을 잠시 미뤄 둔다 (튜토리얼 → 출석 연출 순서)
   const [tourOpen, setTourOpen] = useState(false)
-  const [holdRewards, setHoldRewards] = useState(() => !hasSeenHomeTutorial())
+  const [holdRewards, setHoldRewards] = useState(false) // 자동 튜토리얼을 열 때 true (아래 효과)
   const bursts = holdRewards || tourOpen ? [] : queued
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
@@ -67,19 +67,20 @@ export default function HomePage() {
     if (userId) autoCheckIn(userId)
   }, [userId])
 
-  // HOME 튜토리얼: 처음 쓰는 사용자에게 한 번만 자동으로 먼저 연다. 출석 보상 연출은 튜토리얼을 닫은 뒤에 나온다
-  // - 자동으로 열 때 '봤음'으로 기록 → 도중에 나가도 다시 강제로 띄우지 않는다 (왼쪽 위 ? 버튼으로 다시 보기)
+  // HOME 튜토리얼: 신규 가입 후 HOME 첫 방문에만 자동으로 먼저 연다 (서버 프로필 home_tutorial_seen=false, features/tutorial/autoTutorial.js)
+  // 출석 보상 연출은 튜토리얼을 닫은 뒤에 나온다 (튜토리얼 → 출석 연출 순서)
+  // - 자동으로 여는 순간 서버에 '봤음' 저장 → 도중에 나가도, 다른 기기·재로그인에서도 다시 강제로 띄우지 않는다 (왼쪽 위 ? 버튼으로 다시 보기)
   // - ? 버튼으로 다시 볼 때도 튜토리얼이 열려 있는 동안에는 보상 연출을 미룬다
   useEffect(() => {
-    if (!userId || !holdRewards) return undefined
+    if (!userId || !shouldAutoStartTutorial(profile, 'home')) return undefined
+    setHoldRewards(true)
     const timer = setTimeout(() => {
-      markHomeTutorialSeen()
+      recordAutoTutorial(profile, 'home', applyProfile)
       setTourOpen(true)
     }, 600)
     return () => clearTimeout(timer)
-  }, [userId, holdRewards])
+  }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
   const closeTour = useCallback(() => {
-    markHomeTutorialSeen()
     setTourOpen(false)
     setHoldRewards(false) // 이제 미뤄 둔 출석 연출을 보여 준다
   }, [])
@@ -118,7 +119,7 @@ export default function HomePage() {
   const desiredJob = profile?.interests?.[0]
   const desiredJobLabel = desiredJob && desiredJob !== 'undecided' && jobTitle(desiredJob) !== '선택 안 함' ? jobTitle(desiredJob) : '희망 직무 미정'
   // 펫 이미지 설명용 (화면에 이름으로 보이지 않음)
-  const petLabel = character ? PET_CHARACTERS[character].label : '내 펫'
+  const petLabel = character ? PET_CHARACTERS[character].label : '새싹' // 희망 직무 미정이면 새싹
   // 온기 잔액: 서버 pets.warmth_balance (누적 온기 energy와 별개 — 온기를 쓰면 잔액만 줄어든다)
   const balance = pet.warmth ?? 0
   const growthLabel = maxed

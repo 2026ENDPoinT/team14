@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { completeOnboarding, moveNodes } from '../services/api.js'
 import { recommendCareer } from '../services/careerRecommendation.js'
 import { useAuth } from '../features/auth/AuthProvider.jsx'
-import { CAREERS, EXPERIENCE_GROUPS, TERMS } from '../features/onboarding/onboardingOptions.js'
+import { CAREERS, EXPERIENCE_GROUPS, TERMS, UNDECIDED_JOB } from '../features/onboarding/onboardingOptions.js'
 import {
   curriculum,
   jobRelevance,
@@ -76,7 +76,8 @@ export default function OnboardingPage() {
   const grade = term?.grade ?? null // 지금 DB에는 학년만 저장된다 (학기는 백엔드 변경 후)
   const career = CAREERS.find((c) => c.id === careerId) ?? null
   // 선정 함수에 넘길 직무 키 목록 (저장 가능한 키만, 대표 1개)
-  const jobs = career?.dbKey ? [career.dbKey] : []
+  // '아직 정하지 않음'은 관심 직무로 저장하지 않는다 (interests 빈 목록 → 전공필수 중심 기본 로드맵, 새싹 펫)
+  const jobs = career?.dbKey && career.id !== UNDECIDED_JOB ? [career.dbKey] : []
   // 미래 학년 추천(직무 관련도)이 연결됐는지. 지금은 비어 있어 이수 과목만 저장된다.
   const hasRecommendation = Object.keys(jobRelevance.jobs).length > 0
 
@@ -318,11 +319,16 @@ export default function OnboardingPage() {
             selectedId={careerId}
             onSelect={setCareerId}
             onNext={() => goTo(STEP.setup)}
+            onStartBasic={() => {
+              setCareerId(UNDECIDED_JOB) // 직무 없이 기본 로드맵 (관심 직무는 저장하지 않음)
+              goTo(STEP.setup)
+            }}
           />
         )}
 
         {step === STEP.setup && (
           <SetupStep
+            undecided={jobs.length === 0}
             mode={setupMode}
             onSelect={setSetupMode}
             hasRecommendation={hasRecommendation}
