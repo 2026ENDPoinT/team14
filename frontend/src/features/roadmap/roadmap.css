@@ -1460,3 +1460,14 @@
   letter-spacing: -0.02em;
   white-space: nowrap;
 }
+
+/* 기타 학기처럼 5자 이상인 이름: 원 안에서 두 줄로 */
+.rm-column__badge.is-text.is-long {
+  padding: 0 7px;
+  box-sizing: border-box;
+  font-size: 10px;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
+  word-break: break-all;
+}
