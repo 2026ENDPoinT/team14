@@ -3,10 +3,10 @@
 // ※ 새 기준(팀 확정). SPEC 8장·API.md는 아직 0/50/150/300 → 문서 담당이 바꿔야 함
 // 화면 표시용이다. 실제 단계는 서버가 계산한 pet.stage를 우선 사용한다.
 export const PET_STAGES = [
-  { stage: 1, name: '알 / 아기 펫', minEnergy: 0 },
-  { stage: 2, name: '어린 펫', minEnergy: 1200 },
-  { stage: 3, name: '성장한 펫', minEnergy: 2800 },
-  { stage: 4, name: '최종 성장 펫', minEnergy: 5000 },
+  { stage: 1, name: '새싹', minEnergy: 0 },
+  { stage: 2, name: '아기 펫', minEnergy: 1200 },
+  { stage: 3, name: '꼬마 펫', minEnergy: 2800 },
+  { stage: 4, name: '어른 펫', minEnergy: 5000 },
 ]
 
 export const MAX_STAGE = PET_STAGES[PET_STAGES.length - 1].stage
