@@ -5,7 +5,6 @@ import PetImage from '../features/pet/PetImage.jsx'
 import { getEnergyToNextStage, getStageInfo, getStageProgress, MAX_STAGE } from '../features/pet/petStages.js'
 import { PET_CHARACTERS, petAssetName, petAssetUrl, resolvePetCharacter } from '../features/home/petCharacter.js'
 import { petFrames } from '../features/home/petFrames.js'
-import { jobTitle } from '../features/mypage/jobGroups.js'
 import PetSprite from '../features/home/PetSprite.jsx'
 import { autoCheckIn } from '../features/home/homeActions.js'
 import { dropSeenRewards, finishReward, markRewardSeen, seenRewardIds, useRewardQueue } from '../features/home/rewardQueue.js'
@@ -33,11 +32,7 @@ export default function HomePage() {
   // 서버가 지급을 확인한 보상 연출 대기열 [{ id, amount }] — 보상이 겹쳐도 하나씩 차례로, 끝까지 재생한 뒤에 뺀다
   // HOME을 연 시점에 이미 본 보상은 첫 화면부터 빼고 보여 준다 (다시 그려질 때 한 순간 깜빡이지 않게)
   const [seenAtOpen] = useState(seenRewardIds)
-  const queued = useRewardQueue().filter((reward) => !seenAtOpen.has(reward.id))
-  // HOME 튜토리얼 상태. 튜토리얼을 아직 안 봤거나 보는 중이면 보상 연출을 잠시 미뤄 둔다 (튜토리얼 → 출석 연출 순서)
-  const [tourOpen, setTourOpen] = useState(false)
-  const [holdRewards, setHoldRewards] = useState(() => !hasSeenHomeTutorial())
-  const bursts = holdRewards || tourOpen ? [] : queued
+  const bursts = useRewardQueue().filter((reward) => !seenAtOpen.has(reward.id))
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [nameError, setNameError] = useState('')
@@ -67,21 +62,31 @@ export default function HomePage() {
     if (userId) autoCheckIn(userId)
   }, [userId])
 
-  // HOME 튜토리얼: 처음 쓰는 사용자에게 한 번만 자동으로 먼저 연다. 출석 보상 연출은 튜토리얼을 닫은 뒤에 나온다
+  // HOME 튜토리얼: 처음 쓰는 사용자에게 한 번만 자동으로. 출석 결과(보상 연출)를 먼저 보여 준 뒤에 연다
   // - 자동으로 열 때 '봤음'으로 기록 → 도중에 나가도 다시 강제로 띄우지 않는다 (왼쪽 위 ? 버튼으로 다시 보기)
-  // - ? 버튼으로 다시 볼 때도 튜토리얼이 열려 있는 동안에는 보상 연출을 미룬다
+  const [tourOpen, setTourOpen] = useState(false)
+  const [tourWaiting, setTourWaiting] = useState(false)
   useEffect(() => {
-    if (!userId || !holdRewards) return undefined
-    const timer = setTimeout(() => {
-      markHomeTutorialSeen()
-      setTourOpen(true)
-    }, 600)
-    return () => clearTimeout(timer)
-  }, [userId, holdRewards])
+    if (!userId || hasSeenHomeTutorial()) return undefined
+    let alive = true
+    let timer
+    autoCheckIn(userId).promise.finally(() => {
+      if (alive) timer = setTimeout(() => setTourWaiting(true), 600)
+    })
+    return () => {
+      alive = false
+      clearTimeout(timer)
+    }
+  }, [userId])
+  useEffect(() => {
+    if (!tourWaiting || bursts.length > 0) return
+    setTourWaiting(false)
+    markHomeTutorialSeen()
+    setTourOpen(true)
+  }, [tourWaiting, bursts.length])
   const closeTour = useCallback(() => {
     markHomeTutorialSeen()
     setTourOpen(false)
-    setHoldRewards(false) // 이제 미뤄 둔 출석 연출을 보여 준다
   }, [])
 
   // 펫 클릭 반응: 살짝 통통 튀고 0.5초 안에 제자리로 (포인트·성장 변화 없음)
@@ -114,9 +119,6 @@ export default function HomePage() {
   const frames = useMemo(() => petFrames(assetName), [assetName])
   // 위쪽 이름: 사용자 닉네임 (펫 이름 아님). HOME은 프로필 확인이 끝난 뒤에만 그려진다(RouteGuards)
   const nickname = profile?.nickname?.trim() || ''
-  // 닉네임 아래 희망 직무: 사용자가 실제로 고른 값(profiles.interests 첫 번째, 마이페이지와 같은 값). 펫 종류로 추정하지 않는다
-  const desiredJob = profile?.interests?.[0]
-  const desiredJobLabel = desiredJob && desiredJob !== 'undecided' && jobTitle(desiredJob) !== '선택 안 함' ? jobTitle(desiredJob) : '희망 직무 미정'
   // 펫 이미지 설명용 (화면에 이름으로 보이지 않음)
   const petLabel = character ? PET_CHARACTERS[character].label : '내 펫'
   // 온기 잔액: 서버 pets.warmth_balance (누적 온기 energy와 별개 — 온기를 쓰면 잔액만 줄어든다)
@@ -173,15 +175,7 @@ export default function HomePage() {
       <button type="button" className="hm-help" onClick={() => setTourOpen(true)} aria-label="HOME 사용법 보기" title="HOME 사용법 보기">?</button>
       <HomeTutorial open={tourOpen} onClose={closeTour} />
       {/* 출석 온기 획득 연출: 일기 저장 때와 같은 연기 + '온기 +100 획득!' (화면 전체) */}
-      {bursts[0] && (
-        <WarmthEffect
-          key={bursts[0].id}
-          amount={bursts[0].amount}
-          title={bursts[0].id.startsWith('attendance:') ? '출석!' : ''}
-          onDone={endBurst}
-          fullScreen
-        />
-      )}
+      {bursts[0] && <WarmthEffect key={bursts[0].id} amount={bursts[0].amount} onDone={endBurst} fullScreen />}
       {/* 보유 온기 (오른쪽 위): 햇살 아이콘 + "온기" + 서버에 저장된 잔액(warmth_balance) */}
       <div className="hm-warmth" role="group" aria-label={`보유 온기 ${balance.toLocaleString()}`}>
         <svg className="hm-warmth__icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
@@ -220,7 +214,6 @@ export default function HomePage() {
         ) : (
           <>
             <h1 className={`hm-name__text ${nickname ? '' : 'is-empty'}`}>{nickname || '닉네임을 정해 주세요'}</h1>
-            <p className="hm-name__job">{desiredJobLabel}</p>
             <button type="button" className="hm-name__edit" aria-label="닉네임 수정" title="닉네임 수정" onClick={startEdit}>
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4" />

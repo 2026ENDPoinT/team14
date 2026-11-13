@@ -17,4 +17,5 @@ export const mockSettings = {
   diaryReminder: false, // 켤 때 브라우저 알림 권한을 묻는다
   diaryReminderTime: '21:00',
   weekStart: 'sun', // 'sun' | 'mon'
+  theme: 'light', // 'light' | 'dark'
 }

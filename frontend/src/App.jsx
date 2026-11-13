@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import HomePage from './pages/HomePage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
@@ -13,6 +13,8 @@ import GlobalNav from './components/GlobalNav.jsx'
 import { AuthProvider, useAuth } from './features/auth/AuthProvider.jsx'
 import { RequireOnboarded, RequireOnboardingPending } from './features/auth/RouteGuards.jsx'
 import DiaryReminder from './features/diary/DiaryReminder.jsx'
+import { getDisplayTheme, THEME_CHANGED_EVENT } from './features/mypage/settingsStore.js'
+import './styles/theme.css'
 
 // 개발용 미리보기 화면: 로컬 개발 서버(npm run dev)에서만 쓴다.
 // 배포 빌드에서는 import.meta.env.DEV가 false라 이 코드와 라우트가 통째로 빠진다 → 주소가 열리지 않는다.
@@ -22,6 +24,24 @@ const AiCareerPreview = import.meta.env.DEV ? lazy(() => import('./dev/AiCareerP
 // 접근 규칙: 비로그인 → /login, 온보딩 미완료 → /onboarding, 완료 → 내부 화면
 // /login, /reset-password는 가드 없이 연다 (Google·이메일 인증·재설정 링크 처리를 방해하지 않도록)
 export default function App() {
+  const [theme, setTheme] = useState(getDisplayTheme)
+  useEffect(() => {
+    const refresh = () => setTheme(getDisplayTheme())
+    window.addEventListener(THEME_CHANGED_EVENT, refresh)
+    window.addEventListener('storage', refresh)
+    return () => {
+      window.removeEventListener(THEME_CHANGED_EVENT, refresh)
+      window.removeEventListener('storage', refresh)
+    }
+  }, [])
+  useEffect(() => {
+    document.documentElement.dataset.ctTheme = theme
+    document.documentElement.style.colorScheme = theme
+    return () => {
+      delete document.documentElement.dataset.ctTheme
+      document.documentElement.style.colorScheme = ''
+    }
+  }, [theme])
   return (
     <AuthProvider>
       <AppNav />

@@ -1,0 +1,831 @@
+/* Campus Tree global theme: html[data-ct-theme] is managed centrally in App.jsx.
+   The default light theme uses the team's original CSS unchanged. */
+:root[data-ct-theme="dark"] {
+  color-scheme: dark;
+  --ct-bg: #171d27;
+  --ct-surface: #252e3a;
+  --ct-surface-raised: #2d3745;
+  --ct-field: #303a48;
+  --ct-text: #f1eee8;
+  --ct-muted: #b9c1cb;
+  --ct-line: #586371;
+  --ct-gold: #dfb864;
+  background: var(--ct-bg);
+  color: var(--ct-text);
+}
+:root[data-ct-theme="dark"] body,
+:root[data-ct-theme="dark"] #root { background: var(--ct-bg); color: var(--ct-text); }
+
+/* Pages set --rm-* internally, so override at the SAME element with a stronger selector. */
+:root[data-ct-theme="dark"] .roadmap-page,
+:root[data-ct-theme="dark"] .diary-page {
+  --rm-bg: var(--ct-bg);
+  --rm-surface: var(--ct-surface);
+  --rm-field: var(--ct-field);
+  --rm-text: var(--ct-text);
+  --rm-muted: var(--ct-muted);
+  --rm-line: var(--ct-line);
+  --rm-accent: #68552e;
+  --rm-accent-dot: var(--ct-gold);
+  --rm-dot: #73808d;
+  --rm-shadow: 7px 10px 22px rgba(0,0,0,.25), -3px -3px 12px rgba(255,255,255,.02);
+  --rm-shadow-strong: 0 24px 60px rgba(0,0,0,.42);
+  --dy-ink: var(--ct-text);
+}
+:root[data-ct-theme="dark"] .onboarding {
+  --ob-bg: var(--ct-bg);
+  --ob-text: var(--ct-text);
+  --ob-muted: var(--ct-muted);
+  --ob-accent: #92753c;
+  --ob-surface: linear-gradient(135deg,#303b48,#242c38);
+  --ob-shadow: 6px 8px 16px rgba(0,0,0,.24), -3px -3px 12px rgba(255,255,255,.03);
+  --ob-shadow-soft: 3px 6px 12px rgba(0,0,0,.22), -2px -2px 10px rgba(255,255,255,.03);
+}
+:root[data-ct-theme="dark"] .gnav-wrap {
+  --gnav-text: #fff0d5;
+  --gnav-muted: #d9d9dc;
+  --gnav-accent: rgba(223,184,100,.23);
+  --gnav-line: rgba(255,255,255,.12);
+}
+:root[data-ct-theme="dark"] .gnav,
+:root[data-ct-theme="dark"] .gnav-sub {
+  background: linear-gradient(180deg,rgba(43,53,67,.94),rgba(31,40,54,.94));
+  box-shadow: inset 0 0 0 1px var(--gnav-line), 0 12px 32px rgba(0,0,0,.24);
+}
+:root[data-ct-theme="dark"] .rm-card,
+:root[data-ct-theme="dark"] .dy-input,
+:root[data-ct-theme="dark"] .mp-side__item.is-active,
+:root[data-ct-theme="dark"] .mp-card,
+:root[data-ct-theme="dark"] .ex-card,
+:root[data-ct-theme="dark"] .lg-card {
+  background: linear-gradient(135deg,#303b48,#222b37);
+  color: var(--ct-text);
+  box-shadow: 5px 7px 18px rgba(0,0,0,.26), -2px -2px 8px rgba(255,255,255,.03);
+}
+:root[data-ct-theme="dark"] .rm-column__line { background: #4b5664; }
+:root[data-ct-theme="dark"] .rm-column__badge { color: #ffe8b7; }
+:root[data-ct-theme="dark"] .rm-muted,
+:root[data-ct-theme="dark"] .mp-row__hint,
+:root[data-ct-theme="dark"] .mp-panel__desc,
+:root[data-ct-theme="dark"] .ex-card__sub,
+:root[data-ct-theme="dark"] .lg-tagline { color: var(--ct-muted); }
+:root[data-ct-theme="dark"] .mp-side__item,
+:root[data-ct-theme="dark"] .mp-panel__title,
+:root[data-ct-theme="dark"] .mp-side__title,
+:root[data-ct-theme="dark"] .mp-row__label,
+:root[data-ct-theme="dark"] .mp-row__value,
+:root[data-ct-theme="dark"] .ex-title,
+:root[data-ct-theme="dark"] .ex-card__title,
+:root[data-ct-theme="dark"] .lg-name { color: var(--ct-text); }
+:root[data-ct-theme="dark"] .mp-side__item:hover { background: rgba(255,255,255,.06); }
+:root[data-ct-theme="dark"] .mp-search,
+:root[data-ct-theme="dark"] .mp-segment,
+:root[data-ct-theme="dark"] .ex-tabs { background: var(--ct-field); box-shadow: none; }
+:root[data-ct-theme="dark"] input,
+:root[data-ct-theme="dark"] textarea,
+:root[data-ct-theme="dark"] select { color-scheme: dark; }
+:root[data-ct-theme="dark"] .mp-search input { color: var(--ct-text); }
+:root[data-ct-theme="dark"] .ex-tab { color: #dce1e8; }
+:root[data-ct-theme="dark"] .ex-tab[aria-selected="true"] { background: #d5b36f; color: #202735; }
+/* Career and AI panels have additional hardcoded light colors. */
+:root[data-ct-theme="dark"] .ag-layer { color: var(--ct-text); --ag-lav:#393b57; --ag-lav-strong:#464966; --ag-lav-text:#e6e0ff; --ag-lav-icon:#b8a8fa; }
+:root[data-ct-theme="dark"] .ag-panel { background: #242d39; box-shadow: 0 24px 60px rgba(0,0,0,.4); }
+:root[data-ct-theme="dark"] .ag-backdrop { background: rgba(0,0,0,.45); }
+:root[data-ct-theme="dark"] .ag-panel :is(input,textarea,select) { background-color: #303c4c; color: var(--ct-text); }
+:root[data-ct-theme="dark"] .rm-career-detail { background:#242d39; color:var(--ct-text); border-color:#ad8946; }
+:root[data-ct-theme="dark"] .rm-career-detail h2 { color: #f6d99f; }
+:root[data-ct-theme="dark"] .rm-career-detail__summary,
+:root[data-ct-theme="dark"] .rm-career-detail__section ul { color:#d4d1cc; }
+:root[data-ct-theme="dark"] .rm-career-detail__section { border-top-color:#59606a; }
+:root[data-ct-theme="dark"] .rm-career-detail__skills span { background:#50452d; color:#f5dfb2; }
+:root[data-ct-theme="dark"] .rm-career-detail__secondary { background:#303947; color:var(--ct-text); }
+:root[data-ct-theme="dark"] .rm-goal-node { background:linear-gradient(145deg,#413726,#59482c); color:#f6dfb0; }
+/* Force standard modal surface across roadmap, diary, onboarding and profile */
+:root[data-ct-theme="dark"] :is(.rm-modal,.dy-card,.dp-photo,.ob-card) {
+  background-color:var(--ct-surface); color:var(--ct-text);
+}
+/* Distinguish hover/focus and preserve readable controls. */
+:root[data-ct-theme="dark"] :is(button,input,select,textarea):focus-visible { outline-color:var(--ct-gold); }
+
+/* 다크 모드: 펫 이미지는 변경하지 않고 대비가 필요한 UI만 변경 */
+:root[data-ct-theme="dark"] .home-page {
+  background: linear-gradient(180deg, #151c27 0%, #1a2432 36%, #242c39 70%, #37313a 100%);
+  color: #f5eddf;
+  --hm-shadow: 6px 8px 18px rgba(0,0,0,.24), -3px -3px 10px rgba(255,255,255,.025);
+  --hm-surface: linear-gradient(135deg, #303b48, #202a35);
+}
+:root[data-ct-theme="dark"] .home-page::before {
+  background: radial-gradient(closest-side, rgba(138,157,213,.11), rgba(138,157,213,0));
+}
+:root[data-ct-theme="dark"] .home-page::after {
+  background: radial-gradient(closest-side, rgba(225,175,88,.07), rgba(225,175,88,0));
+}
+:root[data-ct-theme="dark"] .home-page .hm-name__text,
+:root[data-ct-theme="dark"] .home-page .hm-text-btn.is-strong { color: #f8f3eb; }
+:root[data-ct-theme="dark"] .home-page .hm-name__text.is-empty,
+:root[data-ct-theme="dark"] .home-page .hm-name__count,
+:root[data-ct-theme="dark"] .home-page .hm-name__note,
+:root[data-ct-theme="dark"] .home-page .hm-pet__note { color: #b8b5b1; }
+:root[data-ct-theme="dark"] .home-page .hm-name__edit,
+:root[data-ct-theme="dark"] .home-page .hm-text-btn { color: #d6c8b3; }
+:root[data-ct-theme="dark"] .home-page .hm-name__input {
+  color: #f6f0e7;
+  box-shadow: inset 2px 3px 6px rgba(0,0,0,.22);
+}
+:root[data-ct-theme="dark"] .home-page .hm-quote { color: #c6b9a8; }
+:root[data-ct-theme="dark"] .home-page .hm-quote:hover { color: #fff0cd; }
+:root[data-ct-theme="dark"] .home-page .hm-warmth {
+  background: #3b3640;
+  color: #f8d3a2;
+  box-shadow: 0 3px 12px rgba(0,0,0,.15);
+}
+:root[data-ct-theme="dark"] .home-page .hm-warmth__icon { color: #f0bd77; }
+
+
+
+:root[data-ct-theme="dark"] .home-page .hm-growth circle:not(.hm-growth__goal) {
+  fill: #e8dbc9;
+}
+:root[data-ct-theme="dark"] .home-page .hm-growth__goal { stroke: #e8dbc9; }
+:root[data-ct-theme="dark"] .home-page .hm-growth__goal[fill="#000"] { fill: #e8dbc9; }
+:root[data-ct-theme="dark"] .home-page .hm-burst__text { color: #ffdb9d; }
+:root[data-ct-theme="dark"] .home-page .hm-pet__hop:focus-visible,
+:root[data-ct-theme="dark"] .home-page .hm-quote:focus-visible { outline-color: #f4d08f; }
+
+
+
+
+:root[data-ct-theme="dark"] .home-page .hm-help {
+  background: #3b3640;
+  color: #f8d3a2;
+}
+:root[data-ct-theme="dark"] .home-page .hm-help:hover { background: #544756; }
+
+:root[data-ct-theme="dark"] .mp-row,
+:root[data-ct-theme="dark"] .mp-group { border-color:#485363; }
+:root[data-ct-theme="dark"] .mp-segment button { color:var(--ct-muted); }
+:root[data-ct-theme="dark"] .mp-segment button[aria-checked="true"] { background:#c9a768; color:#1c2430; }
+:root[data-ct-theme="dark"] .rm-chip,
+:root[data-ct-theme="dark"] .rm-icon-btn { color:var(--ct-text); }
+
+:root[data-ct-theme="dark"] .mp-stat,
+:root[data-ct-theme="dark"] .mp-dialog,
+:root[data-ct-theme="dark"] .ex-news,
+:root[data-ct-theme="dark"] .ex-field,
+:root[data-ct-theme="dark"] .rm-modal__body {
+  background-color: var(--ct-surface);
+  color: var(--ct-text);
+}
+:root[data-ct-theme="dark"] .rm-modal :is(input,textarea,select),
+:root[data-ct-theme="dark"] .diary-page :is(input,textarea,select),
+:root[data-ct-theme="dark"] .onboarding :is(input,textarea,select) {
+  color: var(--ct-text);
+}
+:root[data-ct-theme="dark"] .lg-page {
+  background: radial-gradient(ellipse at center,#293340,#171d27);
+}
+
+/* ━━━━━━━━━━ Dark mode detail polish v2 ━━━━━━━━━━
+   All rules are scoped to the global theme attribute. The light palette is unchanged.
+   Keep component-specific states (selected, active, danger) distinguishable. */
+:root[data-ct-theme="dark"] {
+  --ct-hover: #3b4757;
+  --ct-active: #4c432f;
+  --ct-border: #596676;
+  --ct-soft: #aeb9c7;
+  --ct-success-bg: #25483a;
+  --ct-success-fg: #aae4c1;
+  --ct-danger-bg: #512f36;
+  --ct-danger-fg: #ffb6bd;
+  --ct-focus-ring: #e5bc70;
+}
+:root[data-ct-theme="dark"] :is(input, textarea, select)::placeholder { color: #aab5c2; opacity: 1; }
+:root[data-ct-theme="dark"] :is(button, [role="button"], a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--ct-focus-ring);
+  outline-offset: 3px;
+}
+:root[data-ct-theme="dark"] :is(button, input, select, textarea):disabled,
+:root[data-ct-theme="dark"] [aria-disabled="true"] { cursor: not-allowed; opacity: .56; }
+:root[data-ct-theme="dark"] :is(input[type="checkbox"], input[type="radio"]) { accent-color: #d9b474; }
+:root[data-ct-theme="dark"] :is(.roadmap-page, .diary-page, .onboarding, .ag-layer, .mp-layout, .explore-page) {
+  scrollbar-color: #657285 #242d39;
+}
+/* Global navigation: hover, inactive and active destinations */
+:root[data-ct-theme="dark"] .gnav-wrap :is(.gnav__item,.gnav-sub__item) { color: #e4e7ed; }
+:root[data-ct-theme="dark"] .gnav-wrap :is(.gnav__item,.gnav-sub__item):hover { background: #414e5d; color:#fff5df; }
+:root[data-ct-theme="dark"] .gnav-wrap :is(.gnav__item,.gnav-sub__item).is-active { background: #5d5037; color: #ffe5a8; }
+/* My Page: menus, dropdowns, profile editor, options, segmented settings */
+:root[data-ct-theme="dark"] :is(.mp-profile,.mp-option,.mp-job__cat.is-active) {
+  background: linear-gradient(135deg,#33404e,#252f3b);
+  color: var(--ct-text);
+  box-shadow: 5px 9px 18px rgba(0,0,0,.27);
+}
+:root[data-ct-theme="dark"] :is(.mp-profile__univ,.mp-option span,.mp-side__desc,.mp-field__label,.mp-side__group-title) { color: var(--ct-soft); }
+:root[data-ct-theme="dark"] :is(.mp-row__icon,.mp-back,.mp-job__caret,.mp-job__cat,.mp-job__item,.mp-option strong) { color: var(--ct-text); }
+:root[data-ct-theme="dark"] :is(.mp-job__menu,.mp-job__sub) {
+  background: #2d3846;
+  border: 1px solid var(--ct-border);
+  box-shadow: 0 14px 35px rgba(0,0,0,.45);
+}
+:root[data-ct-theme="dark"] :is(.mp-job__cat,.mp-job__item):hover,
+:root[data-ct-theme="dark"] .mp-row--link:hover,
+:root[data-ct-theme="dark"] .mp-option:hover { background: var(--ct-hover); color: #fff; }
+:root[data-ct-theme="dark"] .mp-job__item.is-selected { background: #665538; color: #ffe7af; }
+:root[data-ct-theme="dark"] :is(.mp-chip,.mp-time,.mp-input,.mp-textarea,.mp-job__field) {
+  background-color: var(--ct-field);
+  color: var(--ct-text);
+  border-color: var(--ct-border);
+}
+:root[data-ct-theme="dark"] .mp-segment button[aria-checked="true"] { background: #d6af65; color: #202631; }
+:root[data-ct-theme="dark"] .mp-segment button:not([aria-checked="true"]):hover { background:var(--ct-hover); color:#fff; }
+:root[data-ct-theme="dark"] .mp-toggle:not(.is-on) { background: #536070; }
+:root[data-ct-theme="dark"] .mp-toggle.is-on { background: #c9a35d; }
+:root[data-ct-theme="dark"] .mp-row--link.is-danger :is(.mp-row__label,.mp-row__icon) { color: var(--ct-danger-fg); }
+:root[data-ct-theme="dark"] .mp-search input::placeholder { color: var(--ct-soft); }
+/* Roadmap: toolbars, node actions, dialogs, form inputs */
+:root[data-ct-theme="dark"] :is(.rm-modal__card,.rm-inbox__card,.rm-filter,.rm-toast) {
+  background-color: var(--ct-surface);
+  color: var(--ct-text);
+  border-color: var(--ct-border);
+}
+:root[data-ct-theme="dark"] :is(.rm-input,.rm-pick,.rm-segment,.rm-fab__item,.rm-filter__btn,.rm-icon-btn) {
+  background-color: var(--ct-field);
+  color: var(--ct-text);
+  border-color: var(--ct-border);
+}
+:root[data-ct-theme="dark"] :is(.rm-filter__btn,.rm-icon-btn,.rm-fab__item,.rm-chip,.rm-ghost):hover:not(:disabled) {
+  background-color: var(--ct-hover);
+  color: #fff;
+}
+:root[data-ct-theme="dark"] :is(.rm-chip.is-selected,.rm-segment button.is-active,.rm-filter__btn.is-active) {
+  background: #675432;
+  color: #ffe3a0;
+  box-shadow: inset 0 0 0 1px #b38d4e;
+}
+:root[data-ct-theme="dark"] .rm-pick .rm-chip:not(.is-selected) { background: #333e4c; color: #e2e6ee; }
+:root[data-ct-theme="dark"] :is(.rm-primary-btn,.rm-save-btn) { background:#d1ab65; color:#242831; }
+:root[data-ct-theme="dark"] :is(.rm-primary-btn,.rm-save-btn):hover:not(:disabled) { background:#edc77e; color:#191e26; }
+:root[data-ct-theme="dark"] .rm-input::placeholder { color: var(--ct-soft); }
+:root[data-ct-theme="dark"] .rm-canvas .react-flow__controls-button {
+  background: var(--ct-surface); color: var(--ct-text); border-color: var(--ct-border);
+}
+:root[data-ct-theme="dark"] .rm-canvas .react-flow__controls-button:hover { background: var(--ct-hover); }
+:root[data-ct-theme="dark"] .rm-canvas .react-flow__controls-button svg { fill: currentColor; }
+/* AI guide: modes, info, results, action buttons and status */
+:root[data-ct-theme="dark"] .ag-layer {
+  --ag-lav: #373b58;
+  --ag-lav-strong: #494c71;
+  --ag-lav-text: #e9e1ff;
+  --ag-lav-icon: #c4b5ff;
+}
+:root[data-ct-theme="dark"] :is(.ag-mode,.ag-facts,.ag-diary,.ag-card,.ag-posting) {
+  background: #303a49;
+  color: #eef0f4;
+  border: 1px solid #485565;
+  box-shadow: 2px 5px 14px rgba(0,0,0,.16);
+}
+:root[data-ct-theme="dark"] :is(.ag-mode,.ag-posting):hover { background: #3b4759; }
+:root[data-ct-theme="dark"] .ag-mode.is-selected { background: #3e405d; border-color: #b6a7f4; box-shadow: inset 0 0 0 1px #b6a7f4; }
+:root[data-ct-theme="dark"] :is(.ag-mode strong,.ag-empty strong,.ag-card__head strong) { color: #f5f4f7; }
+:root[data-ct-theme="dark"] :is(.ag-mode span,.ag-label,.ag-muted,.ag-meta,.ag-fold,.ag-facts li span,.ag-diary__item b,.ag-dl dt,.ag-evidence,.ag-posting__meta,.ag-empty) { color: #b9c3d2; }
+:root[data-ct-theme="dark"] .ag-diary__item { color:#edf0f6; }
+:root[data-ct-theme="dark"] .ag-pill { background: #475362; color: #eef0f6; }
+:root[data-ct-theme="dark"] .ag-pill.is-done { background: #62512f; color: #ffe1a0; }
+:root[data-ct-theme="dark"] .ag-pill.is-입문 { background: var(--ct-success-bg); color:var(--ct-success-fg); }
+:root[data-ct-theme="dark"] .ag-pill.is-도전 { background: #543a36; color: #ffc8a6; }
+:root[data-ct-theme="dark"] .ag-score select { background: #394555; color:var(--ct-text); border: 1px solid var(--ct-border); }
+:root[data-ct-theme="dark"] .ag-close { color:#e6e6ec; }
+:root[data-ct-theme="dark"] .ag-close:hover { background:var(--ct-hover); }
+:root[data-ct-theme="dark"] .ag-primary { background:#d6b36e; color:#202632; }
+:root[data-ct-theme="dark"] .ag-primary:hover:not(:disabled) { background:#eac781; }
+:root[data-ct-theme="dark"] .ag-ghost { color:var(--ct-text); box-shadow:inset 0 0 0 1px #798596; }
+:root[data-ct-theme="dark"] .ag-ghost:hover:not(:disabled) { background:var(--ct-hover); }
+:root[data-ct-theme="dark"] .ag-add.is-added { background: var(--ct-success-bg); color:var(--ct-success-fg); }
+:root[data-ct-theme="dark"] .ag-warn { color: #ffbe96; }
+/* Explore and diary cards, tab selections, calendar actions */
+:root[data-ct-theme="dark"] :is(.ex-panel,.ex-news,.ex-field,.ex-interest,.ex-add,.ex-back) { color:var(--ct-text); }
+:root[data-ct-theme="dark"] :is(.ex-tab,.ex-back,.ex-add):hover { background:var(--ct-hover); color:#fff; }
+:root[data-ct-theme="dark"] .ex-tab[aria-selected="true"] { background:#d6b36e; color:#202632; }
+:root[data-ct-theme="dark"] :is(.ex-card__note,.ex-card__meta,.ex-news__meta,.ex-panel__hint) { color:var(--ct-soft); }
+:root[data-ct-theme="dark"] :is(.dp-cal-card,.dp-modal__card,.dp-photo,.dp-calendar) {
+  background-color:var(--ct-surface); color:var(--ct-text); border-color:var(--ct-border);
+}
+:root[data-ct-theme="dark"] :is(.dp-btn,.dp-cal-head__nav,.dp-photo__pick,.dp-text-btn) { color:var(--ct-text); }
+:root[data-ct-theme="dark"] :is(.dp-btn,.dp-cal-head__nav,.dp-photo__pick):hover:not(:disabled) { background-color:var(--ct-hover); color:#fff; }
+:root[data-ct-theme="dark"] :is(.dp-day:not(.is-today),.dp-weekday,.dp-legend) { color:#c5ccd6; }
+/* Onboarding: inputs, chips, selected states and secondary buttons */
+:root[data-ct-theme="dark"] :is(.ob-option,.ob-chip,.ob-tab,.ob-bubble,.ob-picked__item) {
+  background-color:var(--ct-surface-raised); color:var(--ct-text); border-color:var(--ct-border);
+}
+:root[data-ct-theme="dark"] :is(.ob-chip,.ob-option,.ob-tab):hover:not(:disabled) { background:var(--ct-hover); color:#fff; }
+:root[data-ct-theme="dark"] :is(.ob-chip.is-selected,.ob-option.is-selected,.ob-tab.is-selected) { background:#665536; color:#ffe6ad; border-color:#cba45a; }
+:root[data-ct-theme="dark"] :is(.ob-input,.ob-grade select,.ob-back,.ob-skip) { background-color:var(--ct-field); color:var(--ct-text); }
+:root[data-ct-theme="dark"] :is(.ob-hint,.ob-empty,.ob-progress__label) { color:var(--ct-soft); }
+/* Career goal modal retains gold accents, but its secondary button must match the theme */
+:root[data-ct-theme="dark"] .rm-career-detail__close { background: #48402e; color:#ffe3ad; }
+:root[data-ct-theme="dark"] .rm-career-detail__close:hover { background: #65532f; }
+:root[data-ct-theme="dark"] .rm-career-detail__secondary { border-color:#8c7852; }
+:root[data-ct-theme="dark"] .rm-career-detail__secondary:hover { background:#3d4856; }
+:root[data-ct-theme="dark"] .rm-career-detail__primary { background:#d6ad61; color:#262b31; }
+:root[data-ct-theme="dark"] .rm-career-detail__primary:hover { background:#efc77b; }
+@media (prefers-reduced-motion: reduce) {
+  :root[data-ct-theme="dark"] :is(.mp-option,.ag-mode,.rm-filter__btn,.ob-chip) { transition: none; }
+}
+
+/* ━━━━━━━━━━ Campus Tree dark mode contrast fix v3 ━━━━━━━━━━
+   Component selectors matched against DiaryHome.css, Memories.css,
+   explore.css and roadmap.css. Light theme is intentionally untouched. */
+:root[data-ct-theme="dark"] .diary-page {
+  --rm-accent: #d4ad62;
+  --rm-muted: #bdc7d4;
+  --rm-field: #303b49;
+  --dy-ink: #f0ece6;
+}
+/* The original cards use background:linear-gradient(...), so background-color
+   alone cannot replace their light gradient. Override background entirely. */
+:root[data-ct-theme="dark"] .diary-page :is(.dp-cal-card, .dp-stat, .dp-modal__card, .dp-photo, .dy-card) {
+  background: linear-gradient(140deg, #303c4b, #25303e);
+  color: #f2f0eb;
+  box-shadow: 0 12px 30px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.045);
+}
+:root[data-ct-theme="dark"] .diary-page :is(.dp-title, .dp-cal-head__title, .dp-stat__prompt, .dp-modal__title, .dp-photo__title, .mm-month__label strong) {
+  color: #f4f0e9;
+}
+:root[data-ct-theme="dark"] .diary-page :is(.dp-lead, .dp-legend, .dp-weekday, .dp-stat__label, .dp-stat__hint, .dp-foot, .dp-modal__sub, .dp-photo__sub, .dp-photo__note, .dp-warmth__mark) {
+  color: #bfc9d5;
+}
+:root[data-ct-theme="dark"] .diary-page .dp-calendar { background: transparent; }
+:root[data-ct-theme="dark"] .diary-page .dp-day:not(:disabled) {
+  background: linear-gradient(145deg, #394757, #2b3644);
+  color: #f0f2f5;
+  box-shadow: 4px 6px 12px rgba(0,0,0,.24), -2px -2px 7px rgba(255,255,255,.03);
+}
+:root[data-ct-theme="dark"] .diary-page .dp-day:not(:disabled):hover,
+:root[data-ct-theme="dark"] .diary-page .dp-day:not(:disabled):focus-visible {
+  background: linear-gradient(145deg,#4b5b6c,#354253);
+  box-shadow: 0 7px 18px rgba(0,0,0,.38);
+}
+:root[data-ct-theme="dark"] .diary-page .dp-day.has-diary:not(:disabled) {
+  background: linear-gradient(145deg,#efd18a,#c69c4e);
+  color: #302418;
+}
+:root[data-ct-theme="dark"] .diary-page .dp-day.is-today:not(:disabled) {
+  box-shadow: 0 0 0 2px #e4bb71, 0 5px 16px rgba(0,0,0,.3);
+}
+:root[data-ct-theme="dark"] .diary-page .dp-day:disabled {
+  background: transparent;
+  color: #8090a3;
+  box-shadow: inset 0 0 0 1px #526071;
+}
+/* Today prompt, tab controls, month picker and day popover */
+:root[data-ct-theme="dark"] .diary-page :is(.dp-btn--soft, .dp-text-btn, .dp-photo__pick, .mm-month__toggle, .mm-picker__done, .mm-hover) {
+  background: #394758;
+  color: #f2eee7;
+  box-shadow: none;
+}
+:root[data-ct-theme="dark"] .diary-page :is(.dp-btn--soft, .dp-text-btn, .dp-photo__pick, .mm-month__toggle, .mm-picker__done):hover:not(:disabled) {
+  background: #4b5b6e;
+  color: #fff;
+}
+:root[data-ct-theme="dark"] .diary-page :is(.dp-btn--accent, .dp-photo-add) {
+  background: #d7b36c;
+  color: #222a33;
+}
+:root[data-ct-theme="dark"] .diary-page .dp-btn--accent:hover:not(:disabled) { background: #f0ce88; }
+:root[data-ct-theme="dark"] .diary-page .mm-picker {
+  background: #2c3745;
+  color: #f2eee7;
+  border: 1px solid #556375;
+}
+:root[data-ct-theme="dark"] .diary-page .mm-wheel::before { background: #414f60; box-shadow: none; }
+:root[data-ct-theme="dark"] .diary-page .mm-wheel__item { color: #b9c5d2; }
+:root[data-ct-theme="dark"] .diary-page .mm-wheel__item.is-active { color: #f7dfad; }
+:root[data-ct-theme="dark"] .diary-page .mm-day { color: #e7ebf1; }
+:root[data-ct-theme="dark"] .diary-page .mm-day:hover:not(:disabled),
+:root[data-ct-theme="dark"] .diary-page .mm-day:focus-visible { background: #3c4959; box-shadow: 0 5px 13px rgba(0,0,0,.24); }
+:root[data-ct-theme="dark"] .diary-page .mm-day:disabled { color: #8895a5; }
+:root[data-ct-theme="dark"] .diary-page .mm-month__caret { color: #e5c88f; }
+:root[data-ct-theme="dark"] .diary-page :is(.dp-textarea, .dy-input, .dy-textarea) {
+  background: #303c4b;
+  color: #f2eee9;
+  border-color: #566274;
+}
+/* Explore: the old primary action had color:#fff but its background became
+   the theme's pale --rm-text, leaving effectively invisible button labels. */
+:root[data-ct-theme="dark"] .explore-page .ex-add {
+  background: #d8b46d;
+  color: #202732;
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+}
+:root[data-ct-theme="dark"] .explore-page .ex-add:hover:not(:disabled) {
+  background: #f0cc81;
+  color: #171f2a;
+}
+:root[data-ct-theme="dark"] .explore-page .ex-add:disabled { opacity: .58; }
+:root[data-ct-theme="dark"] .explore-page :is(.ex-added, .ex-link) { color: #e6c887; }
+:root[data-ct-theme="dark"] .explore-page .ex-tab:not([aria-selected="true"]) { color: #d3deeb; }
+:root[data-ct-theme="dark"] .explore-page .ex-tab[aria-selected="true"] { background: #d8b46d; color: #222936; }
+:root[data-ct-theme="dark"] .explore-page :is(.ex-card__meta, .ex-card__sub, .ex-card__note, .ex-panel__hint) { color: #bac6d5; }
+:root[data-ct-theme="dark"] .explore-page .ex-tag { background: #415064; color: #eaf0f8; }
+:root[data-ct-theme="dark"] .explore-page .ex-interest { background: #66512d; color: #ffe5a7; }
+/* Roadmap floating add / inbox / trash controls */
+:root[data-ct-theme="dark"] .roadmap-page :is(.rm-inbox-btn, .rm-fab__main) {
+  background: #344253;
+  color: #f6f2ec;
+  border: 1px solid #5a687a;
+}
+:root[data-ct-theme="dark"] .roadmap-page :is(.rm-inbox-btn, .rm-fab__main):hover { background: #47596c; color: #fff; }
+:root[data-ct-theme="dark"] .roadmap-page .rm-inbox-btn.is-active { background: #d8b46d; color: #202732; }
+:root[data-ct-theme="dark"] .roadmap-page .rm-fab__main { background: #d8b46d; color: #202732; border-color: #d8b46d; }
+:root[data-ct-theme="dark"] .roadmap-page .rm-fab__main:hover { background: #f0cc81; color: #171f2a; }
+:root[data-ct-theme="dark"] .roadmap-page .rm-inbox { background: #293545; color: #ecf0f5; }
+:root[data-ct-theme="dark"] .roadmap-page .rm-inbox__add { background: #3a4a5c; color: #f2f1ef; }
+:root[data-ct-theme="dark"] .roadmap-page .rm-inbox__add:hover { background: #4b5b70; }
+:root[data-ct-theme="dark"] .roadmap-page .rm-trash { color: #e9dcd5; }
+
+/* Campus Tree - Roadmap dark polish v5
+   Append to the end of frontend/src/styles/theme.css.
+   Targets are scoped to the active dark theme only.
+*/
+:root[data-ct-theme="dark"] .roadmap-page .ag-entry,
+:root[data-ct-theme="dark"] .ag-entry {
+  background: #34394f;
+  border: 1px solid #656989;
+  color: #f0eaff;
+  box-shadow: 0 4px 14px rgba(0,0,0,.22);
+}
+:root[data-ct-theme="dark"] .roadmap-page .ag-entry:hover,
+:root[data-ct-theme="dark"] .ag-entry:hover,
+:root[data-ct-theme="dark"] .ag-entry.is-open {
+  background: #4b4b69;
+  border-color: #948cbd;
+  color: #fff;
+}
+:root[data-ct-theme="dark"] .ag-entry .ag-sparkle { color: #d4c4ff; }
+
+:root[data-ct-theme="dark"] .roadmap-page .rm-trash,
+:root[data-ct-theme="dark"] .rm-trash {
+  background: #334052;
+  color: #d8e0e9;
+  box-shadow: inset 0 0 0 1px #526074, 0 5px 16px rgba(0,0,0,.28);
+}
+:root[data-ct-theme="dark"] .rm-trash.is-armed {
+  background: #4a5667;
+  color: #fff1d7;
+  box-shadow: 0 0 0 2px #cba66a, 0 5px 16px rgba(0,0,0,.28);
+}
+:root[data-ct-theme="dark"] .rm-trash.is-active {
+  background: #b34b53;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(229,72,77,.22), 0 8px 18px rgba(0,0,0,.3);
+}
+
+/* Roadmap onboarding spotlight/tutorial: originally hard-coded bright text/buttons */
+:root[data-ct-theme="dark"] .rm-tour__dialog {
+  background: #273242;
+  border: 1px solid #596677;
+  color: #f2eee8;
+  box-shadow: 0 20px 65px rgba(0,0,0,.52);
+}
+:root[data-ct-theme="dark"] .rm-tour__eyebrow { color: #d5b674; }
+:root[data-ct-theme="dark"] .rm-tour__title { color: #faf6ec; }
+:root[data-ct-theme="dark"] .rm-tour__desc p { color: #cdd6e1; }
+:root[data-ct-theme="dark"] .rm-tour__dots span { background: #566477; }
+:root[data-ct-theme="dark"] .rm-tour__dots span.is-active { background: #e2bc70; }
+:root[data-ct-theme="dark"] .rm-tour__skip { background: transparent; color: #bbc8d7; }
+:root[data-ct-theme="dark"] .rm-tour__skip:hover { color: #fff; }
+:root[data-ct-theme="dark"] .rm-tour__prev {
+  background: #3b495d;
+  color: #f0f4fb;
+  border: 1px solid #5a6a7d;
+}
+:root[data-ct-theme="dark"] .rm-tour__next {
+  background: #dbb76f;
+  color: #222b38;
+  border: 1px solid #dbb76f;
+}
+:root[data-ct-theme="dark"] .rm-tour__next:hover { background: #edca82; }
+:root[data-ct-theme="dark"] .rm-tour button:focus-visible { outline: 2px solid #edca82; outline-offset: 3px; }
+:root[data-ct-theme="dark"] .rm-tour__spot {
+  box-shadow: 0 0 0 2px #dbb76f, 0 0 0 9999px rgba(4,8,15,.67);
+}
+
+/* Covers accessible labels used by newer roadmap toolbar versions. */
+:root[data-ct-theme="dark"] .roadmap-page button:is([aria-label*="튜토리얼"],[aria-label*="도움말"],[title*="튜토리얼"],[title*="도움말"],[aria-label*="수강 필요"],[title*="수강 필요"]) {
+  background: #334052;
+  border: 1px solid #5a6a7e;
+  color: #f1f4fa;
+  box-shadow: 0 3px 12px rgba(0,0,0,.24);
+}
+:root[data-ct-theme="dark"] .roadmap-page button:is([aria-label*="튜토리얼"],[aria-label*="도움말"],[title*="튜토리얼"],[title*="도움말"],[aria-label*="수강 필요"],[title*="수강 필요"]):hover {
+  background: #44546b;
+  color: #fff;
+}
+
+
+/* ━━━ Campus Tree dark-mode integration v6 / audited against 2026-11-14 project ━━━
+ * Component-owned backgrounds and gradients must be overridden with `background`,
+ * not only `background-color`. Every rule is dark-theme scoped.
+ * Gold = active/primary, navy = resting surfaces, red = destructive/required.
+ */
+:root[data-ct-theme="dark"] {
+  --ct-v6-card: linear-gradient(140deg, #303c4b 0%, #25303e 100%);
+  --ct-v6-card-hover: linear-gradient(140deg, #3b4b5d, #2f3b4a);
+  --ct-v6-ink: #f2eee8;
+  --ct-v6-muted: #c1cbd8;
+  --ct-v6-gold: #e0b968;
+  --ct-v6-outline: #526174;
+}
+
+/* --- Roadmap: missing-course guide, including its absolute-positioned dropdown --- */
+:root[data-ct-theme="dark"] .roadmap-page .cg__toggle {
+  background: #303b49; color: #f0f1f4; border: 1px solid #536174;
+  box-shadow: 0 3px 12px rgba(0,0,0,.3);
+}
+:root[data-ct-theme="dark"] .roadmap-page .cg__toggle:hover {
+  background: #405066; color: #fff;
+}
+:root[data-ct-theme="dark"] .roadmap-page .cg.is-open .cg__toggle {
+  background: #614e2d; color: #ffe5aa; border-color: #c69f55;
+}
+:root[data-ct-theme="dark"] .roadmap-page .cg__count {
+  background: #d44451; color: #fff;
+}
+:root[data-ct-theme="dark"] .roadmap-page .cg__panel {
+  background: #273341; color: #f2eee8; border: 1px solid #566477;
+  box-shadow: 0 16px 42px rgba(0,0,0,.48);
+}
+:root[data-ct-theme="dark"] .roadmap-page .cg__head,
+:root[data-ct-theme="dark"] .roadmap-page .cg__title { color: #f3eee6; }
+:root[data-ct-theme="dark"] .roadmap-page :is(.cg__lead,.cg__sub,.cg__term) {
+  color: #bfc9d7;
+}
+:root[data-ct-theme="dark"] .roadmap-page .cg__item {
+  background: var(--ct-v6-card); color: #f2eee8;
+  border: 1px solid #415165;
+}
+:root[data-ct-theme="dark"] .roadmap-page .cg__reason {
+  background: #3e4a59; color: #e7edf6;
+}
+:root[data-ct-theme="dark"] .roadmap-page .cg__reason.is-required {
+  background: #572f37; color: #ffbdc2;
+}
+:root[data-ct-theme="dark"] .roadmap-page .cg__reason.is-core {
+  background: #574725; color: #f5d88c;
+}
+:root[data-ct-theme="dark"] .roadmap-page :is(.cg__btn,.cg__select,.cg__close) {
+  background: #384657; border: 1px solid #5b6879; color: #f2f0e9;
+}
+:root[data-ct-theme="dark"] .roadmap-page :is(.cg__btn,.cg__select,.cg__close):hover:not(:disabled) {
+  background: #4c5c6e; color: #fff;
+}
+:root[data-ct-theme="dark"] .roadmap-page .cg__state { color: #a7e1be; }
+
+/* --- Roadmap standalone tutorial/help controls (do not turn alert badges grey) --- */
+:root[data-ct-theme="dark"] .roadmap-page .rm-tour__dialog,
+:root[data-ct-theme="dark"] .hm-tour .rm-tour__dialog {
+  background: #293545; border: 1px solid #57677b; color: #f2eee8;
+}
+:root[data-ct-theme="dark"] .rm-tour__desc p { color: #d2dbe7; }
+:root[data-ct-theme="dark"] .rm-tour__next {
+  background: #dfb96e; color: #212a36;
+}
+:root[data-ct-theme="dark"] .rm-tour__next:hover { background: #f0cd88; }
+:root[data-ct-theme="dark"] .rm-tour__prev { background: #3d4c5e; color: #f2f3f5; }
+:root[data-ct-theme="dark"] .rm-tour__prev:hover { background: #4c5c70; }
+:root[data-ct-theme="dark"] .hm-tour {
+  --rm-surface: #293545; --rm-text: #f2eee8; --rm-muted: #c0cad7;
+  --rm-field: #3c495b; --rm-shadow-strong: 0 24px 60px rgba(0,0,0,.45);
+}
+/* Do not target every round button: retain notification and warning colors. */
+
+/* --- My Page: activity/statistics cards that used an explicit light gradient --- */
+:root[data-ct-theme="dark"] .diary-page .mp-stat {
+  background: var(--ct-v6-card); color: var(--ct-v6-ink);
+  box-shadow: 0 9px 24px rgba(0,0,0,.27);
+}
+:root[data-ct-theme="dark"] .diary-page .mp-stat__value { color: #f1d293; }
+:root[data-ct-theme="dark"] .diary-page .mp-stat :is(span,small,p):not(.mp-stat__value) {
+  color: #bbc7d6;
+}
+:root[data-ct-theme="dark"] .diary-page .mp-row + .mp-row {
+  border-top-color: #4d5968;
+}
+:root[data-ct-theme="dark"] .diary-page :is(.mp-dialog,.mp-dialog__summary,.mp-dialog__choices) {
+  background: #293545; color: #f1eee9;
+}
+:root[data-ct-theme="dark"] .diary-page :is(.mp-field__note,.mp-recent__date,.mp-dialog__eyebrow) {
+  color: #bac7d6;
+}
+
+/* --- Memories: highlight cards, tabs, filters and status chips --- */
+:root[data-ct-theme="dark"] .diary-page .hl-card {
+  background: var(--ct-v6-card); color: #f3f1ed;
+  border: 1px solid #455469; box-shadow: 0 8px 20px rgba(0,0,0,.25);
+}
+:root[data-ct-theme="dark"] .diary-page .hl-card:hover { background: var(--ct-v6-card-hover); }
+:root[data-ct-theme="dark"] .diary-page .hl-card__icon {
+  background: #465569; color: #e4c57e;
+}
+:root[data-ct-theme="dark"] .diary-page :is(.hl-card__theme,.hl-card__body,.hl-card__date,.hl-col__type) {
+  color: #c5cfdb;
+}
+:root[data-ct-theme="dark"] .diary-page .hl-card__title { color: #f5f1ec; }
+:root[data-ct-theme="dark"] .diary-page .hl-card__status:not(.is-done) {
+  background: #425168; color: #dce4ef;
+}
+:root[data-ct-theme="dark"] .diary-page .hl-card__status.is-done {
+  background: #5c512f; color: #ffe6a5;
+}
+:root[data-ct-theme="dark"] .diary-page .hl-tabs {
+  background: #303c4b;
+}
+:root[data-ct-theme="dark"] .diary-page .hl-tabs button { color: #c7d1dd; }
+:root[data-ct-theme="dark"] .diary-page .hl-tabs button:hover:not(.is-active) {
+  background: #3e4d5f; color: #fff;
+}
+:root[data-ct-theme="dark"] .diary-page .hl-tabs button.is-active {
+  background: #dcb66d; color: #202734; box-shadow: none;
+}
+:root[data-ct-theme="dark"] .diary-page .hl-chip {
+  background: #303d4e; color: #d5deea;
+  box-shadow: 0 3px 10px rgba(0,0,0,.24);
+}
+:root[data-ct-theme="dark"] .diary-page .hl-chip:hover:not(.is-active) {
+  background: #415268; color: #fff;
+}
+:root[data-ct-theme="dark"] .diary-page .hl-chip.is-active {
+  background: #dbb56c; color: #252a32;
+}
+:root[data-ct-theme="dark"] .diary-page .hl-chip__count {
+  background: rgba(255,255,255,.13); color: inherit;
+}
+:root[data-ct-theme="dark"] .diary-page :is(.hl-empty,.hl-none) {
+  background: #293545; color: #cbd5e0;
+}
+
+/* --- AI guide: manual selection and confirmation still hardcoded light --- */
+:root[data-ct-theme="dark"] .ag-layer .ag-manual-careers {
+  border-top-color: #536174;
+}
+:root[data-ct-theme="dark"] .ag-layer .ag-manual-careers__option {
+  background: #303d4d; color: #f1eee8; border-color: #526175;
+}
+:root[data-ct-theme="dark"] .ag-layer .ag-manual-careers__option:hover {
+  background: #41516a; color: #fff;
+}
+:root[data-ct-theme="dark"] .ag-layer .ag-manual-careers__option.is-selected,
+:root[data-ct-theme="dark"] .ag-layer .ag-manual-careers__option[aria-pressed="true"] {
+  background: #5d5037; border-color: #d4ad62; color: #ffe6b1;
+}
+:root[data-ct-theme="dark"] .ag-layer .ag-manual-careers__confirm {
+  background: #3d3a55; color: #f1ebff;
+}
+
+/* --- Consistent panels for attachment/photo widgets and secondary action buttons --- */
+:root[data-ct-theme="dark"] :is(.ph-add,.ph-missing,.ph-item) {
+  background: #303c4b; color: #edf0f5; border-color: #536175;
+}
+:root[data-ct-theme="dark"] :is(.ph-remove,.ph-badge) {
+  background: #4b3541; color: #ffc7cf;
+}
+:root[data-ct-theme="dark"] .ph-note { color: #bfcad8; }
+:root[data-ct-theme="dark"] .ph-add:hover { background: #405167; }
+
+/* --- Shared accessible defaults inside actual panels; no global inversion --- */
+:root[data-ct-theme="dark"] :is(.cg__panel,.rm-modal__card,.ag-panel,.mp-dialog,.dy-card) :is(input,select,textarea) {
+  background-color: #344153; color: #f1eee8; border-color: #617085;
+}
+:root[data-ct-theme="dark"] :is(.cg__panel,.rm-modal__card,.ag-panel,.mp-dialog,.dy-card) :is(input,select,textarea)::placeholder {
+  color: #b6c3d3;
+}
+:root[data-ct-theme="dark"] :is(.cg__panel,.rm-modal__card,.ag-panel,.mp-dialog,.dy-card) :is(button,[role="button"]):focus-visible {
+  outline: 2px solid #e4be75; outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-ct-theme="dark"] :is(.cg__toggle,.hl-card,.hl-tabs button,.hl-chip,.ag-manual-careers__option) {
+    transition: none;
+  }
+}
+
+/* --- Exact help button class from RoadmapPage.jsx (not covered by title matching alone) --- */
+:root[data-ct-theme="dark"] .roadmap-page .rm-help {
+  background: #334052; color: #f0f3f8; border: 1px solid #57677a;
+  box-shadow: 0 4px 15px rgba(0,0,0,.23);
+}
+:root[data-ct-theme="dark"] .roadmap-page .rm-help:hover {
+  background: #46576b; color: #fff;
+}
+/* --- Activity links and files have their own bright backgrounds --- */
+:root[data-ct-theme="dark"] :is(.at-item,.at-add) {
+  background: #303c4b; border-color: #556376; color: #f0f0ed;
+}
+:root[data-ct-theme="dark"] :is(.at-name,.at-name--btn) { color: #f2eee8; }
+:root[data-ct-theme="dark"] .at-size,
+:root[data-ct-theme="dark"] .at-note { color: #bdc8d7; }
+:root[data-ct-theme="dark"] .at-add:hover:not(:disabled) {
+  background: #425166; color: #fff;
+}
+:root[data-ct-theme="dark"] .at-remove {
+  background: #503039; color: #ffd8db;
+}
+:root[data-ct-theme="dark"] .ag-layer .ag-manual-careers__option.is-current small {
+  color: #dcc9ff;
+}
+
+/* Campus Tree - Roadmap FAB dark theme correction v7
+   Keep button wrapper transparent; color its label and icon separately.
+   Applies only while dark mode is selected. */
+:root[data-ct-theme="dark"] .roadmap-page .rm-fab {
+  overflow: visible;
+}
+:root[data-ct-theme="dark"] .roadmap-page .rm-fab__menu {
+  width: 206px;
+  max-width: calc(100vw - 32px);
+  margin-right: 0;
+  overflow: visible;
+}
+:root[data-ct-theme="dark"] .roadmap-page .rm-fab__menu li {
+  width: 100%;
+  min-width: 0;
+  justify-content: flex-end;
+}
+/* Override the broad dark-theme .rm-fab__item background rule. */
+:root[data-ct-theme="dark"] .roadmap-page .rm-fab__item,
+:root[data-ct-theme="dark"] .roadmap-page .rm-fab__item:hover:not(:disabled) {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  background-color: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+:root[data-ct-theme="dark"] .roadmap-page .rm-fab__label {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  padding: 9px 12px;
+  border: 1px solid #53647a;
+  border-radius: 13px;
+  background: #303d4f;
+  color: #f4f0e8;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.25;
+  box-shadow: 0 5px 14px rgba(0,0,0,.25);
+}
+:root[data-ct-theme="dark"] .roadmap-page .rm-fab__icon {
+  box-sizing: border-box;
+  flex: 0 0 52px;
+  width: 52px;
+  height: 52px;
+  background: #394b61;
+  color: #f2d18a;
+  border: 1px solid #64748a;
+  box-shadow: 0 6px 16px rgba(0,0,0,.28);
+}
+:root[data-ct-theme="dark"] .roadmap-page .rm-fab__icon svg {
+  color: inherit;
+  stroke: currentColor;
+}
+:root[data-ct-theme="dark"] .roadmap-page .rm-fab__item:hover:not(:disabled) .rm-fab__label,
+:root[data-ct-theme="dark"] .roadmap-page .rm-fab__item:focus-visible .rm-fab__label {
+  background: #43536a;
+  border-color: #d8b46d;
+  color: #fff;
+}
+:root[data-ct-theme="dark"] .roadmap-page .rm-fab__item:hover:not(:disabled) .rm-fab__icon,
+:root[data-ct-theme="dark"] .roadmap-page .rm-fab__item:focus-visible .rm-fab__icon {
+  background: #50627a;
+  border-color: #d8b46d;
+  color: #ffe4a1;
+}
+:root[data-ct-theme="dark"] .roadmap-page .rm-fab__item:focus-visible {
+  outline: 2px solid #d8b46d;
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+@media (max-width: 480px) {
+  :root[data-ct-theme="dark"] .roadmap-page .rm-fab__menu {
+    width: 176px;
+  }
+  :root[data-ct-theme="dark"] .roadmap-page .rm-fab__label {
+    padding: 8px;
+    font-size: 12px;
+  }
+  :root[data-ct-theme="dark"] .roadmap-page .rm-fab__icon {
+    flex-basis: 46px;
+    width: 46px;
+    height: 46px;
+  }
+}

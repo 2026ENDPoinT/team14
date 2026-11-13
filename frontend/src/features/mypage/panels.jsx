@@ -300,6 +300,15 @@ export function DisplayPanel({ settings, update }) {
     <>
       <PanelTitle title="화면 설정" />
       <p className="rm-muted">※ 설정은 이 브라우저에 저장돼요.</p>
+      <Group title="테마">
+        <Row label="화면 모드" hint="선택한 모드는 홈·로드맵·일기·탐색 등 전체 화면에 적용돼요.">
+          <Segment
+            value={settings.theme === 'dark' ? 'dark' : 'light'}
+            options={[[ 'light', '☀ 라이트' ], [ 'dark', '☾ 다크' ]]}
+            onChange={(v) => update('theme', v)}
+          />
+        </Row>
+      </Group>
       <Group>
         <Row label="달력 시작 요일" hint="일기 달력이 시작하는 요일">
           <Segment

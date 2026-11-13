@@ -4,6 +4,11 @@
 import { mockSettings } from './myPageMock.js'
 
 const KEY = 'campus-roadmap:settings'
+export const THEME_CHANGED_EVENT = 'campustree:theme-changed'
+
+export function getDisplayTheme() {
+  return loadSettings().theme === 'dark' ? 'dark' : 'light'
+}
 
 export function loadSettings() {
   try {
@@ -17,8 +22,9 @@ export function saveSettings(settings) {
   try {
     localStorage.setItem(KEY, JSON.stringify(settings))
   } catch {
-    // 저장하지 못해도 화면에서는 바뀐 값으로 계속 쓴다
+    // 저장을 허용하지 않는 브라우저에서는 현재 방문에만 적용될 수 있다.
   }
+  window.dispatchEvent(new Event(THEME_CHANGED_EVENT))
 }
 
 // 달력 시작 요일: 'sun' | 'mon'
