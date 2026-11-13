@@ -363,11 +363,17 @@
   overflow: visible;
   pointer-events: none;
 }
+/* 학기 가지선: 관계선(실선, --rm-line)과 구분되게 더 옅은 점선 + 타임라인 위 시작점 */
 .rm-branch {
   fill: none;
-  stroke: var(--rm-line);
-  stroke-width: 1.4;
+  stroke: #d2d0cc;
+  stroke-width: 1.2;
+  stroke-dasharray: 3 5;
+  stroke-linecap: round;
   transition: d 0.25s var(--rm-ease);
+}
+.rm-branch__root {
+  fill: #cfcdc9;
 }
 .rm-canvas.is-node-dragging .rm-branch {
   transition: none;

@@ -14,7 +14,7 @@ import GrowthDots from '../features/home/GrowthDots.jsx'
 import WarmthEffect from '../features/diary/WarmthEffect.jsx'
 import HomeQuote from '../features/home/HomeQuote.jsx'
 import HomeTutorial from '../features/home/tutorial/HomeTutorial.jsx'
-import { hasSeenHomeTutorial, markHomeTutorialSeen } from '../features/home/tutorial/homeTutorialStorage.js'
+import { recordAutoTutorial, shouldAutoStartTutorial } from '../features/tutorial/autoTutorial.js'
 import '../features/home/Home.css'
 
 // 펫 HOME (/) — Figma HOME 화면: 은은한 크림 배경, 위쪽 가운데 펫 이름, 가운데 펫, 아래 점선 성장 표시
@@ -63,12 +63,12 @@ export default function HomePage() {
     if (userId) autoCheckIn(userId)
   }, [userId])
 
-  // HOME 튜토리얼: 처음 쓰는 사용자에게 한 번만 자동으로. 출석 결과(보상 연출)를 먼저 보여 준 뒤에 연다
-  // - 자동으로 열 때 '봤음'으로 기록 → 도중에 나가도 다시 강제로 띄우지 않는다 (왼쪽 위 ? 버튼으로 다시 보기)
+  // HOME 튜토리얼: 신규 가입 후 HOME 첫 방문에만 자동으로 (서버 프로필 home_tutorial_seen=false일 때, features/tutorial/autoTutorial.js)
+  // 출석 결과(보상 연출)를 먼저 보여 준 뒤에 연다. 여는 순간 서버에 '봤음' 저장 → 다른 기기·재로그인에서도 다시 안 뜸
   const [tourOpen, setTourOpen] = useState(false)
   const [tourWaiting, setTourWaiting] = useState(false)
   useEffect(() => {
-    if (!userId || hasSeenHomeTutorial()) return undefined
+    if (!userId || !shouldAutoStartTutorial(profile, 'home')) return undefined
     let alive = true
     let timer
     autoCheckIn(userId).promise.finally(() => {
@@ -82,13 +82,11 @@ export default function HomePage() {
   useEffect(() => {
     if (!tourWaiting || bursts.length > 0) return
     setTourWaiting(false)
-    markHomeTutorialSeen()
+    if (!shouldAutoStartTutorial(profile, 'home')) return
+    recordAutoTutorial(profile, 'home', applyProfile)
     setTourOpen(true)
-  }, [tourWaiting, bursts.length])
-  const closeTour = useCallback(() => {
-    markHomeTutorialSeen()
-    setTourOpen(false)
-  }, [])
+  }, [tourWaiting, bursts.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  const closeTour = useCallback(() => setTourOpen(false), [])
 
   // 펫 클릭 반응: 살짝 통통 튀고 0.5초 안에 제자리로 (포인트·성장 변화 없음)
   // Web Animations API라 React 다시 그리기가 없고, 연속 클릭하면 이전 동작을 멈추고 처음부터 다시 재생한다.
@@ -124,7 +122,7 @@ export default function HomePage() {
   const desiredJob = profile?.interests?.[0]
   const desiredJobLabel = desiredJob && desiredJob !== 'undecided' && jobTitle(desiredJob) !== '선택 안 함' ? jobTitle(desiredJob) : '희망 직무 미정'
   // 펫 이미지 설명용 (화면에 이름으로 보이지 않음)
-  const petLabel = character ? PET_CHARACTERS[character].label : '내 펫'
+  const petLabel = character ? PET_CHARACTERS[character].label : '새싹' // 희망 직무 미정이면 새싹
   // 온기 잔액: 서버 pets.warmth_balance (누적 온기 energy와 별개 — 온기를 쓰면 잔액만 줄어든다)
   const balance = pet.warmth ?? 0
   const growthLabel = maxed

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import usePresence from '../usePresence.js'
-import { isPill, nodeBox } from '../layout.js'
+import { isMemo, isPill, nodeBox } from '../layout.js'
 import { ROADMAP_TUTORIAL_STEPS } from './tutorialSteps.js'
 import './tutorial.css'
 
@@ -35,7 +35,7 @@ export default function RoadmapTutorial({ open, nodes, layout, onClose, steps = 
   // 예시 노드: 학기에 배치된 일반 활동 노드 중 가장 앞 학기 (없으면 교과목 노드)
   const demoNode = useMemo(() => {
     if (!open) return null
-    const placed = nodes.filter((n) => n.status === 'placed' && nodeBox(n, layout))
+    const placed = nodes.filter((n) => n.status === 'placed' && !isMemo(n) && nodeBox(n, layout)) // 메모는 예시 노드로 쓰지 않음
     const order = (n) => [layout.cols[n.periodId].x + n.position.x, n.position.y]
     const sorted = [...placed].sort((a, b) => order(a)[0] - order(b)[0] || order(a)[1] - order(b)[1])
     return sorted.find((n) => !isPill(n)) ?? sorted[0] ?? null

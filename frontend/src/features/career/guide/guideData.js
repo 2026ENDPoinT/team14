@@ -58,6 +58,7 @@ export function collectGuideSources(nodes, documents, curriculum) {
   const activities = []
   for (const node of nodes) {
     if (!node.title?.trim()) continue
+    if (node.categoryId === 'memo') continue // 자유 메모는 활동이 아니므로 AI 분석에 보내지 않는다
     const course = isCourse(node) || node.theme === 'major'
     if (course) {
       courses.push({ id: node.id, key: courseKeyOf(node, curriculum), title: node.title.trim(), status: statusOf(node, true) })

@@ -8,16 +8,17 @@ import InboxPanel from '../features/roadmap/InboxPanel.jsx'
 import AddNodeModal from '../features/roadmap/AddNodeModal.jsx'
 import AddPeriodModal from '../features/roadmap/AddPeriodModal.jsx'
 import NodeDetailModal from '../features/roadmap/NodeDetailModal.jsx'
-import NodeFilter from '../features/roadmap/NodeFilter.jsx'
+import MemoCreateModal from '../features/roadmap/MemoCreateModal.jsx'
+import { createMemoNode, saveMemo } from '../services/memo.js'
 import AiGuideButton from '../features/career/guide/AiGuideButton.jsx'
 import AiGuidePanel from '../features/career/guide/AiGuidePanel.jsx'
 import { hasSameTitle } from '../features/career/guide/guideData.js'
-import { BASE_CATEGORIES, nodeCategoryId } from '../features/roadmap/nodeCategories.js'
+import { BASE_CATEGORIES } from '../features/roadmap/nodeCategories.js'
 import RoadmapTutorial from '../features/roadmap/tutorial/RoadmapTutorial.jsx'
-import { hasSeenRoadmapTutorial, markRoadmapTutorialSeen } from '../features/roadmap/tutorial/tutorialStorage.js'
+import { recordAutoTutorial, shouldAutoStartTutorial } from '../features/tutorial/autoTutorial.js'
 import { useOptionalAuth } from '../features/auth/AuthProvider.jsx'
 import { linkProblem } from '../features/roadmap/edgeRules.js'
-import { computeLayout, nextPosition, placeNode } from '../features/roadmap/layout.js'
+import { AUTO_GAP, MEMO_KEY, MEMO_SIZE, MIN_NODE_Y, cardSize, computeLayout, memoSizeOf, nextPosition, nodesOverlap, placeNode, planNewNodeSpace, respaceCourses } from '../features/roadmap/layout.js'
 import {
   createEdge,
   createNode,
@@ -38,6 +39,12 @@ import '../features/roadmap/roadmap.css'
 
 // 노드 삭제 + 그 노드의 첨부 사진 파일 정리 (사진 연결 행은 DB에서 함께 지워진다)
 const deleteNodeAndPhotos = (nodeId) => deleteWithPhotos({ nodeId }, () => deleteNode(nodeId))
+
+// 위치 변경 목록 [{ id, periodId, position }]을 노드 목록에 적용
+const applyMoves = (list, moves) => list.map((n) => {
+  const m = moves.find((x) => x.id === n.id)
+  return m ? { ...n, periodId: m.periodId, position: m.position, status: 'placed' } : n
+})
 
 const UNDO_MS = 5000 // 실행 취소 안내가 보이는 시간. 이 시간이 지나면 삭제를 DB에 저장한다
 
@@ -95,6 +102,7 @@ export default function RoadmapPage() {
   const [toast, setToast] = useState('') // 안내 문구, 또는 { text, undo } (실행 취소 버튼이 있는 삭제 안내)
   const [dropPeriodId, setDropPeriodId] = useState(null) // 노드를 끄는 동안 강조할 학기
   const [tutorialOpen, setTutorialOpen] = useState(false) // 첫 접속 튜토리얼
+  const [scrollToNodeId, setScrollToNodeId] = useState(null) // 방금 학기에 만든 노드: 화면에 안 보이면 그쪽으로 이동
   const [connectMode, setConnectMode] = useState(false) // CONNECT: 노드 오른쪽 핸들로 관계선 만들기
   const [guideOpen, setGuideOpen] = useState(false) // AI 길잡이 패널
   // 직접 추가한 노드 종류 (ADD NODE·NODE DETAILS 공용). 로그인한 사용자의 종류를 DB(node_categories)에서 불러오고 저장한다.
@@ -116,7 +124,7 @@ export default function RoadmapPage() {
     const [roadmap, categories] = await Promise.all([getRoadmap(), listNodeCategories()])
     if (roadmap.error?.code === 'UNAUTHENTICATED') {
       setPeriods(mockPeriods)
-      setNodes(mockNodes)
+      setNodes(applyMoves(mockNodes, respaceCourses(mockPeriods, mockNodes))) // 예시도 같은 간격으로 (저장 없음)
       setEdges(mockEdges)
       setDocuments(mockDocuments)
       setCustomCategories([])
@@ -133,7 +141,28 @@ export default function RoadmapPage() {
     const custom = categories.data.map(toPickerCategory)
     setCustomCategories(custom)
     setPeriods(roadmap.data.periods)
-    setNodes(roadmap.data.nodes.map((n) => ({ ...n, categoryLabel: categoryLabelOf(n.categoryId, custom) })))
+    let loaded = roadmap.data.nodes.map((n) => ({
+      ...n,
+      categoryLabel: categoryLabelOf(n.categoryId, custom),
+      // 메모 노드 크기: 저장된 content.width·height (없으면 기본 260×220)
+      ...(n.categoryId === MEMO_KEY ? { size: memoSizeOf(roadmap.data.documents[n.id]?.content) } : {}),
+    }))
+    // 예전 간격으로 촘촘하게 저장된 타임라인 위 교과목만 널널하게 (layout.js respaceCourses)
+    // 저장에 성공했을 때만 화면에 반영. 실패하면 일부만 바뀐 것을 원래대로 되돌리고 예전 위치로 보여 준다
+    const spacing = respaceCourses(roadmap.data.periods, loaded)
+    if (spacing.length > 0) {
+      const saved = await moveNodes(spacing)
+      if (saved.error) {
+        const back = spacing.map((m) => {
+          const old = loaded.find((n) => n.id === m.id)
+          return { id: m.id, periodId: old.periodId, position: { ...old.position } }
+        })
+        await moveNodes(back)
+      } else {
+        loaded = applyMoves(loaded, spacing)
+      }
+    }
+    setNodes(loaded)
     setEdges(roadmap.data.edges)
     setDocuments(roadmap.data.documents)
     setMode('db')
@@ -168,71 +197,24 @@ export default function RoadmapPage() {
     return { id: category.id }
   }, [])
 
-  // 종류 필터: 보이게 할 카테고리 id 목록 (비어 있으면 전체). 화면 표시만 바꾸고 노드 데이터는 그대로
-  const [filterOpen, setFilterOpen] = useState(false)
-  const [filterIds, setFilterIds] = useState([])
-  const categories = useMemo(() => [...BASE_CATEGORIES, ...customCategories], [customCategories])
-  // 노드의 카테고리: 고른 카테고리(categoryId)가 있으면 그것, 없으면 theme에 맞는 기본 카테고리
-  const isShown = useCallback(
-    (node) => filterIds.length === 0 || filterIds.includes(nodeCategoryId(node, categories)),
-    [filterIds, categories],
-  )
-  // 필터 목록에 보일 종류: 학기에 배치된 활동이 실제로 쓰는 종류만 (기본·직접 추가 종류 같은 규칙)
-  // - 필터 적용 전 전체 노드 기준이라, 필터로 숨긴 종류도 목록에 남는다
-  // - 보관함에만 있는 활동의 종류는 넣지 않는다
-  const usedCategories = useMemo(() => {
-    const used = new Set(nodes.filter((n) => n.status === 'placed').map((n) => nodeCategoryId(n, categories)))
-    return categories.filter((c) => used.has(c.id))
-  }, [nodes, categories])
-  const usedKey = usedCategories.map((c) => c.id).join('|')
-  // 쓰는 종류가 바뀌면 필터 선택을 바로 맞춘다 (그리는 중에 맞춰서 한 프레임도 어긋나지 않게)
-  // - 없어진 종류는 선택에서 빼고, 남은 선택이 없으면 전체 보기로
-  // - 새로 생긴(또는 다시 생긴) 종류는 걸러 보는 중이어도 보이게 선택에 넣는다
-  const [prevUsedKey, setPrevUsedKey] = useState(usedKey)
-  if (prevUsedKey !== usedKey) {
-    setPrevUsedKey(usedKey)
-    if (filterIds.length > 0) {
-      const prev = prevUsedKey.split('|')
-      const now = usedCategories.map((c) => c.id)
-      const kept = filterIds.filter((id) => now.includes(id))
-      const added = now.filter((id) => !prev.includes(id) && !kept.includes(id))
-      setFilterIds(kept.length > 0 ? [...kept, ...added] : [])
-    }
-  }
-  const visibleIds = useMemo(
-    () => (filterIds.length === 0 ? null : new Set(nodes.filter(isShown).map((n) => n.id))),
-    [filterIds, nodes, isShown],
-  )
-  // 배치 후에도 필터로 숨겨지는지 (처음 생기는 종류는 위에서 자동으로 보이게 하므로 숨겨지지 않음)
-  const staysHidden = useCallback(
-    (node) => {
-      const id = nodeCategoryId(node, categories)
-      return filterIds.length > 0 && !filterIds.includes(id) && usedCategories.some((c) => c.id === id)
-    },
-    [filterIds, categories, usedCategories],
-  )
-  const closeFilter = useCallback(() => setFilterOpen(false), [])
-  const HIDDEN_NOTE = ' (지금 필터로 숨긴 종류라 화면에는 보이지 않아요)'
+  // 종류 필터 UI는 없앴다 → 모든 노드를 늘 보여 준다 (노드의 종류·테마 데이터는 그대로)
+  const [memoOpen, setMemoOpen] = useState(false) // 메모 추가 창
 
-  // 처음 접속했을 때만 튜토리얼 자동 표시 (계정별 기록: 같은 브라우저의 다른 계정도 처음이면 나온다)
-  // - 로드맵을 다 불러와 캔버스(학기·카드)가 그려진 뒤에 시작한다 (불러오는 중·오류 화면에서는 시작하지 않음)
-  // - 로그인했으면 계정 id가 확인된 뒤에 판단한다 (로그인 전 예시 로드맵은 예전 공용 기록)
+  // 튜토리얼 자동 실행: 신규 가입 후 로드맵 첫 방문에만 (서버 프로필 roadmap_tutorial_seen=false, features/tutorial/autoTutorial.js)
+  // - 로드맵을 다 불러와 캔버스(학기·카드)가 그려진 뒤에 시작한다 (불러오는 중·오류·예시 로드맵에서는 자동 실행 없음)
+  // - 여는 순간 서버에 '봤음' 저장 → 다른 기기·재로그인에서도 다시 안 뜸. 다시 보기는 ? 버튼
   const auth = useOptionalAuth()
-  const tutorialUserId = mode === 'db' ? auth?.profile?.id ?? null : null
-  const tutorialReady = (mode === 'db' && Boolean(tutorialUserId)) || mode === 'mock'
+  const tutorialReady = mode === 'db' && shouldAutoStartTutorial(auth?.profile, 'roadmap')
   const autoTried = useRef(false)
   useEffect(() => {
     if (!tutorialReady || autoTried.current) return undefined
-    if (hasSeenRoadmapTutorial(tutorialUserId)) {
-      autoTried.current = true
-      return undefined
-    }
     let tries = 0
     let timer
     const start = () => {
       // 캔버스가 실제로 그려졌는지 확인하고 시작 (아직이면 잠시 뒤 다시, 최대 약 5초)
       if (document.querySelector('.react-flow__viewport') || tries > 20) {
         autoTried.current = true
+        recordAutoTutorial(auth.profile, 'roadmap', auth.applyProfile)
         setTutorialOpen(true)
         return
       }
@@ -241,13 +223,10 @@ export default function RoadmapPage() {
     }
     timer = setTimeout(start, 500) // 캔버스가 자리 잡을 시간을 조금 준다
     return () => clearTimeout(timer)
-  }, [tutorialReady, tutorialUserId])
+  }, [tutorialReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 건너뛰거나 완료하면 기록해서 다시 자동으로 나타나지 않게 한다 (계정별)
-  const closeTutorial = useCallback(() => {
-    markRoadmapTutorialSeen(tutorialUserId)
-    setTutorialOpen(false)
-  }, [tutorialUserId])
+  // 닫기 (자동 실행 기록은 열 때 이미 저장했다)
+  const closeTutorial = useCallback(() => setTutorialOpen(false), [])
 
   // 학기 컬럼 배치 (가로 자동 확장): 노드 배치로부터 학기별 x·너비를 매번 다시 계산한다
   // - 노드를 오른쪽에 놓으면 그 학기가 넓어지고 뒤 학기는 밀린다. 노드를 빼거나 지우면 필요한 만큼으로 줄어든다
@@ -286,13 +265,13 @@ export default function RoadmapPage() {
       else if (detailId) setDetailId(null)
       else if (addOpen) setAddOpen(false)
       else if (fabOpen) setFabOpen(false)
-      else if (filterOpen) setFilterOpen(false)
+      else if (memoOpen) setMemoOpen(false)
       else if (connectMode) setConnectMode(false)
       else if (inboxOpen) setInboxOpen(false)
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [guideOpen, detailId, addOpen, fabOpen, filterOpen, connectMode, inboxOpen])
+  }, [guideOpen, detailId, addOpen, fabOpen, memoOpen, connectMode, inboxOpen])
 
   // 안내 메시지는 2초 뒤 사라짐 (실행 취소가 있는 안내는 5초)
   useEffect(() => {
@@ -343,14 +322,10 @@ export default function RoadmapPage() {
     (nodeId, placement) => handleNodesMove([{ id: nodeId, ...placement }]),
     [handleNodesMove],
   )
-  // 보관함 → 학기 배치. 필터로 숨긴 종류면 사라진 것처럼 보이지 않게 안내
+  // 보관함 → 학기 배치
   const handleInboxPlace = useCallback(
-    (nodeId, placement) => {
-      handleNodeMove(nodeId, placement)
-      const node = nodes.find((n) => n.id === nodeId)
-      if (node && staysHidden(node)) setToast(`학기에 배치했어요.${HIDDEN_NOTE}`)
-    },
-    [handleNodeMove, nodes, staysHidden],
+    (nodeId, placement) => handleNodeMove(nodeId, placement),
+    [handleNodeMove],
   )
 
   // 완료 상태 표시등 클릭: completed만 뒤집는다 (기존 필드 사용). DB면 저장에 성공한 뒤에 바꾼다
@@ -411,6 +386,11 @@ export default function RoadmapPage() {
 
   const handleFabSelect = (id) => {
     if (id === 'node') return openAdd()
+    if (id === 'memo') {
+      setFabOpen(false)
+      setMemoOpen(true)
+      return
+    }
     setFabOpen(false)
     if (id === 'connect') {
       setConnectMode(true)
@@ -458,11 +438,19 @@ export default function RoadmapPage() {
     }
     // 학기를 골랐으면: 기존 노드 아래쪽에서 시작해 드래그와 같은 겹침 보정 규칙으로 자리를 찾는다
     let placement = null
+    // 새 일반 활동 자리를 만들려고 오른쪽으로 밀 교과목 [{ id, periodId, position }] (layout.js planNewNodeSpace)
+    let shiftMoves = []
     // (자리가 없으면 학기를 최대 너비까지 넓혀 보고, 그래도 없을 때만 보관함으로)
     if (periodId) {
-      const start = nextPosition(nodes, periodId)
-      placement = placeNode(newNode, { x: layout.cols[periodId].x + start.x, y: start.y }, nodes, layout)
+      const plan = planNewNodeSpace(newNode, periodId, nodes, layout)
+      placement = plan.placement
+      shiftMoves = placement ? plan.moves : []
     }
+    // 밀기 전 위치 (저장 실패 시 되돌리기용)
+    const shiftBack = shiftMoves.map((m) => {
+      const old = nodes.find((n) => n.id === m.id)
+      return { id: m.id, periodId: old.periodId, position: { ...old.position } }
+    })
     let created = placement ? { ...newNode, ...placement, status: 'placed' } : newNode
     let document = memo
       ? { nodeId: id, content: { format: 'plain', body: memo }, updatedAt: newNode.createdAt }
@@ -470,6 +458,15 @@ export default function RoadmapPage() {
     let memoFailed = false
 
     if (mode === 'db') {
+      // ① 교과목 밀기를 먼저 저장. 하나라도 실패하면 모두 원래 자리로 되돌리고 새 노드도 만들지 않는다
+      if (shiftMoves.length > 0) {
+        const moved = await moveNodes(shiftMoves)
+        if (moved.error) {
+          await moveNodes(shiftBack)
+          return `교과목 자리를 옮기지 못해 활동을 추가하지 않았어요. ${moved.error.message}`
+        }
+      }
+      // ② 새 노드 저장. 실패하면 밀어 둔 교과목을 원래 자리로
       // 사용자 정의 종류는 category_id, 기본 종류는 category_key(+ 세부 활동 detail_key)
       const isCustom = customCategories.some((c) => c.id === categoryId)
       const result = await createNode({
@@ -482,19 +479,30 @@ export default function RoadmapPage() {
         detailKey: isCustom ? null : detailId,
         memo,
       })
-      if (result.error) return `활동을 저장하지 못했어요. ${result.error.message}`
+      if (result.error) {
+        if (shiftMoves.length > 0) await moveNodes(shiftBack)
+        return `활동을 저장하지 못했어요. ${result.error.message}`
+      }
       created = { ...result.data.node, categoryLabel: categoryLabelOf(result.data.node.categoryId, customCategories), courseKey }
       document = result.data.document
       memoFailed = Boolean(result.data.documentError)
     }
 
-    setNodes((prev) => [...prev, created])
+    // 저장에 성공한 뒤에만 화면 반영: 밀린 교과목 위치 + 새 노드
+    setNodes((prev) => [
+      ...prev.map((n) => {
+        const m = shiftMoves.find((s) => s.id === n.id)
+        return m ? { ...n, periodId: m.periodId, position: m.position } : n
+      }),
+      created,
+    ])
     // 짧은 메모는 노드 문서(NodeDocument)의 내용으로 저장
     if (document) setDocuments((prev) => ({ ...prev, [created.id]: document }))
     setAddOpen(false)
     if (!placement) setInboxOpen(true) // 보관함에 넣었으면 보관함을 열어 보여 준다
+    else setScrollToNodeId(created.id) // 학기에 놓였으면 그 노드가 보이게 화면 이동 (실패·취소 때는 여기까지 오지 않음)
     if (memoFailed) setToast('활동은 저장했지만 메모는 저장하지 못했어요.')
-    else if (placement) setToast(`활동을 학기에 추가했어요.${staysHidden(created) ? HIDDEN_NOTE : ''}`)
+    else if (placement) setToast('활동을 학기에 추가했어요.')
     else if (periodId) setToast('학기에 빈 자리가 없어 보관함에 넣었어요.')
     else setToast('활동을 보관함에 추가했어요.')
     return null
@@ -515,6 +523,110 @@ export default function RoadmapPage() {
     return { ok: true }
   }, [mode, customCategories])
   const guideHasActivity = useCallback((title) => hasSameTitle(nodesRef.current, title), [])
+
+  // ───── 메모 노드 ─────
+  // 메모 내용 { title, body, color } (node_documents.content)
+  const getMemo = useCallback((nodeId) => documents[nodeId]?.content ?? null, [documents])
+
+  // 메모 만들기: 고른 학기의 기존 카드 아래쪽 빈자리 (다른 카드와 넉넉히 띄움). 저장에 성공한 뒤에만 화면에 넣는다
+  // 반환: 오류 문구 또는 null
+  const handleCreateMemo = async ({ periodId, title, body, color }) => {
+    const col = layout.cols[periodId]
+    if (!col) return '학기를 다시 골라 주세요.'
+    const now = new Date().toISOString()
+    const draft = {
+      id: `m_${Date.now()}`,
+      title: title.trim() || '메모',
+      theme: 'free',
+      categoryId: MEMO_KEY,
+      detailId: null,
+      categoryLabel: null,
+      periodId: null,
+      position: null,
+      status: 'stored',
+      source: 'user',
+      originKey: null,
+      completed: false,
+      branchVisibility: null,
+      createdAt: now,
+      size: { ...MEMO_SIZE },
+    }
+    const start = nextPosition(nodes, periodId)
+    const placement = placeNode(draft, { x: col.x + start.x, y: start.y }, nodes, layout, { gap: AUTO_GAP })
+    if (!placement || placement.periodId !== periodId) return '이 학기에 메모를 놓을 빈자리가 없어요.'
+    const content = { format: 'memo', title: title.trim(), body, color, width: MEMO_SIZE.w, height: MEMO_SIZE.h }
+    let created = { ...draft, ...placement, status: 'placed' }
+    let document = { nodeId: draft.id, content, updatedAt: now }
+    if (isDb) {
+      const result = await createMemoNode({ title: draft.title, periodId, position: placement.position, content })
+      if (result.error) return result.error.message
+      created = { ...result.data.node, size: { ...MEMO_SIZE } }
+      document = result.data.document
+    }
+    setNodes((prev) => [...prev, created])
+    setDocuments((prev) => ({ ...prev, [created.id]: document }))
+    setMemoOpen(false)
+    setScrollToNodeId(created.id)
+    setToast(isDb ? '메모를 붙였어요.' : '예시 화면이라 메모가 저장되지 않아요.')
+    return null
+  }
+
+  // 메모 자동 저장 (캔버스에서 고칠 때). 반환 { ok } | { local } (예시 화면, 저장 안 함) | { error }
+  const documentsRef = useRef(documents)
+  documentsRef.current = documents
+  const handleMemoSave = useCallback(async (nodeId, { title, body, color, fontSize }) => {
+    // 크기(width·height) 등 다른 값은 그대로 두고 글·색·본문 글씨 크기만 바꾼다
+    const content = { ...(documentsRef.current[nodeId]?.content ?? {}), format: 'memo', title: title.trim(), body, color, fontSize }
+    const nodeTitle = title.trim() || '메모'
+    if (!isDb) {
+      setDocuments((prev) => ({ ...prev, [nodeId]: { nodeId, content, updatedAt: new Date().toISOString() } }))
+      setNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, title: nodeTitle } : n)))
+      return { local: true }
+    }
+    const result = await saveMemo(nodeId, { title: nodeTitle, content })
+    if (result.error) return { error: result.error.message }
+    setDocuments((prev) => ({ ...prev, [nodeId]: result.data.document }))
+    setNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, title: nodeTitle } : n)))
+    return { ok: true }
+  }, [isDb])
+
+  // 메모 크기 바꾸기 (오른쪽 위 핸들). 왼쪽 아래 모서리를 고정하므로 높이가 바뀐 만큼 윗변(y)도 옮긴다.
+  // - 타임라인 위로 올라가거나 같은 학기의 다른 노드와 겹치면 바꾸지 않는다 (이전 크기 그대로)
+  // - 너비가 커지면 학기 너비·뒤 학기 위치는 노드 크기로 다시 계산된다
+  // - 저장: 크기는 node_documents.content.width·height, 위치는 기존 노드 이동 저장. 하나라도 실패하면 이전 값으로 되돌린다
+  // - 관계선은 만들지 않는다 (겹침 판정만)
+  // 반환 { ok } | { local } | { error }
+  const handleMemoResize = useCallback(async (nodeId, { w, h }) => {
+    const node = nodesRef.current.find((n) => n.id === nodeId)
+    if (!node?.position) return { error: '메모를 찾을 수 없어요.' }
+    const old = cardSize(node)
+    const position = { x: node.position.x, y: node.position.y - (h - old.h) }
+    if (position.y < MIN_NODE_Y) return { error: '타임라인 위로는 키울 수 없어요.' }
+    const resized = { ...node, size: { w, h }, position }
+    const hit = nodesRef.current.some(
+      (n) => n.id !== nodeId && n.status === 'placed' && n.periodId === node.periodId && nodesOverlap(resized, n),
+    )
+    if (hit) return { error: '다른 노드와 겹쳐서 이 크기로 바꿀 수 없어요.' }
+
+    const prevContent = documentsRef.current[nodeId]?.content ?? { format: 'memo' }
+    const content = { ...prevContent, width: w, height: h }
+    let document = { nodeId, content, updatedAt: new Date().toISOString() }
+    if (isDb) {
+      const saved = await saveMemo(nodeId, { title: node.title, content })
+      if (saved.error) return { error: `크기를 저장하지 못했어요. ${saved.error.message}` }
+      if (position.y !== node.position.y) {
+        const moved = await moveNodes([{ id: nodeId, periodId: node.periodId, position }])
+        if (moved.error) {
+          await saveMemo(nodeId, { title: node.title, content: prevContent })
+          return { error: '크기를 저장하지 못했어요.' }
+        }
+      }
+      document = saved.data.document
+    }
+    setDocuments((prev) => ({ ...prev, [nodeId]: document }))
+    setNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, size: { w, h }, position } : n)))
+    return isDb ? { ok: true } : { local: true }
+  }, [isDb])
 
   // 상세 창 저장: 제목·기록, 그리고 종류를 바꿨으면 종류(type)
   // type: { theme, categoryId, detailId, categoryLabel }
@@ -622,7 +734,7 @@ export default function RoadmapPage() {
       if (isDb) {
         const timer = setTimeout(() => commitDelete(undo), UNDO_MS)
         pendingDeletes.current.set(nodeId, { timer, undo })
-        setToast({ text: '활동을 삭제할게요.', undo })
+        setToast({ text: nodes[index].categoryId === MEMO_KEY ? '메모를 삭제할게요.' : '활동을 삭제할게요.', undo })
       } else {
         setToast({ text: '활동을 삭제했어요.', undo })
       }
@@ -688,30 +800,28 @@ export default function RoadmapPage() {
           onLinkReject={handleLinkReject}
           dropPeriodId={dropPeriodId}
           onDropTargetChange={setDropPeriodId}
-          visibleIds={visibleIds}
+          focusNodeId={scrollToNodeId}
+          getMemo={getMemo}
+          onMemoSave={handleMemoSave}
+          onMemoResize={handleMemoResize}
+          onFocusDone={() => setScrollToNodeId(null)}
         />
 
 
-        <NodeFilter
-          open={filterOpen}
-          onToggle={() => setFilterOpen((v) => !v)}
-          onClose={closeFilter}
-          categories={usedCategories}
-          selected={filterIds}
-          onChange={setFilterIds}
-        >
-          <AiGuideButton open={guideOpen} onClick={() => { setFilterOpen(false); setGuideOpen(true) }} />
+        {/* 상단 도구 (왼쪽 위): AI 길잡이 · 사용법 다시 보기 — 예전 종류 필터 자리 */}
+        <div className="rm-filter rm-tools">
+          <AiGuideButton open={guideOpen} onClick={() => setGuideOpen(true)} />
           {/* 튜토리얼 다시 보기 (기록과 상관없이 언제든 열린다) */}
           <button
             type="button"
             className="rm-help"
-            onClick={() => { setFilterOpen(false); setTutorialOpen(true) }}
+            onClick={() => setTutorialOpen(true)}
             aria-label="로드맵 사용법 다시 보기"
             title="로드맵 사용법 다시 보기"
           >
             ?
           </button>
-        </NodeFilter>
+        </div>
 
         {/* 비어 있는 로드맵 안내 (누를 수 없는 안내 문구) */}
         {(periods.length === 0 || nodes.length === 0) && (
@@ -774,6 +884,8 @@ export default function RoadmapPage() {
           onClose={() => setPeriodOpen(false)}
           onSubmit={handleAddPeriod}
         />
+
+        <MemoCreateModal open={memoOpen} periods={periods} onClose={() => setMemoOpen(false)} onCreate={handleCreateMemo} />
 
         <NodeDetailModal
           node={detailNode}

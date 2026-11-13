@@ -50,3 +50,10 @@ export const ClipIcon = (p) => (
     <path d="M20 11l-8.5 8.5a5 5 0 0 1-7-7L13 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L14 7" />
   </svg>
 )
+// 메모 추가 (접힌 모서리가 있는 메모지)
+export const MemoIcon = (p) => (
+  <svg {...base} {...p}>
+    <path d="M5 4h14v10l-5 5H5z" />
+    <path d="M14 19v-5h5M8 9h8M8 12.5h5" />
+  </svg>
+)
