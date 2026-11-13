@@ -10,7 +10,6 @@ import { checkNickname, NICKNAME_COST, NICKNAME_MAX, nicknameLength, saveNicknam
 import GrowthDots from '../features/home/GrowthDots.jsx'
 import WarmthEffect from '../features/diary/WarmthEffect.jsx'
 import HomeQuote from '../features/home/HomeQuote.jsx'
-import CareerEntryButton from '../features/career/CareerEntryButton.jsx'
 import '../features/home/Home.css'
 
 // 펫 HOME (/) — Figma HOME 화면: 은은한 크림 배경, 위쪽 가운데 펫 이름, 가운데 펫, 아래 점선 성장 표시
@@ -148,9 +147,6 @@ export default function HomePage() {
         <span className="hm-warmth__label" aria-hidden="true">온기</span>
         <span className="hm-warmth__num" aria-hidden="true">{balance.toLocaleString()}</span>
       </div>
-
-      {/* AI 진로 추천 (왼쪽 위, 온기와 대칭): 누르면 추천 화면을 전체 화면 팝업으로 연다 */}
-      <CareerEntryButton />
 
       {/* 사용자 닉네임 (Figma의 펫 이름 위치) */}
       <div className="hm-name">

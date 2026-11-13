@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { EMPTY_PET, usePet } from '../features/pet/petStore.js'
 import { useAuth } from '../features/auth/AuthProvider.jsx'
-import { JOB_TO_PET, PET_CHARACTERS } from '../features/home/petCharacter.js'
-import { updateMyDesiredJob } from '../services/api.js'
+import { saveDesiredJob } from '../features/mypage/desiredJob.js'
 import { saveNickname } from '../features/profile/nickname.js'
 import { mockProfile } from '../features/mypage/myPageMock.js'
 import { loadSettings, saveSettings } from '../features/mypage/settingsStore.js'
@@ -110,23 +109,14 @@ export default function MyPage() {
       setToast('프로필을 저장했어요. (예시 화면이라 저장되지 않아요)')
       return
     }
-    const newPet = JOB_TO_PET[next.desiredJob]
-    if (!newPet) {
-      setToast('지금은 펫을 유지한 채 미정으로 바꿀 수 없어요. 서버 준비 후 바꿀 수 있어요.')
+    // 저장 규칙은 desiredJob.js (AI 길잡이와 같이 쓴다)
+    const saved = await saveDesiredJob(shownProfile.desiredJob, next.desiredJob, { signedIn, applyProfile: auth.applyProfile })
+    if (saved.error) {
+      setToast(saved.error)
       return
     }
-    if (signedIn) {
-      const result = await updateMyDesiredJob(next.desiredJob)
-      if (result.error) {
-        setToast(`희망 직무를 저장하지 못했어요. ${result.error.message}`)
-        return
-      }
-      auth.applyProfile({ interests: result.data.interests })
-    }
     setProfile(next)
-    const samePet = JOB_TO_PET[shownProfile.desiredJob] === newPet
-    const parts = ['희망 직무를 바꿨어요.']
-    parts.push(samePet ? `펫은 그대로 ${PET_CHARACTERS[newPet].name}예요.` : `펫이 ${PET_CHARACTERS[newPet].name}(${PET_CHARACTERS[newPet].label})로 바뀌었어요.`)
+    const parts = ['희망 직무를 바꿨어요.', saved.petMessage]
     if (choices.resetCourses) parts.push('과목 재설정은 아직 준비 중이라 로드맵은 그대로예요.')
     if (!signedIn) parts.push('(예시 화면이라 저장되지 않아요)')
     setToast(parts.join(' '))
