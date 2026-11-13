@@ -7,12 +7,12 @@ import { CANVAS_HEIGHT, TIMELINE_Y, periodLabel } from './layout.js'
 // 가지선은 카드보다 아래(배경)에 그려진다. 마우스 조작은 받지 않는다.
 // React Flow 노드로 넣어서 확대·이동할 때 노드와 함께 움직인다. (드래그·클릭 불가)
 export default function TimelineNode({ data }) {
-  const { layout, width } = data
+  const { layout, width, timelineEnd } = data
   const dropPeriodId = useContext(DropTargetContext) // 드래그 중 놓일 학기
   const branches = useContext(BranchContext) // 학기 가지선 [{ id, d }]
   return (
     <div className="rm-timeline-bg" style={{ width, height: CANVAS_HEIGHT }}>
-      <div className="rm-timeline" style={{ top: TIMELINE_Y }} />
+      <div className="rm-timeline" style={{ top: TIMELINE_Y, right: "auto", width: timelineEnd ?? width }} />
       {layout.periods.map((period) => (
         <div
           key={period.id}
@@ -20,8 +20,12 @@ export default function TimelineNode({ data }) {
           style={{ left: layout.cols[period.id].x, width: layout.cols[period.id].width }}
         >
           <div className="rm-column__line" style={{ top: TIMELINE_Y }} />
-          {/* 휴학·군휴학·교환학생 같은 학기 외 칸은 이름이 길어 글자를 작게 */}
-          <div className={`rm-column__badge ${period.type !== 'semester' ? 'is-text' : ''}`} style={{ top: TIMELINE_Y }}>
+          {/* 휴학·군휴학·교환학생·기타 같은 학기 외 칸은 이름이 길어 글자를 작게 (5자 이상은 두 줄) */}
+          <div
+            className={`rm-column__badge ${period.type !== 'semester' ? 'is-text' : ''} ${[...periodLabel(period)].length > 4 ? 'is-long' : ''}`}
+            style={{ top: TIMELINE_Y }}
+            title={period.name}
+          >
             {periodLabel(period)}
           </div>
         </div>

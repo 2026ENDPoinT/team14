@@ -7,6 +7,7 @@ import './WarmthEffect.css'
 // 3) 3.6초: 사라지고 onDone 호출
 // amount는 서버 결과 값을 그대로 보여 준다. 화면에서 온기를 직접 더하지 않는다.
 // fullScreen: HOME처럼 화면 전체를 덮을 때 true (기본은 감싼 팝업 카드만 덮는다)
+// title: 배지 위에 크게 보여 줄 말 (예: 출석 보상이면 '출석!'). 없으면 표시하지 않는다
 
 // 연기 방울: x(가로 위치), s(크기), d(시작 지연), dx(흔들림)
 const PUFFS = [
@@ -24,7 +25,7 @@ const PUFFS = [
 // 배지 주변으로 튀는 작은 점 (각도)
 const SPARKS = [0, 50, 110, 170, 230, 290]
 
-export default function WarmthEffect({ amount, onDone, fullScreen = false }) {
+export default function WarmthEffect({ amount, onDone, fullScreen = false, title = '' }) {
   const [phase, setPhase] = useState('smoke') // 'smoke' → 'pop' → 'leave'
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function WarmthEffect({ amount, onDone, fullScreen = false }) {
             {SPARKS.map((a) => (
               <span key={a} className="wm-spark" aria-hidden="true" style={{ '--a': `${a}deg` }} />
             ))}
+            {title && <p className="wm-title">{title}</p>}
             <p className="wm-badge">
               온기 <strong>+{amount.toLocaleString()}</strong> 획득!
             </p>

@@ -7,7 +7,8 @@ import './photos.css'
 // props
 //   draft: usePhotoDraft() 결과 / readOnly: 보기만 (추가·삭제 버튼 없음)
 //   disabledNote: 사진을 쓸 수 없을 때 안내 (예: 로그인 전) / onChange: 사진을 추가·삭제했을 때
-export default function PhotoField({ draft, readOnly = false, disabledNote = '', onChange }) {
+//   allowAdd: false면 새 사진 추가 없이 저장된 사진 보기·삭제만 (로드맵 활동 상세: 새 첨부는 링크·파일)
+export default function PhotoField({ draft, readOnly = false, disabledNote = '', onChange, allowAdd = true }) {
   const inputRef = useRef(null)
   const [notice, setNotice] = useState('')
   const [viewing, setViewing] = useState(null) // 크게 보는 사진 주소
@@ -28,7 +29,7 @@ export default function PhotoField({ draft, readOnly = false, disabledNote = '',
       {draft.loadError && <p className="ph-note is-error" role="alert">{draft.loadError}</p>}
       {readOnly && !draft.loading && draft.items.length === 0 && <p className="ph-note">사진이 없어요.</p>}
 
-      {(draft.items.length > 0 || !readOnly) && (
+      {(draft.items.length > 0 || (!readOnly && allowAdd)) && (
         <ul className="ph-list">
           {draft.items.map((p) => (
             <li key={p.key} className={`ph-item is-${p.status} ${p.kind === 'new' ? 'is-new' : ''}`}>
@@ -50,7 +51,7 @@ export default function PhotoField({ draft, readOnly = false, disabledNote = '',
               )}
             </li>
           ))}
-          {!readOnly && !full && !draft.loading && (
+          {!readOnly && allowAdd && !full && !draft.loading && (
             <li>
               <button type="button" className="ph-add" onClick={() => inputRef.current?.click()}>
                 <span aria-hidden="true">+</span>
@@ -61,7 +62,7 @@ export default function PhotoField({ draft, readOnly = false, disabledNote = '',
         </ul>
       )}
 
-      {!readOnly && (
+      {!readOnly && allowAdd && (
         <>
           <input
             ref={inputRef}

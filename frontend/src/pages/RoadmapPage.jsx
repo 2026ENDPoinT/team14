@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useAuth } from '../features/auth/AuthProvider.jsx'
 import { mockDocuments, mockEdges, mockNodes, mockPeriods } from '../data/roadmapMock.js'
 import RoadmapCanvas from '../features/roadmap/RoadmapCanvas.jsx'
+import CareerGoalModal from '../features/roadmap/CareerGoalModal.jsx'
+import { careerGoalInfo } from '../features/roadmap/careerGoalInfo.js'
 import FabMenu from '../features/roadmap/FabMenu.jsx'
 import InboxPanel from '../features/roadmap/InboxPanel.jsx'
 import AddNodeModal from '../features/roadmap/AddNodeModal.jsx'
@@ -10,6 +13,7 @@ import AddPeriodModal from '../features/roadmap/AddPeriodModal.jsx'
 import NodeDetailModal from '../features/roadmap/NodeDetailModal.jsx'
 import MemoCreateModal from '../features/roadmap/MemoCreateModal.jsx'
 import { createMemoNode, saveMemo } from '../services/memo.js'
+import CourseGuidePanel from '../features/courses/CourseGuidePanel.jsx'
 import AiGuideButton from '../features/career/guide/AiGuideButton.jsx'
 import AiGuidePanel from '../features/career/guide/AiGuidePanel.jsx'
 import { hasSameTitle } from '../features/career/guide/guideData.js'
@@ -35,10 +39,12 @@ import {
 } from '../services/api.js'
 import { insertPeriod } from '../services/periods.js'
 import { deleteWithPhotos } from '../services/photos.js'
+import { deleteWithAttachments } from '../services/attachments.js'
 import '../features/roadmap/roadmap.css'
 
-// 노드 삭제 + 그 노드의 첨부 사진 파일 정리 (사진 연결 행은 DB에서 함께 지워진다)
-const deleteNodeAndPhotos = (nodeId) => deleteWithPhotos({ nodeId }, () => deleteNode(nodeId))
+// 노드 삭제 + 그 노드의 사진·첨부 파일 정리 (연결 행은 DB에서 함께 지워진다)
+const deleteNodeAndPhotos = (nodeId) =>
+  deleteWithAttachments(nodeId, () => deleteWithPhotos({ nodeId }, () => deleteNode(nodeId)))
 
 // 위치 변경 목록 [{ id, periodId, position }]을 노드 목록에 적용
 const applyMoves = (list, moves) => list.map((n) => {
@@ -86,6 +92,11 @@ function changedPeriodIds(prev, next) {
 //         로그인 전이거나 Supabase 설정(.env)이 없으면 예시(Mock Data)를 보여 준다. (예시는 DB에 넣지 않는다)
 //         학기 가지선 표시 설정은 아직 화면에서만 바뀐다 (DB 컬럼 없음)
 export default function RoadmapPage() {
+  const { profile } = useAuth()
+  const navigate = useNavigate()
+  const goalJob = profile?.interests?.find((job) => job && job !== 'undecided') ?? ''
+  const goalJobLabel = careerGoalInfo(goalJob)?.title ?? ''
+  const [goalDetailOpen, setGoalDetailOpen] = useState(false)
   const [mode, setMode] = useState(isSupabaseConfigured ? 'loading' : 'mock') // 'loading' | 'db' | 'mock' | 'error'
   const [loadError, setLoadError] = useState('')
   const [periods, setPeriods] = useState(isSupabaseConfigured ? [] : mockPeriods)
@@ -376,6 +387,11 @@ export default function RoadmapPage() {
   }, [isDb])
 
   const handleLinkReject = useCallback((message) => setToast(message), [])
+
+  // '수강 필요'에서 추가한 과목 노드를 화면에 반영 (이미 있던 노드면 그 노드를 최신 값으로)
+  const handleCourseAdded = useCallback((node) => {
+    setNodes((prev) => (prev.some((n) => n.id === node.id) ? prev.map((n) => (n.id === node.id ? { ...n, ...node } : n)) : [...prev, node]))
+  }, [])
 
 
   const openAdd = () => {
@@ -805,7 +821,16 @@ export default function RoadmapPage() {
           onMemoSave={handleMemoSave}
           onMemoResize={handleMemoResize}
           onFocusDone={() => setScrollToNodeId(null)}
+          goalJob={goalJobLabel}
+          onGoalClick={() => setGoalDetailOpen(true)}
         />
+        {goalDetailOpen && (
+          <CareerGoalModal
+            job={goalJob}
+            onClose={() => setGoalDetailOpen(false)}
+            onEdit={() => navigate('/mypage')}
+          />
+        )}
 
 
         {/* 상단 도구 (왼쪽 위): AI 길잡이 · 사용법 다시 보기 — 예전 종류 필터 자리 */}
@@ -822,6 +847,9 @@ export default function RoadmapPage() {
             ?
           </button>
         </div>
+
+        {/* 수강 필요: 놓친 저학년 필수·핵심 과목 안내, 보관함 추가·학기 배치 (features/courses) */}
+        <CourseGuidePanel nodes={nodes} periods={periods} layout={layout} enabled={isDb} onAdded={handleCourseAdded} onToast={setToast} />
 
         {/* 비어 있는 로드맵 안내 (누를 수 없는 안내 문구) */}
         {(periods.length === 0 || nodes.length === 0) && (

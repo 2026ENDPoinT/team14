@@ -175,6 +175,10 @@
   color: #8a857c;
   text-align: center;
 }
+.hm-name__note.is-error {
+  color: #c0392b; /* 저장 실패 원인 */
+  font-weight: 700;
+}
 .hm-text-btn {
   padding: 4px 8px;
   border: none;

@@ -66,7 +66,7 @@ export default function OnboardingPage() {
   const [aiPickedKeys, setAiPickedKeys] = useState([])
   const [grades, setGrades] = useState({}) // { 과목 키: 'A+' ... }
   const [ai, setAi] = useState(AI_IDLE)
-  const [setupMode, setSetupMode] = useState('auto') // 'auto' | 'manual'
+  const [setupMode, setSetupMode] = useState('auto') // 'auto' | 'inbox'
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null) // { messages, fixes }
   // 과목 위치 저장 결과 (온보딩 저장 후 따로 실행): null | { moves, status: 'failed' | 'retrying' | 'saved' }
@@ -90,8 +90,10 @@ export default function OnboardingPage() {
 
   // 과목 추천 초안: 학년·이수 과목·희망 직무만 사용 (경험은 사용하지 않음)
   const coursePreview = useMemo(() => {
-    if (!grade) return { completed: [], recommended: [] }
-    const { courseNodes } = selectCourses({
+    if (!grade) return { completed: [], recommended: [], missed: [] }
+    // courseNodes: 이수 완료 + 남은 학년 추천 (저장 요청에 넣는다)
+    // missedCourses: 현재 학년까지 아직 안 들은 필수·핵심 과목 (저장하지 않는다. 로드맵이 같은 함수로 다시 계산해 '수강 필요'로 안내)
+    const { courseNodes, missedCourses } = selectCourses({
       grade,
       completedCourseKeys,
       jobs,
@@ -104,7 +106,7 @@ export default function OnboardingPage() {
     const recommended = courseNodes.filter(
       (node) => !node.completed && !completedKeys.has(node.courseKey),
     )
-    return { completed, recommended }
+    return { completed, recommended, missed: missedCourses }
   }, [grade, completedCourseKeys, jobs.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function goTo(nextStep) {
@@ -180,8 +182,8 @@ export default function OnboardingPage() {
     setSaving(true)
     setError(null)
 
-    // 직접 구성: 추천 과목을 보내지 않는다 → 학기·보관함 어디에도 추천 과목이 생기지 않는다.
-    const recommended = setupMode === 'auto' ? coursePreview.recommended : []
+    // 추천 과목: auto → 권장 학기 / inbox → 보관함 (위치는 RPC가 roadmap_mode로 정한다)
+    const recommended = coursePreview.recommended
     const courseNodes = [...coursePreview.completed, ...recommended]
     const completedCourses = coursePreview.completed.map((node) => node.courseKey)
     if (includeTestCourse) {
@@ -195,8 +197,7 @@ export default function OnboardingPage() {
       experiences: [...new Set(pickedExperiences.map((item) => item.dbKey))], // 보관함 저장용 (같은 키는 1번만)
       completedCourses,
       interests: jobs,
-      // RPC는 auto/inbox만 받는다. 직접 구성은 추천 과목을 보내지 않으므로 inbox여도 추가되는 과목이 없다.
-      roadmapMode: setupMode === 'auto' ? 'auto' : 'inbox',
+      roadmapMode: setupMode, // 'auto' | 'inbox'
       courseNodes,
     })
 
@@ -331,6 +332,7 @@ export default function OnboardingPage() {
             mode={setupMode}
             onSelect={setSetupMode}
             hasRecommendation={hasRecommendation}
+            preview={{ recommended: coursePreview.recommended.length, missed: coursePreview.missed.length }}
             saving={saving}
             error={error}
             onFix={goTo}

@@ -147,9 +147,9 @@ export default function LoginPage() {
   return (
     <div className="diary-page lg-page">
       <main className="lg-main">
-        {/* 서비스 이름 ([미확정] Campus Roadmap은 가칭) */}
+        {/* 서비스 이름 (Momentree) */}
         <header className="lg-brand">
-          <p className="lg-name">Campus <strong>Roadmap</strong></p>
+          <p className="lg-name"><strong>Momentree</strong></p>
           <p className="lg-tagline">계획하고, 기록하고, 펫과 함께 자라는 대학생활</p>
         </header>
 
