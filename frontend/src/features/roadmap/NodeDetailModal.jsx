@@ -131,6 +131,7 @@ export default function NodeDetailModal({
     }
     setSaving(false)
     setSaved(true)
+    onClose() // 저장 버튼으로 모두 저장되면 상세 창을 닫고 로드맵으로 (캔버스 화면 위치는 그대로라 그 학기가 보인다)
   }
 
   const handleDelete = () => {

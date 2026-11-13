@@ -42,4 +42,18 @@ export async function getMyPet() {
   return { data: toPet(data) }
 }
 
+// 직무 미정 사용자가 온보딩에서 고른 펫 종류 저장 (RPC choose_pet, migration 20261114002600)
+// - 펫 종류는 pets.type에 저장 (직무와 따로). 이미 종류가 있으면 서버가 바꾸지 않는다 (changed=false)
+// - RPC가 아직 서버에 없으면 오류 그대로 돌려준다 (가짜 저장 없음)
+// 성공: { data: { changed, pet } }
+export async function choosePet(type) {
+  if (!(await hasSession())) return { error: { code: 'UNAUTHENTICATED', message: '로그인이 필요합니다.' } }
+  const { data, error } = await supabase.rpc('choose_pet', { p_type: type })
+  if (error) {
+    if (error.code === 'PGRST202') return { error: { code: 'NOT_READY', message: '펫 저장 기능이 아직 서버에 준비되지 않았어요.' } }
+    return { error: toServiceError(error, '펫을 저장하지 못했어요.') }
+  }
+  return { data: { changed: data.changed, pet: toPet(data.pet) } }
+}
+
 // 출석(check_in)은 services/api.js checkInToday → features/home/homeActions.js autoCheckIn 한 곳에서 부른다.

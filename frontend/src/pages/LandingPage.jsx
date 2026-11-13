@@ -13,15 +13,16 @@ import '../features/landing/landing.css'
 // - '로그인'·'시작하기'는 기존 로그인 화면(/login)으로. 이미 로그인했으면 HOME('/')으로
 // - 움직임 줄이기 설정이면 모든 장면을 완성된 모습으로 보여 준다 (CSS)
 
-// 브랜드 심볼: 작은 점(순간)이 모여 줄기와 잎(나무)이 되는 모양
+// 브랜드 심볼: 작은 흙 둔덕에서 둥근 잎 두 장이 난 새싹 + 노란 점 하나(반짝이는 '순간')
 export function BrandMark({ size = 28 }) {
   return (
     <svg className="lp-mark" width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
       <circle cx="16" cy="16" r="16" fill="#8fa889" />
-      <path d="M16 25V14.5" stroke="#fbf8f0" strokeWidth="2" strokeLinecap="round" />
-      <path d="M16 17.5c0-3.4 2.4-5.6 5.8-5.6 0 3.4-2.4 5.6-5.8 5.6z" fill="#fbf8f0" />
-      <path d="M16 20c0-2.6-1.9-4.4-4.6-4.4 0 2.6 1.9 4.4 4.6 4.4z" fill="#fbf8f0" opacity="0.85" />
-      <circle cx="16" cy="9.2" r="1.8" fill="#f6e3a8" />
+      <ellipse cx="16" cy="24.6" rx="6.6" ry="2.1" fill="#fbf8f0" opacity="0.5" />
+      <path d="M16 24.2V16.4" stroke="#fbf8f0" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M16 17.4c-3.5.3-5.9-1.7-6.1-5 3.4-.2 5.8 1.8 6.1 5z" fill="#fbf8f0" opacity="0.9" />
+      <path d="M16 15.8c.2-3.9 2.8-6.4 6.7-6.4 0 3.9-2.7 6.4-6.7 6.4z" fill="#fbf8f0" />
+      <circle cx="10.6" cy="8.4" r="1.7" fill="#f6e3a8" />
     </svg>
   )
 }
@@ -101,7 +102,7 @@ export default function LandingPage() {
     <div className="lp" ref={rootRef}>
       <header className="lp-header">
         <Link to="/welcome" className="lp-brand" aria-label="momentree 처음 화면">
-          <BrandMark size={22} />
+          <BrandMark size={24} />
           <span>momentree</span>
         </Link>
         <Link to="/login" className="lp-login">로그인</Link>

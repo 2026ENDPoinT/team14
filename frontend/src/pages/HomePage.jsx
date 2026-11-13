@@ -13,6 +13,8 @@ import { checkNickname, NICKNAME_COST, NICKNAME_MAX, nicknameLength, saveNicknam
 import GrowthDots from '../features/home/GrowthDots.jsx'
 import WarmthEffect from '../features/diary/WarmthEffect.jsx'
 import HomeQuote from '../features/home/HomeQuote.jsx'
+import PetEffects from '../features/home/PetEffects.jsx'
+import { daysSince, getPreviousVisitDate } from '../services/lastVisit.js'
 import HomeTutorial from '../features/home/tutorial/HomeTutorial.jsx'
 import { recordAutoTutorial, shouldAutoStartTutorial } from '../features/tutorial/autoTutorial.js'
 import '../features/home/Home.css'
@@ -45,6 +47,10 @@ export default function HomePage() {
   const inputRef = useRef(null)
   const hopRef = useRef(null)
   const spriteRef = useRef(null) // 펫 부분 애니메이션 (눈 깜빡임·손 흔들기 프레임이 있을 때만)
+  const [soilKey, setSoilKey] = useState(0) // 새싹을 누를 때마다 +1 → 흙 알갱이 효과 다시 재생
+  // 오래 못 본 펫: 지난 접속(서버 출석 기록, 오늘 제외)에서 7일 이상 지났으면 춥고 슬픈 모습.
+  // 펫을 한 번 쓰다듬으면(클릭) 풀린다. 보상·출석 규칙과는 무관 (읽기만 함)
+  const [cold, setCold] = useState(false)
   const burstId = bursts[0]?.id
   const endBurst = useCallback(() => {
     if (burstId) finishReward(burstId)
@@ -65,6 +71,19 @@ export default function HomePage() {
   // 서버 미준비·오류는 조용히 넘어간다 (오류 안내·가짜 지급 없음)
   useEffect(() => {
     if (userId) autoCheckIn(userId)
+  }, [userId])
+  // 지난 접속 확인: 오늘 출석 기록과 섞이지 않게 '오늘 이전' 기록만 본다 → 출석 처리 순서와 상관없이 판정
+  // 기록이 없으면(새 사용자 등) 평소 모습
+  useEffect(() => {
+    if (!userId) return undefined
+    let alive = true
+    getPreviousVisitDate().then((date) => {
+      const days = daysSince(date)
+      if (alive && days !== null && days >= 7) setCold(true)
+    })
+    return () => {
+      alive = false
+    }
   }, [userId])
 
   // HOME 튜토리얼: 신규 가입 후 HOME 첫 방문에만 자동으로 먼저 연다 (서버 프로필 home_tutorial_seen=false, features/tutorial/autoTutorial.js)
@@ -88,6 +107,8 @@ export default function HomePage() {
   // 펫 클릭 반응: 살짝 통통 튀고 0.5초 안에 제자리로 (포인트·성장 변화 없음)
   // Web Animations API라 React 다시 그리기가 없고, 연속 클릭하면 이전 동작을 멈추고 처음부터 다시 재생한다.
   function hop() {
+    if (assetName === 'sprout') setSoilKey((k) => k + 1)
+    setCold(false) // 쓰다듬어 주면 다시 괜찮아져요
     spriteRef.current?.react() // 프레임이 있으면 짧게 손 흔들기(없으면 눈 깜빡임). 프레임이 없으면 아무것도 안 함
     const el = hopRef.current
     if (!el?.animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
@@ -237,7 +258,7 @@ export default function HomePage() {
       {/* 펫 캐릭터: 투명 PNG가 있으면 그 이미지, 없으면 대체 상태
           - 바깥(hop): 클릭 반응 / 안쪽(idle): 숨쉬기 반복 — 두 움직임이 섞이지 않게 요소를 나눔
           - key={imageUrl}: 성장 단계가 바뀌면 새 이미지가 짧게 페이드 인 */}
-      <div className="hm-pet" data-character={character ?? 'none'} data-stage={stage}>
+      <div className={`hm-pet ${cold ? 'is-cold' : ''}`} data-character={character ?? 'none'} data-stage={stage}>
         <button type="button" className="hm-pet__hop" ref={hopRef} onClick={hop} aria-label={`${petLabel} 쓰다듬기`}>
           <span className="hm-pet__idle">
             {imageUrl ? (
@@ -251,6 +272,8 @@ export default function HomePage() {
               </span>
             )}
           </span>
+          {/* 펫 위 효과: 새싹 흙 알갱이 · 오래 못 본 뒤 눈물·바람 (원본 그림은 그대로) */}
+          <PetEffects hostRef={hopRef} assetName={assetName} soilKey={soilKey} cold={cold} />
         </button>
       </div>
 

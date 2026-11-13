@@ -3,11 +3,11 @@ import { useReactFlow } from '@xyflow/react'
 import { MEMO_MAX, MEMO_MIN, cardSize } from './layout.js'
 import './memo.css'
 
-// 메모 색 (모멘트리 톤: 버터 옐로 · 세이지 그린 · 연핑크 · 화이트)
+// 메모 색 (모노톤). id는 저장된 값과 맞추려고 예전 이름 그대로 쓴다 → 예전 메모도 그대로 보인다
 export const MEMO_COLORS = [
-  { id: 'butter', label: '버터 옐로' },
-  { id: 'sage', label: '세이지 그린' },
-  { id: 'pink', label: '연핑크' },
+  { id: 'butter', label: '오프화이트' },
+  { id: 'sage', label: '라이트 그레이' },
+  { id: 'pink', label: '그레이' },
   { id: 'white', label: '화이트' },
 ]
 const SAVE_DELAY = 700 // 입력을 멈추고 이만큼 지나면 자동 저장
