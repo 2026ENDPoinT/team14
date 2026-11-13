@@ -210,44 +210,47 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
           {readOnly ? (
             <p className="dp-story">{content || '(내용 없음)'}</p>
           ) : (
-            // 일기 입력칸 (로드맵 노드 카드 모양, 20자를 채우면 왼쪽 점이 노랗게). 사진 추가 동그라미는 칸 안 왼쪽 아래
+            // 일기 입력칸 (로드맵 노드 카드 모양, 20자를 채우면 왼쪽 점이 노랗게). 사진 추가 동그라미는 칸 안 아래 줄
             <div className="dy-node dy-node--top dm-story__node">
               <span className={`dy-node__dot ${meetsLength ? 'is-done' : ''}`} aria-hidden="true" />
-              <textarea
-                ref={textareaRef}
-                className="dy-input dy-textarea dm-story__input"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="오늘은 어떤 하루였나요? 자유롭게 이야기해 주세요."
-                aria-label="오늘의 이야기"
-              />
-              <div className="dm-story__foot">
-                {photos.items.length < PHOTO_MAX_COUNT && !photos.loading && (
-                  <button
-                    type="button"
-                    className="dm-photo-btn"
-                    onClick={() => photoInputRef.current?.click()}
-                    aria-label="사진 추가"
-                    title={`사진 추가 (jpg·png·webp·gif, 한 장 5MB까지 최대 ${PHOTO_MAX_COUNT}장)`}
-                  >
-                    <PhotoPlusIcon />
-                  </button>
-                )}
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  multiple
-                  hidden
-                  onChange={pickPhotos}
+              {/* 입력칸 모양 상자: 글은 위쪽에만 쓰이고, 사진 줄은 그 아래 따로 (글이 사진 버튼 뒤로 가지 않게) */}
+              <div className="dy-input dm-story__card">
+                <textarea
+                  ref={textareaRef}
+                  className="dm-story__input"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="오늘은 어떤 하루였나요? 자유롭게 이야기해 주세요."
+                  aria-label="오늘의 이야기"
                 />
-                {photos.items.length === 0 && <span className="dm-story__hint">사진은 저장할 때 함께 올라가요</span>}
-                {photos.items.length > 0 && (
-                  <div className="dm-story__photos">
-                    <PhotoField draft={photos} allowAdd={false} onChange={() => setSaveError('')} />
-                  </div>
-                )}
-                {showGoal && <GoalRing count={charCount} goal={REWARD_MIN_CHARS} />}
+                <div className="dm-story__foot">
+                  {photos.items.length < PHOTO_MAX_COUNT && !photos.loading && (
+                    <button
+                      type="button"
+                      className="dm-photo-btn"
+                      onClick={() => photoInputRef.current?.click()}
+                      aria-label="사진 추가"
+                      title={`사진 추가 (jpg·png·webp·gif, 한 장 5MB까지 최대 ${PHOTO_MAX_COUNT}장)`}
+                    >
+                      <PhotoPlusIcon />
+                    </button>
+                  )}
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    multiple
+                    hidden
+                    onChange={pickPhotos}
+                  />
+                  {photos.items.length === 0 && <span className="dm-story__hint">사진은 저장할 때 함께 올라가요</span>}
+                  {photos.items.length > 0 && (
+                    <div className="dm-story__photos">
+                      <PhotoField draft={photos} allowAdd={false} onChange={() => setSaveError('')} />
+                    </div>
+                  )}
+                  {showGoal && <GoalRing count={charCount} goal={REWARD_MIN_CHARS} />}
+                </div>
               </div>
             </div>
           )}

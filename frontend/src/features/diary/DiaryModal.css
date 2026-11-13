@@ -97,25 +97,42 @@
   color: #b8902f;
 }
 
-/* 입력칸: 원래 일기 칸 모양(dy-input) 그대로, 높이만 줄이고 아래에 사진 줄 자리를 둔다 */
-.dm-story .dm-story__input {
-  min-height: 150px;
-  padding: 20px 26px 64px;
+/* 입력칸 상자: 원래 일기 칸 모양(dy-input)을 상자에 입히고, 그 안에 글칸(위) + 사진 줄(아래)을 차례로 둔다
+   → 글은 사진 줄 위쪽에서만 쓰이고, 길어지면 글칸 안에서 스크롤된다 (사진 버튼 뒤로 겹치지 않음) */
+.dm-story .dm-story__card {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
 }
-/* 사진 줄: 입력칸 안 왼쪽 아래 (입력칸과 함께 떠오른다) */
+.dm-story__node:focus-within .dm-story__card {
+  transform: translateY(-3px);
+  box-shadow: 10px 18px 32px rgba(0, 0, 0, 0.12), -6px -6px 16px rgba(255, 255, 255, 0.9);
+}
+.dm-story__input {
+  display: block;
+  width: 100%;
+  min-height: 110px;
+  box-sizing: border-box;
+  padding: 20px 26px 8px;
+  border: none;
+  outline: none;
+  resize: vertical;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.7;
+  color: var(--rm-text);
+}
+.dm-story__input::placeholder {
+  color: var(--rm-muted);
+}
+/* 사진 줄: 글칸 아래 (상자 안 맨 아래) */
 .dm-story__foot {
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  bottom: 12px;
   display: flex;
   align-items: center;
   gap: 10px;
-  transition: transform 0.25s var(--rm-ease);
-}
-.dm-story__node:hover .dm-story__foot,
-.dm-story__node:focus-within .dm-story__foot {
-  transform: translateY(-3px);
+  padding: 4px 18px 14px;
 }
 .dm-photo-btn {
   display: grid;
