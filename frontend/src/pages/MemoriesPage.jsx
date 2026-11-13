@@ -40,7 +40,7 @@ function pickPrompt(current) {
 // 탭마다 주소가 따로 있다 (상단 메뉴의 하위 탭 '일기 쓰기 · 추억 보관소'와 같은 주소)
 const TABS = [
   { key: 'diary', label: '일기', path: '/diary' },
-  { key: 'highlights', label: '추억 보관소', path: '/memories' },
+  { key: 'highlights', label: '주요 활동', path: '/memories' },
 ]
 
 // 추억 보관소 = 일기장 + 주요 활동 (/memories, /diary 모두 이 화면)

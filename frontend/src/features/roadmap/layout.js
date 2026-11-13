@@ -1,7 +1,11 @@
 // 로드맵 캔버스 크기·좌표 계산 (화면 배치 전용 값)
 
-export const BASE_WIDTH = 630 // 학기 컬럼 기본 너비
-export const MAX_WIDTH = 1890 // 학기 컬럼 최대 너비 (기본의 3배)
+// 학기 컬럼 너비 (가로 자동 확장)
+// - 기본 800: 일반 카드(226) 3개가 한 줄에 나란히 들어가는 너비 (3×226 + 사이 16×2 + 오른쪽 여백 48 = 758)
+// - 노드를 오른쪽으로 놓으면 그 노드 오른쪽 끝 + 여백까지 학기가 넓어지고(최대 3배), 뒤 학기들은 그만큼 오른쪽으로 밀린다
+// - 노드를 빼거나 지우면 다시 필요한 만큼으로 줄어든다 (노드보다 좁아지지는 않음)
+export const BASE_WIDTH = 800
+export const MAX_WIDTH = 2400 // 학기 컬럼 최대 너비 (기본의 3배)
 // 학기 오른쪽 여백: 노드는 (학기 너비 - EDGE)까지만 놓인다.
 // 48 = 다음 학기 배지 반지름 32 + 최소 간격 16 → 다음 학기 배지와 자동으로 16px 이상 떨어진다
 const EDGE = 48
@@ -65,8 +69,9 @@ export function periodLabel(period) {
 // ───────── 학기 컬럼 배치 (자동 확장) ─────────
 
 // 학기마다 x 위치와 너비를 계산한다. 데이터에 저장하지 않고 노드 배치로부터 계산한다.
-// 너비 = max(기본 630, 학기 안 노드의 가장 오른쪽 끝 + 여백, 이번 세션에서 커졌던 너비)
-// - keptWidths: { periodId: 너비 } 세션 동안 줄어들지 않게 붙잡아 두는 값 (새로고침하면 사라짐)
+// 너비 = max(기본 800, 학기 안 노드의 가장 오른쪽 끝 + 여백, 잠깐 붙잡아 둔 너비)
+// - keptWidths: { periodId: 너비 } 노드를 넓어진 학기에서 뒤 학기로 옮긴 직후에만 앞 학기 너비를 붙잡아 둔다
+//   (바로 줄면 방금 놓은 노드가 왼쪽으로 튀어 보이므로). 다음 변경 때 노드 기준으로 다시 줄어든다 (RoadmapPage)
 // 결과: { periods(순서대로), cols: { periodId: { x, width } }, width(캔버스 전체 너비) }
 export function computeLayout(periods, nodes, keptWidths = {}) {
   const sorted = [...periods].sort((a, b) => a.order - b.order)
@@ -102,6 +107,22 @@ export function nextPosition(nodes, periodId) {
 
 // ───────── 노드 배치 (드래그·보관함·새 노드 공통) ─────────
 
+// 드래그한 노드를 놓을 학기
+// - 원래 학기(P)에 있던 노드를 오른쪽으로 끌 때: 카드 왼쪽 끝이 P의 오른쪽 경계(다음 학기 선)를 넘기 전까지는 P
+//   → 카드 일부가 경계를 넘어도 P에 놓이고 P가 넓어진다 (학기를 넓히려는 드래그)
+//   → 카드 전체가 다음 학기 선을 넘으면 다음 학기로 이동 (학기를 옮기려는 드래그)
+// - 그 밖(왼쪽으로 끌기, 보관함·새 노드): 카드 중심이 있는 학기 (findPeriodAt)
+export function dropPeriodFor(node, topLeft, layout) {
+  const { w, h } = cardSize(node)
+  const cx = topLeft.x + w / 2
+  const cy = topLeft.y + h / 2
+  const col = node.status === 'placed' && node.periodId ? layout.cols[node.periodId] : null
+  if (col && cy >= 0 && cy <= CANVAS_HEIGHT && cx >= col.x && topLeft.x < col.x + col.width) {
+    return layout.periods.find((p) => p.id === node.periodId) ?? null
+  }
+  return findPeriodAt(cx, cy, layout)
+}
+
 // 캔버스 좌표 (x, y)가 속한 학기. 학기 영역 밖이면 null
 // 학기 영역: 기준 원(col.x)부터 다음 학기 기준 원 직전까지, 높이는 캔버스 전체
 export function findPeriodAt(x, y, layout) {
@@ -116,7 +137,6 @@ const GAP = 16 // 노드 사이(그리고 배지·타임라인과의) 최소 간
 const BADGE_SIZE = 64 // 학기 원형 배지 지름
 const MIN_Y = TIMELINE_Y + GAP // 일반 노드의 윗변은 타임라인 선보다 이만큼 아래에 있어야 한다
 const SNAP = 24 // 교과목 노드 중심이 선 위쪽이거나 선 아래 이 거리 안이면 선 위에 딱 맞춘다
-const NEAR = 240 // 학기를 넓히지 않고 찾아볼 거리: 이 안에 빈자리가 없을 때만 학기를 넓힌다
 const STEP = 8 // 빈자리 탐색 간격(px)
 
 function overlaps(a, b) {
@@ -169,13 +189,13 @@ function findFree(target, size, area, obstacles, maxDist = Infinity) {
 // - 일반 노드: 타임라인 선 아래에만
 // - 교과목·전공·학업 노드: 선 위쪽·선 근처에 놓으면 선 위에 맞춤 (선을 따라 좌우로 보정), 그 밖에는 일반 노드처럼
 //   전공·학업 노드는 선 위에서는 작은 카드, 선 아래에서는 일반 카드 → 놓을 자리의 크기로 계산하고 카드 중심을 기준으로 맞춘다
-// - 탐색 순서: ① 지금 학기 너비 안의 가까운 빈자리 → ② 최대 너비까지 넓힌 영역의 가장 가까운 빈자리
-//   (②에서 고른 자리가 지금 너비를 넘으면 그만큼 학기가 넓어진다. 최대 너비에서는 남은 세로 공간까지 찾는다)
+// - 놓은 자리에서 가장 가까운 빈자리 (최대 너비까지). 지금 너비를 넘으면 그만큼 학기가 넓어진다
+//   (예전에는 지금 너비 안의 빈자리를 먼저 찾아서, 오른쪽에 놓아도 안쪽·아래 줄로 당겨지고 학기가 넓어지지 않았다)
 export function placeNode(node, topLeft, nodes, layout) {
   const { w, h } = cardSize(node) // 끄는 동안의 크기
   const cx = topLeft.x + w / 2
   const cy = topLeft.y + h / 2
-  const period = findPeriodAt(cx, cy, layout)
+  const period = dropPeriodFor(node, topLeft, layout)
   if (!period) return null
   const col = layout.cols[period.id]
 
@@ -191,7 +211,6 @@ export function placeNode(node, topLeft, nodes, layout) {
   ]
   // 카드 왼쪽 위 꼭짓점이 놓일 수 있는 x 범위 (학기 너비·카드 너비 기준)
   const xRange = (width, size) => ({ minX: col.x, maxX: col.x + width - EDGE - size.w })
-  const nowWidth = col.width
   const maxWidth = Math.max(MAX_WIDTH, col.width)
 
   let box = null
@@ -200,18 +219,14 @@ export function placeNode(node, topLeft, nodes, layout) {
     const size = PILL_SIZE
     const lineY = TIMELINE_Y - size.h / 2
     const target = { x: cx - size.w / 2, y: lineY }
-    box =
-      findFree(target, size, { ...xRange(nowWidth, size), minY: lineY, maxY: lineY }, obstacles) ??
-      findFree(target, size, { ...xRange(maxWidth, size), minY: lineY, maxY: lineY }, obstacles)
+    box = findFree(target, size, { ...xRange(maxWidth, size), minY: lineY, maxY: lineY }, obstacles)
   }
   // 그 밖의 경우(또는 선 위에 자리가 없을 때): 타임라인 선 아래 (교과목은 작은 카드, 나머지는 일반 카드)
   if (!box) {
     const size = isCourse(node) ? PILL_SIZE : CARD_SIZE
     const target = { x: cx - size.w / 2, y: cy - size.h / 2 }
     const yRange = { minY: MIN_Y, maxY: CANVAS_HEIGHT - size.h }
-    box =
-      findFree(target, size, { ...xRange(nowWidth, size), ...yRange }, obstacles, NEAR) ??
-      findFree(target, size, { ...xRange(maxWidth, size), ...yRange }, obstacles)
+    box = findFree(target, size, { ...xRange(maxWidth, size), ...yRange }, obstacles)
   }
   if (!box) return null
 
@@ -277,9 +292,10 @@ export function planDrop(node, topLeft, nodes, layout, canSwapWith) {
 // - 상단 반원 메뉴(높이 96px) 아래로 타임라인 위 교과목 카드(반 높이 42px)가 내려오게 한다
 // - 가로: 노드가 놓인 가장 앞 학기부터 보여 준다 (빈 학기만 보이는 첫 화면 방지)
 const VIEW_SEMESTERS = 2.5
+const VIEW_COLUMN = 630 // 첫 화면 배율 계산용 (기본 너비를 넓혀도 카드가 작아 보이지 않게 예전 너비 기준)
 const NAV_CLEAR = 96 + 16
 export function initialViewport(screenW, screenH, layout, nodes) {
-  const zoom = Math.round(Math.min(1, Math.max(0.6, screenW / (VIEW_SEMESTERS * BASE_WIDTH + CANVAS_LEFT))) * 100) / 100
+  const zoom = Math.round(Math.min(1, Math.max(0.6, screenW / (VIEW_SEMESTERS * VIEW_COLUMN + CANVAS_LEFT))) * 100) / 100
   const lineY = Math.max(screenH * 0.22, NAV_CLEAR + 42 * zoom)
   const placedXs = nodes.filter((n) => n.status === 'placed' && layout.cols[n.periodId]).map((n) => layout.cols[n.periodId].x)
   const startX = placedXs.length ? Math.min(...placedXs) : CANVAS_LEFT

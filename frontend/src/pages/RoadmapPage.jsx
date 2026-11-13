@@ -9,11 +9,15 @@ import AddNodeModal from '../features/roadmap/AddNodeModal.jsx'
 import NodeDetailModal from '../features/roadmap/NodeDetailModal.jsx'
 import NodeFilter from '../features/roadmap/NodeFilter.jsx'
 import CourseGuidePanel from '../features/courses/CourseGuidePanel.jsx'
+import AiGuideButton from '../features/career/guide/AiGuideButton.jsx'
+import AiGuidePanel from '../features/career/guide/AiGuidePanel.jsx'
+import { hasSameTitle } from '../features/career/guide/guideData.js'
 import { BASE_CATEGORIES, nodeCategoryId } from '../features/roadmap/nodeCategories.js'
 import RoadmapTutorial from '../features/roadmap/tutorial/RoadmapTutorial.jsx'
 import { hasSeenRoadmapTutorial, markRoadmapTutorialSeen } from '../features/roadmap/tutorial/tutorialStorage.js'
+import { useOptionalAuth } from '../features/auth/AuthProvider.jsx'
 import { linkProblem } from '../features/roadmap/edgeRules.js'
-import { BASE_WIDTH, computeLayout, nextPosition, placeNode } from '../features/roadmap/layout.js'
+import { computeLayout, nextPosition, placeNode } from '../features/roadmap/layout.js'
 import {
   createEdge,
   createNode,
@@ -47,6 +51,22 @@ function categoryLabelOf(categoryId, customCategories) {
   return [...BASE_CATEGORIES, ...customCategories].find((c) => c.id === categoryId)?.label ?? null
 }
 
+// 노드 배치가 바뀐 학기 id 목록 (이전·새 노드 비교: 추가·삭제·이동·학기 변경)
+function changedPeriodIds(prev, next) {
+  const ids = new Set()
+  const before = new Map(prev.map((n) => [n.id, n]))
+  const key = (n) => (n.status === 'placed' ? `${n.periodId}:${n.position?.x}:${n.position?.y}` : 'stored')
+  for (const n of next) {
+    const old = before.get(n.id)
+    before.delete(n.id)
+    if (old === n || (old && key(old) === key(n))) continue
+    if (old?.status === 'placed') ids.add(old.periodId)
+    if (n.status === 'placed') ids.add(n.periodId)
+  }
+  for (const old of before.values()) if (old.status === 'placed') ids.add(old.periodId) // 지운 노드
+  return ids
+}
+
 // 로드맵 페이지: 하나의 화면에서 상태에 따라 메뉴·보관함·팝업이 나타나고 사라진다.
 // 데이터: 로그인했으면 내 학기·노드·연결선·노드 문서를 DB에서 불러오고,
 //         노드 생성·이동·수정(이름·종류·기록)·완료 표시·삭제, 연결선 추가·변경·삭제를 DB에 저장한다.
@@ -70,6 +90,7 @@ export default function RoadmapPage() {
   const [dropPeriodId, setDropPeriodId] = useState(null) // 노드를 끄는 동안 강조할 학기
   const [tutorialOpen, setTutorialOpen] = useState(false) // 첫 접속 튜토리얼
   const [connectMode, setConnectMode] = useState(false) // CONNECT: 노드 오른쪽 핸들로 관계선 만들기
+  const [guideOpen, setGuideOpen] = useState(false) // AI 길잡이 패널
   // 직접 추가한 노드 종류 (ADD NODE·NODE DETAILS 공용). 로그인한 사용자의 종류를 DB(node_categories)에서 불러오고 저장한다.
   const [customCategories, setCustomCategories] = useState([])
 
@@ -187,33 +208,60 @@ export default function RoadmapPage() {
   const closeFilter = useCallback(() => setFilterOpen(false), [])
   const HIDDEN_NOTE = ' (지금 필터로 숨긴 종류라 화면에는 보이지 않아요)'
 
-  // 처음 접속했을 때만 튜토리얼 자동 표시 (캔버스가 자리 잡을 시간을 조금 준다)
+  // 처음 접속했을 때만 튜토리얼 자동 표시 (계정별 기록: 같은 브라우저의 다른 계정도 처음이면 나온다)
+  // - 로드맵을 다 불러와 캔버스(학기·카드)가 그려진 뒤에 시작한다 (불러오는 중·오류 화면에서는 시작하지 않음)
+  // - 로그인했으면 계정 id가 확인된 뒤에 판단한다 (로그인 전 예시 로드맵은 예전 공용 기록)
+  const auth = useOptionalAuth()
+  const tutorialUserId = mode === 'db' ? auth?.profile?.id ?? null : null
+  const tutorialReady = (mode === 'db' && Boolean(tutorialUserId)) || mode === 'mock'
+  const autoTried = useRef(false)
   useEffect(() => {
-    if (hasSeenRoadmapTutorial()) return undefined
-    const timer = setTimeout(() => setTutorialOpen(true), 500)
+    if (!tutorialReady || autoTried.current) return undefined
+    if (hasSeenRoadmapTutorial(tutorialUserId)) {
+      autoTried.current = true
+      return undefined
+    }
+    let tries = 0
+    let timer
+    const start = () => {
+      // 캔버스가 실제로 그려졌는지 확인하고 시작 (아직이면 잠시 뒤 다시, 최대 약 5초)
+      if (document.querySelector('.react-flow__viewport') || tries > 20) {
+        autoTried.current = true
+        setTutorialOpen(true)
+        return
+      }
+      tries += 1
+      timer = setTimeout(start, 250)
+    }
+    timer = setTimeout(start, 500) // 캔버스가 자리 잡을 시간을 조금 준다
     return () => clearTimeout(timer)
-  }, [])
+  }, [tutorialReady, tutorialUserId])
 
-  // 건너뛰거나 완료하면 기록해서 다시 자동으로 나타나지 않게 한다
+  // 건너뛰거나 완료하면 기록해서 다시 자동으로 나타나지 않게 한다 (계정별)
   const closeTutorial = useCallback(() => {
-    markRoadmapTutorialSeen()
+    markRoadmapTutorialSeen(tutorialUserId)
     setTutorialOpen(false)
-  }, [])
+  }, [tutorialUserId])
 
-  // 학기 컬럼 배치 (자동 확장): 노드 배치로부터 학기별 x·너비 계산
-  // keptWidths: 이번 세션에서 커졌던 너비. 노드를 빼내도 학기가 바로 줄지 않게 해서
-  //             뒤 학기·노드가 갑자기 왼쪽으로 튀지 않게 한다. (새로고침하면 다시 계산)
-  const [keptWidths, setKeptWidths] = useState({})
-  const layout = useMemo(() => computeLayout(periods, nodes, keptWidths), [periods, nodes, keptWidths])
-  useEffect(() => {
-    setKeptWidths((prev) => {
-      const grown = Object.entries(layout.cols).filter(
-        ([id, col]) => col.width > BASE_WIDTH && col.width > (prev[id] ?? 0),
-      )
-      if (grown.length === 0) return prev
-      return { ...prev, ...Object.fromEntries(grown.map(([id, col]) => [id, col.width])) }
-    })
-  }, [layout])
+  // 학기 컬럼 배치 (가로 자동 확장): 노드 배치로부터 학기별 x·너비를 매번 다시 계산한다
+  // - 노드를 오른쪽에 놓으면 그 학기가 넓어지고 뒤 학기는 밀린다. 노드를 빼거나 지우면 필요한 만큼으로 줄어든다
+  // - holdRef: 넓어진 학기에서 뒤 학기로 노드를 옮기면 앞 학기 너비를 붙잡아 둔다
+  //   (바로 줄면 뒤 학기가 왼쪽으로 당겨져 방금 놓은 노드가 튀어 보임).
+  //   그 학기 자체가 바뀔 때(노드를 넣거나 빼거나 옮기거나 지울 때)만 풀어서 노드 기준으로 줄인다
+  //   → 다른 학기에서 작업하는 동안 화면이 갑자기 당겨지지 않는다
+  const holdRef = useRef({ widths: {}, prevNodes: null, keep: null })
+  const layout = useMemo(() => {
+    const hold = holdRef.current
+    if (hold.prevNodes && hold.prevNodes !== nodes) {
+      for (const id of changedPeriodIds(hold.prevNodes, nodes)) {
+        if (!(hold.keep?.nodes === nodes && hold.keep.ids.includes(id))) delete hold.widths[id]
+      }
+    }
+    hold.prevNodes = nodes
+    return computeLayout(periods, nodes, hold.widths)
+  }, [periods, nodes])
+  const layoutRef = useRef(layout)
+  layoutRef.current = layout
 
   const getBody = (nodeId) => documents[nodeId]?.content.body ?? ''
   // 캔버스가 불필요하게 다시 그려지지 않도록 useCallback으로 고정
@@ -228,7 +276,8 @@ export default function RoadmapPage() {
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key !== 'Escape') return
-      if (detailId) setDetailId(null)
+      if (guideOpen) setGuideOpen(false)
+      else if (detailId) setDetailId(null)
       else if (addOpen) setAddOpen(false)
       else if (fabOpen) setFabOpen(false)
       else if (filterOpen) setFilterOpen(false)
@@ -237,7 +286,7 @@ export default function RoadmapPage() {
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [detailId, addOpen, fabOpen, filterOpen, connectMode, inboxOpen])
+  }, [guideOpen, detailId, addOpen, fabOpen, filterOpen, connectMode, inboxOpen])
 
   // 안내 메시지는 2초 뒤 사라짐 (실행 취소가 있는 안내는 5초)
   useEffect(() => {
@@ -259,12 +308,23 @@ export default function RoadmapPage() {
   // 로그인 상태(DB)면 끌어 놓은 자리를 바로 보여 주고 저장한다. 저장에 실패하면 그 노드들만 원래 자리로 되돌린다.
   const handleNodesMove = useCallback((moves) => {
     const before = nodesRef.current
-    setNodes((prev) =>
-      prev.map((n) => {
-        const move = moves.find((m) => m.id === n.id)
-        return move ? { ...n, periodId: move.periodId, position: move.position, status: 'placed' } : n
-      }),
-    )
+    const next = before.map((n) => {
+      const move = moves.find((m) => m.id === n.id)
+      return move ? { ...n, periodId: move.periodId, position: move.position, status: 'placed' } : n
+    })
+    // 뒤 학기로 옮겨 간 노드의 원래 학기 너비는 이번 한 번만 그대로 둔다 (놓은 자리가 왼쪽으로 튀지 않게)
+    const { cols, periods: ordered } = layoutRef.current
+    const order = (id) => ordered.findIndex((p) => p.id === id)
+    const widths = {}
+    for (const move of moves) {
+      const old = before.find((n) => n.id === move.id)
+      if (old?.status === 'placed' && cols[old.periodId] && order(old.periodId) < order(move.periodId)) {
+        widths[old.periodId] = cols[old.periodId].width
+      }
+    }
+    Object.assign(holdRef.current.widths, widths)
+    holdRef.current.keep = { nodes: next, ids: Object.keys(widths) }
+    setNodes(next)
     if (!isDb) return
     moveNodes(moves).then((result) => {
       if (!result.error) return
@@ -425,6 +485,22 @@ export default function RoadmapPage() {
     else setToast('활동을 보관함에 추가했어요.')
     return null
   }
+
+  // AI 길잡이 추천 활동 → 보관함 (사용자가 카드의 버튼을 눌렀을 때만)
+  // 기존 노드 생성 함수(createNode)로 저장하고, 성공했을 때만 화면에 넣는다. 학기에 자동 배치하지 않는다.
+  // 같은 이름의 활동이 이미 있으면 저장하지 않는다. 기존 활동은 바꾸거나 지우지 않는다.
+  // 반환 { ok } 또는 { error: 문구 }
+  const addGuideActivity = useCallback(async ({ title, theme, categoryId, memo }) => {
+    if (mode !== 'db') return { error: '로그인하면 보관함에 추가할 수 있어요.' }
+    if (hasSameTitle(nodesRef.current, title)) return { error: '이미 로드맵에 같은 이름의 활동이 있어요.' }
+    const result = await createNode({ title, theme, categoryKey: categoryId, memo })
+    if (result.error) return { error: `보관함에 추가하지 못했어요. ${result.error.message}` }
+    const node = { ...result.data.node, categoryLabel: categoryLabelOf(result.data.node.categoryId, customCategories) }
+    setNodes((prev) => [...prev, node])
+    if (result.data.document) setDocuments((prev) => ({ ...prev, [node.id]: result.data.document }))
+    return { ok: true }
+  }, [mode, customCategories])
+  const guideHasActivity = useCallback((title) => hasSameTitle(nodesRef.current, title), [])
 
   // 상세 창 저장: 제목·기록, 그리고 종류를 바꿨으면 종류(type)
   // type: { theme, categoryId, detailId, categoryLabel }
@@ -609,7 +685,19 @@ export default function RoadmapPage() {
           categories={usedCategories}
           selected={filterIds}
           onChange={setFilterIds}
-        />
+        >
+          <AiGuideButton open={guideOpen} onClick={() => { setFilterOpen(false); setGuideOpen(true) }} />
+          {/* 튜토리얼 다시 보기 (기록과 상관없이 언제든 열린다) */}
+          <button
+            type="button"
+            className="rm-help"
+            onClick={() => { setFilterOpen(false); setTutorialOpen(true) }}
+            aria-label="로드맵 사용법 다시 보기"
+            title="로드맵 사용법 다시 보기"
+          >
+            ?
+          </button>
+        </NodeFilter>
 
         {/* 수강 필요: 놓친 저학년 필수·핵심 과목 안내, 보관함 추가·학기 배치 (features/courses) */}
         <CourseGuidePanel nodes={nodes} periods={periods} layout={layout} enabled={isDb} onAdded={handleCourseAdded} onToast={setToast} />
@@ -680,6 +768,18 @@ export default function RoadmapPage() {
           customCategories={customCategories}
           onAddCustomCategory={addCustomCategory}
         />
+
+        {guideOpen && (
+          <AiGuidePanel
+            open
+            onClose={() => setGuideOpen(false)}
+            signedIn={isDb}
+            nodes={nodes}
+            documents={documents}
+            onAddActivity={addGuideActivity}
+            hasActivity={guideHasActivity}
+          />
+        )}
 
         <RoadmapTutorial open={tutorialOpen} nodes={nodes} layout={layout} onClose={closeTutorial} />
 

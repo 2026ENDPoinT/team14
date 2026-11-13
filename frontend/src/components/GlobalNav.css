@@ -1,12 +1,13 @@
-/* 공통 상단 메뉴: 상단 가운데 떠 있는 가로형 캡슐
-   색·그림자·움직임은 예전 로드맵 반원 메뉴(RoadmapNav, roadmap.css '상단 반원 메뉴')의 값을 그대로 쓴다.
-   - 바탕: 반원과 같은 회색 그라데이션(#f2f2f2 → #ececec) + 그림자, 올리면 6px 내려오며 그림자가 짙어짐
-   - 글자: 기본 #b3b3b3, 올리면 #111 + 1.18배, 처음 나타날 때 위에서 순서대로(40ms 간격) 내려옴
-   - 현재 페이지: #F6D878 배경 (기획에서 정한 강조색) */
+/* 공통 상단 메뉴: 상단 가운데 떠 있는 가로형 캡슐 (형태·크기·메뉴 구성은 그대로)
+   - 바탕: 미니멀 글래스 — 반투명 흰색 + 아주 옅은 버터 옐로, 뒤를 흐리게(blur), 아주 옅은 경계선, 넓고 옅은 그림자
+   - 글자: 기본 따뜻한 다크그레이(#6B665F), 활성·올림 #514836. 올리면 살짝(1.05배)만 커짐
+   - 현재 페이지: 부드러운 크림색 하이라이트 (예전 진한 노랑 #F6D878 대신) */
 .gnav-wrap {
-  --gnav-text: #111; /* 반원 메뉴 --rm-text */
-  --gnav-muted: #b3b3b3; /* 반원 메뉴 --rm-muted */
-  --gnav-accent: #f6d878;
+  /* 미니멀 글래스: 반투명 흰 바탕 + 아주 옅은 버터 옐로, 따뜻한 회색 글자 */
+  --gnav-text: #514836; /* 활성·올린 글자 */
+  --gnav-muted: #6b665f; /* 기본 글자 */
+  --gnav-accent: rgba(246, 216, 145, 0.34); /* 활성 메뉴: 부드러운 크림 */
+  --gnav-line: rgba(170, 150, 110, 0.16); /* 아주 옅은 경계 */
   --gnav-ease: cubic-bezier(0.22, 1, 0.36, 1); /* 반원 메뉴 --rm-ease */
 
   position: fixed;
@@ -35,24 +36,31 @@ body:has([aria-modal="true"]) .gnav-wrap {
 .gnav,
 .gnav-sub {
   pointer-events: auto;
-  background: linear-gradient(180deg, rgba(242, 242, 242, 0.88), rgba(236, 236, 236, 0.88));
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 251, 240, 0.58));
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(20px) saturate(140%);
+  /* 경계선은 안쪽 그림자로 (테두리를 더하지 않아 크기 그대로), 바깥 그림자는 넓고 옅게 */
+  box-shadow:
+    inset 0 0 0 1px var(--gnav-line),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 12px 32px rgba(120, 100, 60, 0.08);
   transition: transform 0.35s var(--gnav-ease), box-shadow 0.35s var(--gnav-ease);
 }
 /* 흐림을 지원하지 않는 브라우저는 반원 메뉴처럼 불투명하게 */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .gnav,
   .gnav-sub {
-    background: linear-gradient(180deg, #f2f2f2, #ececec);
+    background: linear-gradient(180deg, #fffdf8, #fbf6ea);
   }
 }
 /* 반원 메뉴처럼: 올리면 6px 내려오고 그림자가 짙어짐 (마우스가 있는 기기에서만) */
 @media (hover: hover) {
   .gnav:hover {
-    transform: translateY(6px);
-    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.09);
+    transform: translateY(2px);
+    box-shadow:
+      inset 0 0 0 1px var(--gnav-line),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      0 14px 36px rgba(120, 100, 60, 0.1);
   }
 }
 
@@ -107,11 +115,15 @@ body:has([aria-modal="true"]) .gnav-wrap {
 /* 반원 메뉴처럼 올린 글씨만 커짐 (마우스가 있는 기기에서만) */
 @media (hover: hover) {
   .gnav__item:hover .gnav__inner {
-    transform: scale(1.18);
+    transform: scale(1.05);
   }
+}
+.gnav__item:hover:not(.is-active) {
+  background: rgba(255, 255, 255, 0.45);
 }
 .gnav__item.is-active {
   background: var(--gnav-accent);
+  box-shadow: inset 0 0 0 1px rgba(214, 180, 110, 0.18);
   color: var(--gnav-text);
 }
 .gnav__item:focus-visible,

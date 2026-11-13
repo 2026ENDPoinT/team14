@@ -9,6 +9,9 @@ import { getMyPet } from '../../services/rewards.js'
 export const EMPTY_PET = { id: null, type: null, stage: 1, energy: 0, warmth: 0, name: null }
 
 let state = { status: 'idle', pet: null, error: null }
+// 서버 RPC 결과로 펫을 맞춘 횟수. 다시 읽기(reloadPet)가 그보다 먼저 시작됐으면 그 결과(옛 값)는 버린다
+// (HOME을 열 때 읽기와 출석이 동시에 가면, 늦게 도착한 읽기가 출석 후 잔액을 옛 값으로 덮지 않게)
+let serverVersion = 0
 const listeners = new Set()
 function setState(patch) {
   state = { ...state, ...patch }
@@ -21,7 +24,9 @@ const subscribe = (listener) => {
 
 export async function reloadPet() {
   setState({ status: state.pet ? 'ready' : 'loading', error: null })
+  const startedAt = serverVersion
   const result = await getMyPet()
+  if (startedAt !== serverVersion) return // 읽는 동안 RPC 결과가 더 새 값으로 맞췄다
   if (result.error) {
     setState({ status: 'error', error: result.error })
     return
@@ -31,7 +36,9 @@ export async function reloadPet() {
 
 // 서버 RPC가 돌려준 펫으로 바로 맞춘다 (check_in, save_diary 결과)
 export function setPetFromServer(pet) {
-  if (pet) setState({ status: 'ready', pet, error: null })
+  if (!pet) return
+  serverVersion += 1
+  setState({ status: 'ready', pet, error: null })
 }
 
 if (supabase) {

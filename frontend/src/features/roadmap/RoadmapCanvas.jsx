@@ -12,7 +12,7 @@ import useWheelZoom from './useWheelZoom.js'
 import { TrashIcon } from './icons.jsx'
 import { routeBetween, routeEdges, routeToPoint } from './edgeRouting.js'
 import { linkProblem } from './edgeRules.js'
-import { CANVAS_HEIGHT, cardSize, findPeriodAt, findSwapTarget, initialViewport, nodeBox, planDrop } from './layout.js'
+import { CANVAS_HEIGHT, cardSize, dropPeriodFor, findSwapTarget, initialViewport, nodeBox, planDrop } from './layout.js'
 
 // React Flow에 등록할 노드·연결선 종류 (컴포넌트 밖에 두어야 매번 새로 만들지 않는다)
 const nodeTypes = { timeline: TimelineNode, card: CardNode }
@@ -213,8 +213,8 @@ export default function RoadmapCanvas({
         onDropTargetChange(null)
         return
       }
-      const { x, y, w, h } = boxAt(flowNode.position, flowNode.data.node)
-      onDropTargetChange(findPeriodAt(x + w / 2, y + h / 2, layout)?.id ?? null)
+      // 놓일 학기 강조: 드롭과 같은 규칙 (원래 학기에서 오른쪽으로 끌면 카드 전체가 다음 학기 선을 넘기 전까지 원래 학기)
+      onDropTargetChange(dropPeriodFor(flowNode.data.node, flowNode.position, layout)?.id ?? null)
     },
     [nodes, layout, onDropTargetChange, isOverTrash, canSwapWith, findDropLink],
   )
