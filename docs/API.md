@@ -71,7 +71,7 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 - `nickname` 중복 허용.
 - `grade`: 현재 학년 `1` | `2` | `3` | `4` (학년 단위, 해당 학년 1·2학기 포함). 나중에 변경 가능하며, 변경해도 기존 로드맵을 자동으로 덮어쓰지 않는다.
 - `interests`: 온보딩에서 고른 **희망 직무** 키 목록. 현재 화면은 대표 직무 1개만 저장하고, '아직 정하지 않음'이면 빈 배열 `[]`
-- `homeTutorialSeen` / `roadmapTutorialSeen`: 튜토리얼 자동 실행 기록 (migration `20261114002800`, **실제 DB 미적용**). 칸이 없으면 `undefined` → 튜토리얼을 자동으로 띄우지 않는다. 가입 시 `false`, 기존 가입자는 `true`. 바꾸는 것은 RPC `mark_tutorial_seen`만
+- `homeTutorialSeen` / `roadmapTutorialSeen`: 튜토리얼 자동 실행 기록 (migration `20261114003000`, **실제 DB 미적용**). 칸이 없으면 `undefined` → 튜토리얼을 자동으로 띄우지 않는다. 가입 시 `false`, 기존 가입자는 `true`. 바꾸는 것은 RPC `mark_tutorial_seen`만
 - 닉네임 변경은 RPC `change_nickname`만 (테이블 직접 수정 불가, 4.7)
 
 ### TimelinePeriod (학기/기간, `timeline_periods`)
@@ -340,7 +340,7 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 | --- | --- | --- |
 | 로드맵 조회 | 테이블 `timeline_periods`, `nodes`(+`contests` 공고 정보), `edges`, `node_documents` 조회 | `getRoadmap()` → periods + nodes + edges + documents 한 번에 반환. 탐색에서 추가한 공모전 노드에는 `contest`(출처·마감일·원문 링크)가 붙는다 |
 | 학기/기간 삽입 | RPC `insert_timeline_period` | `insertPeriod({ type, afterPeriodId, requestId, name })`. 뒤 기간 order 재계산, `requestId`로 중복 호출 안전, 사용자 이름 '기타' 기간 가능 (migration `20261113002100`, `20261114002300`) |
-| 학기/기간 삭제 | RPC `delete_timeline_period(p_period_id)` | `deletePeriod(periodId)`. 소속 노드(교과목·활동·메모)를 보관함(`stored`, `periodId: null`)으로 옮기고 학기 삭제, 남은 학기 order를 0부터 다시 매김 — 한 트랜잭션. 이미 없는 학기면 `deleted: false`. 결과 `{ deleted, moved_node_ids, periods }` (migration `20261114002900`, **실제 DB 미적용**) |
+| 학기/기간 삭제 | RPC `delete_timeline_period(p_period_id)` | `deletePeriod(periodId)`. 소속 노드(교과목·활동·메모)를 보관함(`stored`, `periodId: null`)으로 옮기고 학기 삭제, 남은 학기 order를 0부터 다시 매김 — 한 트랜잭션. 이미 없는 학기면 `deleted: false`. 결과 `{ deleted, moved_node_ids, periods }` (migration `20261114003100`, **실제 DB 미적용**) |
 | 학기 순서 변경 | (미구현) | |
 | 학기 이름·타입 수정 | (미구현) | |
 | 메모 노드 생성·저장 | 테이블 `nodes` 추가 + `node_documents` 저장 | `createMemoNode()`, `saveMemo()` (`services/memo.js`). 크기·글씨 크기도 문서에 저장 |
@@ -534,7 +534,7 @@ selectCourses({
 | 지난 접속 날짜 | 테이블 `reward_events` 조회 (`attendance`, 오늘 **이전** 가장 최근 `ref_id`) | `services/lastVisit.js`. 펫 시무룩(3일)·추운 모습(7일) 연출용. 읽기만, 기록이 없으면 평소 모습 |
 | 닉네임 변경 | RPC `change_nickname(p_nickname)` | 첫 변경 무료, 이후 온기 잔액 300 차감 (migration `20261114002500`) |
 | 미정 사용자 펫 저장 | RPC `choose_pet(p_type)` | 4.2 참고 (**미적용**) |
-| 튜토리얼 '봤음' 기록 | RPC `mark_tutorial_seen(p_kind)` | `home` \| `roadmap`. 자동 실행 순간 기록 (migration `20261114002800`, **미적용**) |
+| 튜토리얼 '봤음' 기록 | RPC `mark_tutorial_seen(p_kind)` | `home` \| `roadmap`. 자동 실행 순간 기록 (migration `20261114003000`, **미적용**) |
 
 ```json
 // 출석 요청 (보낼 값 없음. 날짜는 서버가 정함)
@@ -666,7 +666,7 @@ selectCourses({
 | --- | --- |
 | migration `20261109000100` ~ `20261114002600_diary_footprint` | 적용됨 |
 | migration `20261114002700_choose_pet` | **미적용** |
-| migration `20261114002800_tutorial_seen` | **미적용** (번호를 `000100`에서 바꿈. 같은 내용이 예전 번호로 적용된 적 없음) |
-| migration `20261114002900_delete_timeline_period` (학기 삭제) | **미적용** → 적용 전에는 × 를 누르면 '서버에 준비되지 않았어요' 안내, 아무것도 바뀌지 않음 |
+| migration `20261114003000_tutorial_seen` | **미적용** (번호를 `000100` → `002800` → `003000`으로 바꿈. 팀원의 `002800`과 겹치지 않게. 같은 내용이 적용된 적 없음) |
+| migration `20261114003100_delete_timeline_period` (학기 삭제) | **미적용** → 적용 전에는 × 를 누르면 '서버에 준비되지 않았어요' 안내, 아무것도 바뀌지 않음 |
 | Edge Function `recommend-career`, `delete-account` | 배포됨 |
 | `recommend-career`의 `reflect`·`timecapsule` 모드 | **재배포 필요** (배포 여부 미확인) |

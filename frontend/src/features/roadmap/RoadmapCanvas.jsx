@@ -19,6 +19,7 @@ import { CANVAS_HEIGHT, TIMELINE_Y, cardSize, dropPeriodFor, findSwapTarget, isM
 const nodeTypes = { timeline: TimelineNode, card: CardNode, goal: GoalNode } // 메모도 card (CardNode가 메모 위젯을 그린다)
 const edgeTypes = { roadmap: RoadmapEdge }
 const MIN_ZOOM = 0.25
+const CENTER_ZOOM = 0.85 // 노드를 화면 가운데로 보낼 때의 최소 배율
 const MAX_ZOOM = 1.6
 // React Flow 기본 버튼·설명 문구 (마우스를 올리면 보이는 안내와 화면 읽기에 함께 쓰인다)
 const FLOW_LABELS = {
@@ -62,6 +63,7 @@ export default function RoadmapCanvas({
   connectMode, onEdgeCreate, onEdgeReconnect, onLinkReject, // 관계선 만들기·끝점 옮기기
   visibleIds = null, // 종류 필터로 보이는 노드 id (Set). null이면 전체
   focusNodeId = null, onFocusDone, // 방금 만든 노드: 화면 밖이면 그 노드가 가운데 오게 이동
+  focusCenter = false, // true면(추억 보관소에서 활동 위치 보기) 화면 안에 보여도 항상 그 노드를 화면 가운데로
   getMemo = () => null, onMemoSave, onMemoResize, // 메모 노드 내용 { title, body, color, width, height, fontSize } · 자동 저장 · 크기 바꾸기
   goalJob = '', onGoalClick, // 프로필 희망 직무. 일반 학기/활동 노드와 분리된 고정형 종착점
   onDeletePeriod, // 학기 배지의 × (학기 삭제). 없으면 버튼을 그리지 않는다
@@ -93,13 +95,20 @@ export default function RoadmapCanvas({
         const bottom = top + box.h * zoom
         // 상단 메뉴·필터(위)와 + 버튼·보관함(아래)에 가리지 않는 영역
         const inView = left >= rect.left + 40 && right <= rect.right - 40 && top >= rect.top + 120 && bottom <= rect.bottom - 120
-        if (!inView) setCenter(box.x + box.w / 2, box.y + box.h / 2, { zoom, duration: 450 })
+        // 가운데로 보낼 때는 너무 작게 보이지 않게 최소 배율 0.85 (화면 이동 범위 extent가 이 배율까지 가운데 정렬을 허용)
+        if (focusCenter) setCenter(box.x + box.w / 2, box.y + box.h / 2, { zoom: Math.max(zoom, CENTER_ZOOM), duration: 450 })
+        else if (!inView) setCenter(box.x + box.w / 2, box.y + box.h / 2, { zoom, duration: 450 })
       }
       onFocusDone?.()
     })
     return () => cancelAnimationFrame(raf)
   }, [focusNodeId, nodes, layout]) // eslint-disable-line react-hooks/exhaustive-deps
-  const extent = useMemo(() => [[-600, -400], [width + 600, CANVAS_HEIGHT + 400]], [width]) // 화면 이동 가능 범위
+  // 화면 이동 가능 범위: 가장자리 노드도 화면 가운데로 올 수 있게, 화면 크기의 절반(배율 CENTER_ZOOM 기준)만큼 여유를 둔다 (최소 600·400)
+  const extent = useMemo(() => {
+    const mx = Math.max(600, Math.ceil(window.innerWidth / 2 / CENTER_ZOOM) + 40)
+    const my = Math.max(400, Math.ceil(window.innerHeight / 2 / CENTER_ZOOM) + 40)
+    return [[-mx, -my], [width + mx, CANVAS_HEIGHT + my]]
+  }, [width])
   useWheelZoom(wrapRef, { minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM, extent })
   const [draggingId, setDraggingId] = useState(null) // 끌고 있는 노드 (연결선 애니메이션 끔, 가지선 잠시 숨김)
   const [swapId, setSwapId] = useState(null) // 드래그 중 자리를 바꿀 타임라인 위 카드

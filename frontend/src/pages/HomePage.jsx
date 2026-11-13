@@ -175,9 +175,8 @@ export default function HomePage() {
 
   return (
     <div className="home-page">
-      {/* 왼쪽 위: HOME 사용법 다시 보기(?) + 서비스 로고(로그인 화면과 같은 글꼴, 누르면 새로고침) */}
+      {/* 왼쪽 위: 서비스 로고(로그인 화면과 같은 글꼴, 누르면 새로고침) */}
       <div className="hm-topleft">
-        <button type="button" className="hm-help" onClick={() => setTourOpen(true)} aria-label="HOME 사용법 보기" title="HOME 사용법 보기">?</button>
         <button type="button" className="hm-logo" onClick={() => window.location.reload()} aria-label="Momentree 새로고침" title="새로고침">
           Momentree
         </button>
@@ -185,7 +184,9 @@ export default function HomePage() {
       <HomeTutorial open={tourOpen} onClose={closeTour} />
       {/* 출석 온기 획득 연출: 일기 저장 때와 같은 연기 + '온기 +100 획득!' (화면 전체) */}
       {bursts[0] && <WarmthEffect key={bursts[0].id} amount={bursts[0].amount} onDone={endBurst} fullScreen />}
-      {/* 보유 온기 (오른쪽 위): 햇살 아이콘 + "온기" + 서버에 저장된 잔액(warmth_balance) */}
+      {/* 오른쪽 위: 보유 온기(햇살 아이콘 + "온기" + 서버에 저장된 잔액 warmth_balance) + 그 왼쪽에 HOME 사용법 다시 보기(?) */}
+      <div className="hm-topright">
+        <button type="button" className="hm-help" onClick={() => setTourOpen(true)} aria-label="HOME 사용법 보기" title="HOME 사용법 보기">?</button>
       <div className="hm-warmth" role="group" aria-label={`보유 온기 ${balance.toLocaleString()}`}>
         <svg className="hm-warmth__icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
           <circle cx="12" cy="12" r="4" />
@@ -193,6 +194,7 @@ export default function HomePage() {
         </svg>
         <span className="hm-warmth__label" aria-hidden="true">온기</span>
         <span className="hm-warmth__num" aria-hidden="true">{balance.toLocaleString()}</span>
+      </div>
       </div>
 
       {/* 사용자 닉네임 (Figma의 펫 이름 위치) */}

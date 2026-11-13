@@ -157,8 +157,8 @@ npm run build             # 빌드 확인
 | --- | --- | --- |
 | migration `20261109000100` ~ `20261114002600_diary_footprint` | 있음 | 적용됨 |
 | migration `20261114002700_choose_pet` (미정 사용자 펫 저장) | 있음 | **미적용** → 적용 전에는 직무 미정 사용자가 온보딩 마지막 화면에서 넘어가지 못함 |
-| migration `20261114002800_tutorial_seen` (튜토리얼 첫 실행 기록) | 있음 | **미적용** → 적용 전에는 튜토리얼이 자동으로 뜨지 않음(? 버튼은 동작) |
-| migration `20261114002900_delete_timeline_period` (학기 삭제) | 있음 | **미적용** → 적용 전에는 학기 삭제가 '서버 준비 중' 안내만 함 |
+| migration `20261114003000_tutorial_seen` (튜토리얼 첫 실행 기록) | 있음 | **미적용** → 적용 전에는 튜토리얼이 자동으로 뜨지 않음(? 버튼은 동작) |
+| migration `20261114003100_delete_timeline_period` (학기 삭제) | 있음 | **미적용** → 적용 전에는 학기 삭제가 '서버 준비 중' 안내만 함 |
 | Edge Function `recommend-career` (온보딩 추천·AI 길잡이) | 있음 | 배포됨 |
 | 같은 함수의 `reflect`·`timecapsule` 모드 (AI 회고·타임캡슐) | 있음 | **배포 여부 미확인** (재배포 필요, 배포 전에는 "서버에 배포되지 않았어요" 안내) |
 | Edge Function `delete-account` | 있음 | 배포됨 |

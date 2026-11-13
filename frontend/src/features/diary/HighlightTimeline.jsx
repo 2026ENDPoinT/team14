@@ -89,7 +89,7 @@ function HighlightCard({ node, doc, onOpen }) {
   const theme = THEMES.find((t) => t.id === node.theme)
   const date = activityDate(node)
   return (
-    <button type="button" className="hl-card" onClick={onOpen} title={date ? '그날 일기 보기' : '로드맵에서 보기'}>
+    <button type="button" className="hl-card" onClick={onOpen} title="로드맵에서 이 활동 위치 보기">
       <span className="hl-card__top">
         <span className="hl-card__icon" aria-hidden="true"><ThemeIcon theme={node.theme} /></span>
         <span className="hl-card__theme">{theme?.label}</span>

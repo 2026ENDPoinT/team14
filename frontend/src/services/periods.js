@@ -37,7 +37,7 @@ export async function insertPeriod({ type, afterPeriodId = null, requestId, name
   return { data: { period: toPeriod(data.period), created: data.created, periods: data.periods.map(toPeriod) } }
 }
 
-// 로드맵 학기(기간) 삭제 — RPC delete_timeline_period (migration 20261114002900)
+// 로드맵 학기(기간) 삭제 — RPC delete_timeline_period (migration 20261114003100)
 // - 그 학기에 배치된 노드(교과목·활동·메모)는 지우지 않고 보관함으로 옮긴다. 관계선·문서·사진·첨부는 그대로
 // - 노드 이동·학기 삭제·남은 학기 순서 정리를 서버가 한 번에 한다 (중간 실패 시 전부 취소)
 // - 이미 지워진 학기면 deleted: false (다시 불러도 안전)

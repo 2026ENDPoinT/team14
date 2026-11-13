@@ -200,6 +200,45 @@ export default function RoadmapPage() {
     setSearchParams({}, { replace: true })
   }, [mode, focusNodeId, nodes, setSearchParams])
 
+  // 추억 보관소 '주요 활동'에서 고른 활동(/roadmap?focus=…): 상세 창 대신 그 노드가 있는 자리로 화면을 옮기고 잠깐 반짝여 알려 준다
+  // 보관함 노드면 보관함을 연다. 한 번 처리한 뒤 주소의 ?focus=를 지운다
+  const locateNodeId = searchParams.get('focus')
+  const [flashNodeId, setFlashNodeId] = useState(null)
+  const [focusCenter, setFocusCenter] = useState(false) // 이번 화면 이동은 항상 가운데로 (새 노드 이동과 구분)
+  useEffect(() => {
+    if (mode !== 'db' || !locateNodeId) return
+    const target = nodes.find((n) => n.id === locateNodeId)
+    if (target?.status === 'stored') setInboxOpen(true)
+    else if (target) {
+      setFocusCenter(true)
+      setScrollToNodeId(target.id)
+      setFlashNodeId(target.id)
+    }
+    setSearchParams({}, { replace: true })
+  }, [mode, locateNodeId, nodes, setSearchParams])
+  // 화면 이동이 끝난 뒤 그 노드 카드를 노란 빛으로 두 번 반짝인다 (React Flow 노드 요소: data-id)
+  useEffect(() => {
+    if (!flashNodeId) return undefined
+    const timer = setTimeout(() => {
+      const el = document.querySelector(`.react-flow__node[data-id="${flashNodeId}"]`)
+      const card = el?.firstElementChild ?? el
+      if (card?.animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        card.animate(
+          [
+            { boxShadow: '0 0 0 0 rgba(242, 214, 143, 0)', transform: 'scale(1)' },
+            { boxShadow: '0 0 0 10px rgba(242, 214, 143, 0.75)', transform: 'scale(1.04)', offset: 0.25 },
+            { boxShadow: '0 0 0 0 rgba(242, 214, 143, 0)', transform: 'scale(1)', offset: 0.5 },
+            { boxShadow: '0 0 0 10px rgba(242, 214, 143, 0.75)', transform: 'scale(1.04)', offset: 0.75 },
+            { boxShadow: '0 0 0 0 rgba(242, 214, 143, 0)', transform: 'scale(1)' },
+          ],
+          { duration: 1600, easing: 'ease-in-out' },
+        )
+      }
+      setFlashNodeId(null)
+    }, 550) // 화면 이동(0.45초)이 끝난 뒤
+    return () => clearTimeout(timer)
+  }, [flashNodeId])
+
   // 종류 추가: DB에 저장된 뒤에만 목록에 넣는다. 반환 { id } 또는 { error: 문구 }
   // 저장 값(theme)은 자유 노드(free)
   const addCustomCategory = useCallback(async (name) => {
@@ -842,10 +881,14 @@ export default function RoadmapPage() {
           dropPeriodId={dropPeriodId}
           onDropTargetChange={setDropPeriodId}
           focusNodeId={scrollToNodeId}
+          focusCenter={focusCenter}
           getMemo={getMemo}
           onMemoSave={handleMemoSave}
           onMemoResize={handleMemoResize}
-          onFocusDone={() => setScrollToNodeId(null)}
+          onFocusDone={() => {
+            setScrollToNodeId(null)
+            setFocusCenter(false)
+          }}
           goalJob={goalJobLabel}
           onGoalClick={() => setGoalDetailOpen(true)}
           onDeletePeriod={isDb ? handleDeletePeriod : undefined}

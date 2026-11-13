@@ -574,7 +574,7 @@
   }
 }
 
-/* ───── 왼쪽 위: 사용법(?) 버튼 + Momentree 로고 ─────
+/* ───── 왼쪽 위: Momentree 로고 / 오른쪽 위: 사용법(?) 버튼 + 그 오른쪽 온기 ─────
    로고는 로그인 화면 이름(.lg-name)과 같은 둥근 글꼴·색, 크기만 작게. 누르면 새로고침 */
 .hm-topleft {
   position: absolute;
@@ -585,8 +585,18 @@
   align-items: center;
   gap: 10px;
 }
-.hm-topleft .hm-help {
-  position: static; /* 로고 왼쪽에 나란히 (원래는 왼쪽 위에 따로 떠 있음) */
+.hm-topright {
+  position: absolute;
+  top: 26px;
+  right: 28px;
+  z-index: 2;
+  display: flex;
+  align-items: center; /* ? 버튼과 온기 캡슐을 가로로 나란히, 가운데 높이 맞춤 */
+  gap: 8px;
+}
+.hm-topright .hm-warmth,
+.hm-topright .hm-help {
+  position: static; /* 묶음 안에서 가로로 나란히 (원래는 각각 따로 떠 있음) */
 }
 .hm-logo {
   padding: 0;
@@ -614,6 +624,10 @@
   .hm-topleft {
     top: 86px;
     left: 16px;
+  }
+  .hm-topright {
+    top: 86px;
+    right: 16px;
   }
   .hm-logo {
     font-size: 18px;
