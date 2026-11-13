@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../features/auth/AuthProvider.jsx'
 import { EMPTY_PET, usePet } from '../features/pet/petStore.js'
 import PetImage from '../features/pet/PetImage.jsx'
 import { getEnergyToNextStage, getStageInfo, getStageProgress, MAX_STAGE } from '../features/pet/petStages.js'
-import { PET_CHARACTERS, petAssetUrl, resolvePetCharacter } from '../features/home/petCharacter.js'
+import { PET_CHARACTERS, petAssetName, petAssetUrl, resolvePetCharacter } from '../features/home/petCharacter.js'
+import { petFrames } from '../features/home/petFrames.js'
+import PetSprite from '../features/home/PetSprite.jsx'
 import { autoCheckIn } from '../features/home/homeActions.js'
 import { dropSeenRewards, finishReward, markRewardSeen, seenRewardIds, useRewardQueue } from '../features/home/rewardQueue.js'
 import { checkNickname, NICKNAME_COST, NICKNAME_MAX, nicknameLength, saveNickname } from '../features/profile/nickname.js'
 import GrowthDots from '../features/home/GrowthDots.jsx'
 import WarmthEffect from '../features/diary/WarmthEffect.jsx'
 import HomeQuote from '../features/home/HomeQuote.jsx'
-import CareerEntryButton from '../features/career/CareerEntryButton.jsx'
 import '../features/home/Home.css'
 
 // 펫 HOME (/) — Figma HOME 화면: 은은한 크림 배경, 위쪽 가운데 펫 이름, 가운데 펫, 아래 점선 성장 표시
@@ -36,6 +37,7 @@ export default function HomePage() {
   const [busy, setBusy] = useState(false)
   const inputRef = useRef(null)
   const hopRef = useRef(null)
+  const spriteRef = useRef(null) // 펫 부분 애니메이션 (눈 깜빡임·손 흔들기 프레임이 있을 때만)
   const burstId = bursts[0]?.id
   const endBurst = useCallback(() => {
     if (burstId) finishReward(burstId)
@@ -61,6 +63,7 @@ export default function HomePage() {
   // 펫 클릭 반응: 살짝 통통 튀고 0.5초 안에 제자리로 (포인트·성장 변화 없음)
   // Web Animations API라 React 다시 그리기가 없고, 연속 클릭하면 이전 동작을 멈추고 처음부터 다시 재생한다.
   function hop() {
+    spriteRef.current?.react() // 프레임이 있으면 짧게 손 흔들기(없으면 눈 깜빡임). 프레임이 없으면 아무것도 안 함
     const el = hopRef.current
     if (!el?.animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     el.getAnimations().forEach((a) => a.cancel())
@@ -83,6 +86,8 @@ export default function HomePage() {
   const nextMin = getEnergyToNextStage(pet.energy)
   const progress = getStageProgress(pet.energy)
   const imageUrl = petAssetUrl(character, stage)
+  const assetName = imageUrl ? petAssetName(character, stage) : null
+  const frames = useMemo(() => petFrames(assetName), [assetName])
   // 위쪽 이름: 사용자 닉네임 (펫 이름 아님). HOME은 프로필 확인이 끝난 뒤에만 그려진다(RouteGuards)
   const nickname = profile?.nickname?.trim() || ''
   // 펫 이미지 설명용 (화면에 이름으로 보이지 않음)
@@ -149,9 +154,6 @@ export default function HomePage() {
         <span className="hm-warmth__num" aria-hidden="true">{balance.toLocaleString()}</span>
       </div>
 
-      {/* AI 진로 추천 (왼쪽 위, 온기와 대칭): 누르면 추천 화면을 전체 화면 팝업으로 연다 */}
-      <CareerEntryButton />
-
       {/* 사용자 닉네임 (Figma의 펫 이름 위치) */}
       <div className="hm-name">
         {editing ? (
@@ -196,7 +198,7 @@ export default function HomePage() {
         <button type="button" className="hm-pet__hop" ref={hopRef} onClick={hop} aria-label={`${petLabel} 쓰다듬기`}>
           <span className="hm-pet__idle">
             {imageUrl ? (
-              <img key={imageUrl} className="hm-pet__img" src={imageUrl} alt={`${petLabel} (${stage}단계)`} draggable="false" />
+              <PetSprite ref={spriteRef} src={imageUrl} frames={frames} alt={`${petLabel} (${stage}단계)`} />
             ) : (
               <span className="hm-pet__fallback" role="img" aria-label={`${petLabel} ${stage}단계 — 캐릭터 이미지 준비 중`}>
                 <span className="hm-pet__shape"><PetImage stage={stage} size={120} /></span>
