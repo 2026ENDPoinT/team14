@@ -50,7 +50,7 @@ export default function HomePage() {
   const spriteRef = useRef(null) // 펫 부분 애니메이션 (눈 깜빡임·손 흔들기 프레임이 있을 때만)
   const [soilKey, setSoilKey] = useState(0) // 새싹을 누를 때마다 +1 → 흙 알갱이 효과 다시 재생
   // 오래 못 본 펫 (features/pet/petMood.js, 마이페이지 아이콘과 같은 값): 지난 접속(서버 출석 기록, 오늘 제외)에서
-  // 3일 이상 → 시들시들·시무룩(gloomy), 7일 이상 → 거기에 추워서 떨고 눈물·바람(cold).
+  // 3일 이상 → 시들시들·시무룩(gloomy: 머리부터 파랗게·八자 눈썹), 7일 이상 → 꽁꽁 언 모습(cold: 테두리 얼음·언 눈물·처진 입·바람).
   // 펫을 한 번 쓰다듬으면(클릭) 풀린다. 보상·출석 규칙과는 무관 (읽기만 함)
   const { gloomy, cold } = usePetMood(userId)
   const burstId = bursts[0]?.id
@@ -264,8 +264,8 @@ export default function HomePage() {
               </span>
             )}
           </span>
-          {/* 펫 위 효과: 새싹 흙 알갱이 · 3일 이상 못 본 뒤 머리부터 파랗게·시무룩한 눈썹 · 7일 이상 눈물·바람 (원본 그림은 그대로) */}
-          <PetEffects hostRef={hopRef} assetName={assetName} soilKey={soilKey} cold={cold} brows={gloomy && !sadUrl} tintSrc={gloomy ? imageUrl : null} />
+          {/* 펫 위 효과: 새싹 흙 알갱이 · 3일 이상 못 본 뒤 머리부터 파랗게·시무룩한 눈썹 · 7일 이상 꽁꽁 언 얼음·바람 (원본 그림은 그대로) */}
+          <PetEffects hostRef={hopRef} assetName={assetName} soilKey={soilKey} cold={cold} brows={gloomy && !sadUrl} tintSrc={gloomy && !cold ? imageUrl : null} frozenSrc={cold ? imageUrl : null} frozenFace={!sadUrl} />
         </button>
       </div>
 

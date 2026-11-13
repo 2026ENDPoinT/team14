@@ -54,3 +54,53 @@
 @media (prefers-reduced-motion: reduce) {
   .pm-tint { animation: none; }
 }
+
+/* ───── 꽁꽁 언 펫 (FrozenPet.jsx, 7일 이상 미접속) — 움직임 없이 가만히 ───── */
+.pm-frozen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  container-type: inline-size; /* 처진 입 두께를 그림 크기에 맞춘다 (cqw) */
+}
+/* 펫 테두리를 따라 부풀린 얼음 (그림에서 계산해 만든 이미지) */
+.pm-ice {
+  position: absolute;
+  z-index: 4;
+  display: block;
+  max-width: none;
+  pointer-events: none;
+}
+/* 웃는 입을 덮는 피부색 */
+.pm-mouth-patch {
+  position: absolute;
+  z-index: 2;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  filter: blur(0.6px);
+}
+/* 아래로 처진 입꼬리 (∩ 모양) */
+.pm-frown {
+  position: absolute;
+  z-index: 3;
+  aspect-ratio: 2.4;
+  border: 0 solid rgba(70, 50, 40, 0.9);
+  border-top-width: max(1.6px, 0.9cqw);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  transform: translate(-50%, -50%);
+}
+/* 맺힌 채 얼어붙은 눈물 */
+.pm-tear-ice {
+  position: absolute;
+  z-index: 3;
+  width: 3.8%;
+  aspect-ratio: 0.72;
+  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+  background: radial-gradient(ellipse at 40% 35%, #ffffff 0 16%, #a9d8f5 55%, #7fb9e3 100%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7);
+  transform: translate(-50%, 0);
+}
+/* 얼어 있을 때 눈썹은 얼음 위에서도 보이게 */
+.pm-frozen ~ .pm-brows,
+.pm-brows {
+  z-index: 3;
+}

@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
-import { eyesOf } from '../pet/petFace.js'
 import SadBrows from '../pet/SadBrows.jsx'
 import SadTint from '../pet/SadTint.jsx'
+import FrozenPet from '../pet/FrozenPet.jsx'
 
 // HOME 펫 위에 겹쳐 그리는 효과 (원본 PNG는 그대로, CSS/SVG만)
 // - soilKey: 새싹을 누를 때마다 바뀌는 번호 → 흙더미 양 끝에서 흙 알갱이가 불꽃·물줄기처럼 흩뿌려진다 (새싹일 때만 넘겨 받음)
-// - cold: 오래(7일 이상) 못 본 뒤 첫 방문 → 눈물·바람선 (떨림은 Home.css .hm-pet.is-cold)
+// - cold: 오래(7일 이상) 못 본 뒤 → 꽁꽁 언 모습(FrozenPet: 테두리 얼음·언 눈물·처진 입) + 바람선. 펫은 움직이지 않음
 // - brows: 3일 이상 못 봤을 때 시무룩한 눈썹 (시무룩한 그림 파일이 있으면 HomePage가 false로 넘긴다)
 // - tintSrc: 3일 이상 못 봤을 때 머리 위부터 파랗게 (지금 보이는 그림 주소, 그림 모양대로 칠함)
+// - frozenSrc: 7일 이상일 때 얼음을 만들 그림 주소 / frozenFace: false면 처진 입·언 눈물 생략(시무룩 그림 파일을 쓸 때)
 // 위치는 펫 그림 상자 기준 비율이라 화면·펫 크기가 달라도 함께 맞춰진다
 
 // 그림별 눈 위치는 features/pet/petFace.js (시무룩한 눈썹과 같이 쓴다)
@@ -35,7 +36,7 @@ function sprayStyle([angle, dist, size, delay], dir) {
   }
 }
 
-export default function PetEffects({ hostRef, assetName, soilKey = 0, cold = false, brows = false, tintSrc = null }) {
+export default function PetEffects({ hostRef, assetName, soilKey = 0, cold = false, brows = false, tintSrc = null, frozenSrc = null, frozenFace = true }) {
   const [box, setBox] = useState(null) // 펫 그림의 위치·크기 (hostRef 기준)
 
   // 그림 크기가 바뀌면(화면 크기·성장 단계) 다시 잰다
@@ -62,11 +63,11 @@ export default function PetEffects({ hostRef, assetName, soilKey = 0, cold = fal
   }, [hostRef, assetName])
 
   if (!box || (!cold && !soilKey && !brows && !tintSrc)) return null
-  const [lx, rx, ey] = eyesOf(assetName)
 
   return (
     <span className="hm-fx" aria-hidden="true" style={box}>
       {tintSrc && <SadTint src={tintSrc} />}
+      {cold && frozenSrc && <FrozenPet src={frozenSrc} assetName={assetName} face={frozenFace} />}
       {brows && <SadBrows assetName={assetName} />}
       {soilKey > 0 && (
         <span key={soilKey}>
@@ -81,8 +82,6 @@ export default function PetEffects({ hostRef, assetName, soilKey = 0, cold = fal
       )}
       {cold && (
         <>
-          <span className="hm-tear" style={{ left: `${lx * 100}%`, top: `${ey * 100}%` }} />
-          <span className="hm-tear is-late" style={{ left: `${rx * 100}%`, top: `${ey * 100}%` }} />
           <svg className="hm-wind" viewBox="0 0 200 100" preserveAspectRatio="none">
             <path className="hm-wind__line" d="M0 30 q30 -8 60 0 t60 0" />
             <path className="hm-wind__line is-2" d="M0 58 q30 -8 60 0 t60 0" />

@@ -259,6 +259,13 @@
 .mp-avatar__pet.is-gloomy .mp-avatar__img {
   filter: saturate(0.45) brightness(0.95);
 }
+/* 7일 이상: 꽁꽁 얼어서 고개를 떨구지 않고 가만히, 차가운 색 */
+.mp-avatar__pet.is-cold {
+  transform: none;
+}
+.mp-avatar__pet.is-cold .mp-avatar__img {
+  filter: saturate(0.35) brightness(1.03) hue-rotate(-8deg);
+}
 
 /* 프로필 바 */
 .mp-profile {

@@ -13,3 +13,19 @@ export const DEFAULT_EYES = [0.4, 0.6, 0.4]
 export function eyesOf(assetName) {
   return EYES[assetName] ?? DEFAULT_EYES
 }
+
+// 펫 그림별 입 위치 [x, y, 입 너비, cover] (그림 폭·높이에 대한 비율, 그림을 보고 잰 대략값)
+// cover: 1이면 웃는 입이 크게 보여서 피부색으로 덮은 뒤 처진 입을 그린다 (펭귄 부리·고양이 코 아래는 덮지 않음)
+export const MOUTHS = {
+  sprout: [0.55, 0.69, 0.07, 1],
+  'rabbit-2': [0.546, 0.574, 0.09, 1], 'rabbit-3': [0.503, 0.5, 0.08, 1], 'rabbit-4': [0.513, 0.48, 0.07, 1],
+  'hamster-2': [0.593, 0.53, 0.12, 1], 'hamster-3': [0.516, 0.47, 0.09, 1], 'hamster-4': [0.51, 0.44, 0.08, 1],
+  'otter-2': [0.506, 0.53, 0.09, 1], 'otter-3': [0.577, 0.386, 0.08, 1], 'otter-4': [0.52, 0.49, 0.05, 1],
+  'penguin-2': [0.49, 0.54, 0.07, 0], 'penguin-3': [0.528, 0.53, 0.08, 0], 'penguin-4': [0.54, 0.43, 0.05, 0],
+  'black_cat-2': [0.453, 0.51, 0.06, 0], 'black_cat-3': [0.51, 0.53, 0.08, 0], 'black_cat-4': [0.48, 0.51, 0.06, 0],
+}
+export const DEFAULT_MOUTH = [0.5, 0.55, 0.07, 0]
+
+export function mouthOf(assetName) {
+  return MOUTHS[assetName] ?? DEFAULT_MOUTH
+}

@@ -11,6 +11,7 @@ import { JOB_TO_PET, PET_CHARACTERS, petAssetName, petAssetUrl, petSadAssetUrl, 
 import { usePetMood } from '../pet/petMood.js'
 import SadBrows from '../pet/SadBrows.jsx'
 import SadTint from '../pet/SadTint.jsx'
+import FrozenPet from '../pet/FrozenPet.jsx'
 import { useAuth } from '../auth/AuthProvider.jsx'
 import WithdrawDialog from './WithdrawDialog.jsx'
 import { NICKNAME_COST, NICKNAME_MAX } from '../profile/nickname.js'
@@ -25,10 +26,10 @@ import { canNotify, showDiaryNotification } from '../diary/DiaryReminder.jsx'
 // - 1단계(새싹)는 모든 직무 공통 그림, 2~4단계(아기·꼬마·어른 펫)는 펫 종류마다 다른 그림
 // - 단계는 누적 온기 기준 (서버 stage가 더 높으면 그 값 — HOME·일기와 같은 규칙)
 // - 직무가 '아직 정하지 않음'이라 펫 종류를 모르면 임시 아이콘(PetImage)
-// - 3일 이상 접속하지 않았으면 HOME 펫과 같이 시들시들·시무룩 (features/pet/petMood.js, HOME에서 쓰다듬으면 풀림)
+// - 3일 이상 접속하지 않았으면 HOME 펫과 같이 시들시들·시무룩, 7일 이상이면 꽁꽁 언 모습 (features/pet/petMood.js, HOME에서 쓰다듬으면 풀림)
 export function Avatar({ pet, job, size = 84 }) {
   const { profile, status } = useAuth()
-  const { gloomy } = usePetMood(status === 'ready' ? profile?.id : null)
+  const { gloomy, cold } = usePetMood(status === 'ready' ? profile?.id : null)
   const stage = petStage(pet)
   const character = resolvePetCharacter(pet, job ? [job] : [])
   const sadUrl = gloomy ? petSadAssetUrl(character, stage) : null // 시무룩한 그림 파일이 있으면 그 그림
@@ -38,9 +39,10 @@ export function Avatar({ pet, job, size = 84 }) {
     <span className="mp-avatar" style={{ width: size, height: size }}>
       {imageUrl ? (
         // 그림과 같은 크기의 상자 안에 눈썹을 겹친다 (위치가 그림 비율이라 상자 = 그림이어야 함)
-        <span className={`mp-avatar__pet ${gloomy ? 'is-gloomy' : ''}`} style={{ width: Math.round(size * 0.8) }}>
+        <span className={`mp-avatar__pet ${gloomy ? 'is-gloomy' : ''} ${cold ? 'is-cold' : ''}`} style={{ width: Math.round(size * 0.8) }}>
           <img className="mp-avatar__img" src={imageUrl} alt={`내 펫: ${label}${gloomy ? ' (시무룩)' : ''}`} />
-          {gloomy && <SadTint src={imageUrl} />}
+          {gloomy && !cold && <SadTint src={imageUrl} />}
+          {cold && <FrozenPet src={imageUrl} assetName={petAssetName(character, stage)} face={!sadUrl} />}
           {gloomy && !sadUrl && <SadBrows assetName={petAssetName(character, stage)} />}
         </span>
       ) : (

@@ -512,11 +512,15 @@
   /* 포물선으로 바깥 아래로 떨어지며 사라짐 */
   100% { opacity: 0; transform: translate(var(--dx), calc(var(--up) * -0.15 + 16px)); }
 }
-/* 오래 못 본 펫: 가볍게 부르르 떨기 (몇 초마다 짧게) */
-.hm-pet.is-cold .hm-pet__hop {
-  animation: hm-shiver 2.8s ease-in-out infinite;
+/* 7일 이상 못 본 펫: 꽁꽁 얼어서 가만히 (떨림·한숨 없이 멈춤). 얼음·언 눈물·처진 입은 FrozenPet이 겹쳐 그린다 */
+.hm-pet.is-cold .hm-pet__idle,
+.hm-pet.is-cold .hm-fx {
+  animation: none;
+  transform: translateY(4px);
 }
-@keyframes hm-shiver {
+.hm-pet.is-cold .hm-pet__img {
+  filter: saturate(0.35) brightness(1.03) hue-rotate(-8deg);
+}@keyframes hm-shiver {
   0%, 22%, 100% { transform: translateX(0); }
   3%, 11%, 19% { transform: translateX(-1.6px); }
   7%, 15% { transform: translateX(1.6px); }
