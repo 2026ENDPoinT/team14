@@ -1,0 +1,105 @@
+/* 홈 상단 메뉴와 캐릭터 오른쪽 테마 패널 */
+.home-page .hm-topright { z-index: 25; gap: 9px; }
+.home-page .hm-topright button { font: inherit; cursor: pointer; }
+.home-page .hm-menu-btn { border: 0; border-radius: 999px; padding: 8px 15px; font-size: 13px !important; font-weight: 700 !important; background: #fbf8f2; color: #746b60; box-shadow: 0 2px 9px rgba(96,78,59,.1); white-space: nowrap; }
+.home-page .hm-menu-btn:hover, .home-page .hm-menu-btn.is-selected { background: #f4dfbd; color: #57473b; }
+.home-page .hm-topright .hm-warmth { padding:0; background:transparent; box-shadow:none; }
+.home-page .hm-topright button:focus-visible, .hm-side-panel button:focus-visible { outline:2px solid #ba8d52; outline-offset:3px; }
+.home-page .hm-side-panel { position:absolute; z-index:20; top: 31%; width: clamp(265px, 25vw, 350px); max-height: min(490px, 58vh); display:flex; flex-direction:column; padding:22px 19px 16px; border:1px solid rgba(218,190,148,.5); border-radius:24px; background:rgba(255,252,246,.96); box-shadow:0 15px 45px rgba(94,70,43,.16); backdrop-filter: blur(15px); color:#4b4036; animation:hm-panel-appear .2s ease-out; }
+.home-page .hm-side-panel--left { right:calc(50% + min(230px, 23vw) + 15px); }
+.home-page .hm-side-panel--right { left:calc(50% + min(230px, 23vw) + 15px); }
+@keyframes hm-panel-appear { from { opacity:0; transform:translateY(9px) scale(.98); } to { opacity:1; transform:none; } }
+.home-page .hm-side-panel__header { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:18px; }
+.home-page .hm-side-panel__eyebrow { font-size:9px; font-weight:800; letter-spacing:.15em; color:#bd9c73; }
+.home-page .hm-side-panel__header h2 { margin:3px 0 5px; font-size:21px; line-height:1.25; }
+.home-page .hm-side-panel__header p { margin:0; font-size:11px; color:#908476; line-height:1.5; }
+.home-page .hm-side-panel__close { border:0; border-radius:50%; width:31px; height:31px; font-size:24px; line-height:1; color:#877b70; background:#f4ede2; cursor:pointer; flex-shrink:0; }
+.home-page .hm-side-panel__close:hover { background:#ead9c0; }
+.home-page .hm-side-panel__items { overflow:auto; min-height:0; display:flex; flex-direction:column; gap:10px; padding:2px 3px 4px; }
+.home-page .hm-theme-card { border:1px solid #eee3d5; border-radius:15px; background:#fff; padding:10px; display:grid; grid-template-columns:58px minmax(0,1fr); gap:8px 10px; align-items:center; }
+.home-page .hm-theme-card__preview { width:58px; height:65px; border-radius:12px; display:grid; place-items:center; font-size:27px; }
+.hm-theme-card__preview--classic { background:linear-gradient(#f8f8f8,#f9ead0); }
+.hm-theme-card__preview--blossom { background:linear-gradient(#fff0f5,#f1b7d0); }
+.hm-theme-card__preview--forest { background:linear-gradient(#d4e9d0,#8db49a); }
+.hm-theme-card__preview--night { background:linear-gradient(#273457,#596186); }
+.home-page .hm-theme-card__info h3 { font-size:13px; margin:0 0 3px; }
+.home-page .hm-theme-card__info p { font-size:10px; line-height:1.4; margin:0; color:#938578; }
+.home-page .hm-theme-card__action { grid-column:2; justify-self:end; border:0; padding:6px 15px; border-radius:999px; background:#e8c790; color:#493f36; font:inherit; font-size:11px; font-weight:750; cursor:pointer; }
+.home-page .hm-theme-card__action:disabled { opacity:.6; cursor:default; }
+.home-page .hm-side-panel__message { margin:12px 2px 0; font-size:11px; line-height:1.5; color:#936544; }
+.home-page .hm-side-panel__footnote, .home-page .hm-side-panel__empty { font-size:11px; color:#9c8c79; }
+/* 적용된 배경 테마: 펫의 레벨/이미지나 다른 페이지는 바꾸지 않는다. */
+.home-page.hm-theme-blossom { background:linear-gradient(180deg,#fffbfb 0%,#fff1f5 48%,#f4cadc 100%); }
+.home-page.hm-theme-forest { background:linear-gradient(180deg,#f6fcf5 0%,#e7f3e3 43%,#bed8bd 100%); }
+.home-page.hm-theme-night { background:linear-gradient(180deg,#1d2641 0%,#354465 52%,#626889 100%); }
+.home-page.hm-theme-night .hm-name__text { color:#fbf4df; }
+.home-page.hm-theme-night .hm-quote { color:#f0e2d5; }
+@media (max-width:1120px) {
+  .home-page .hm-side-panel { width:clamp(240px, 28vw, 310px); }
+  .home-page .hm-side-panel--left { right:calc(50% + min(190px, 18vw)); }
+  .home-page .hm-side-panel--right { left:calc(50% + min(190px, 18vw)); }
+}
+@media (max-width:850px) {
+  .home-page .hm-topright { gap:6px; }
+  .home-page .hm-menu-btn { padding:7px 10px; }
+  .home-page .hm-side-panel { top:145px; left:50%; right:auto; transform:translateX(-50%); width:min(370px, calc(100vw - 30px)); max-height:min(390px, 60vh); box-sizing:border-box; animation:none; }
+}
+@media (max-width:520px) {
+  .home-page .hm-topright { top:78px; right:12px; }
+  .home-page .hm-topright .hm-warmth__label { display:none; }
+  .home-page .hm-side-panel { top:131px; }
+}
+:root[data-ct-theme="dark"] .home-page .hm-side-panel { background:rgba(37,45,58,.98); color:#f5eddf; border-color:#586071; }
+:root[data-ct-theme="dark"] .home-page .hm-theme-card { background:#343d49; border-color:#536071; }
+:root[data-ct-theme="dark"] .home-page .hm-theme-card__info p, :root[data-ct-theme="dark"] .home-page .hm-side-panel__header p { color:#cec4b6; }
+
+/* 홈 테마 패널: 기본 화면 모드와 홈 전용 배경 모드를 통합 */
+.hm-theme-card__preview--light { background:linear-gradient(160deg,#fffdf2,#f3ddb1); }
+.hm-theme-card__preview--dark { background:linear-gradient(160deg,#343d51,#161c2b); }
+.hm-theme-card__preview--sunset { background:linear-gradient(160deg,#fce2be,#efa49d,#b982c7); }
+.hm-theme-card__preview--ocean { background:linear-gradient(160deg,#c7f1f2,#60b2d7,#21699a); }
+/* 라이트·다크·노을·바다는 기존 사이트 전역 테마 CSS가 적용된다. */
+.home-page.hm-theme-sunset { background:linear-gradient(180deg,#fff4df 0%,#f7d5bd 48%,#d69ec6 100%); }
+.home-page.hm-theme-ocean { background:linear-gradient(180deg,#effcff 0%,#c2eaf2 46%,#87c5e4 100%); }
+
+/* 다크 모드: 상단 테마 · 온기 메뉴를 어두운 화면에 맞춰 통일 */
+:root[data-ct-theme="dark"] .home-page .hm-topright .hm-menu-btn {
+  background: #303a49;
+  color: #f3e7d5;
+  border: 1px solid #505b6b;
+  box-shadow: 0 3px 12px rgba(0,0,0,.18);
+}
+:root[data-ct-theme="dark"] .home-page .hm-topright .hm-menu-btn:hover,
+:root[data-ct-theme="dark"] .home-page .hm-topright .hm-menu-btn.is-selected {
+  background: #4c443e;
+  color: #ffe5b1;
+  border-color: #897250;
+}
+:root[data-ct-theme="dark"] .home-page .hm-topright .hm-warmth {
+  background: transparent;
+  box-shadow: none;
+  color: #f1d4ab;
+}
+
+/* 상점 제거: 온기를 단독 정보 배지로 표시 (클릭 불가) */
+.home-page .hm-topright .hm-warmth-pill {
+  display: flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 8px 13px;
+  background: #fff2e4;
+  box-shadow: 0 2px 8px rgba(137,107,84,.08);
+  white-space: nowrap;
+}
+.home-page .hm-topright .hm-warmth-pill .hm-warmth {
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+:root[data-ct-theme="dark"] .home-page .hm-topright .hm-warmth-pill {
+  background: #303a49;
+  border: 1px solid #505b6b;
+  color: #f1d4ab;
+  box-shadow: 0 3px 12px rgba(0,0,0,.18);
+}
+/* 모바일에서는 기존 미디어 쿼리에 따라 화면 중앙으로 패널 배치 */
