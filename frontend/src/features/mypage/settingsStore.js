@@ -6,8 +6,11 @@ import { mockSettings } from './myPageMock.js'
 const KEY = 'campus-roadmap:settings'
 export const THEME_CHANGED_EVENT = 'campustree:theme-changed'
 
+// 화면 테마: 'light' | 'dark' | 'ocean'(바다, styles/ocean.css)
+const THEMES = ['light', 'dark', 'ocean']
 export function getDisplayTheme() {
-  return loadSettings().theme === 'dark' ? 'dark' : 'light'
+  const theme = loadSettings().theme
+  return THEMES.includes(theme) ? theme : 'light'
 }
 
 export function loadSettings() {
