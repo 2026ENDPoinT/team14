@@ -78,6 +78,11 @@
   color: #000;
   white-space: nowrap;
 }
+/* 닉네임이 아직 없을 때 안내 (흐리게) */
+.hm-name__text.is-empty {
+  font-weight: 600;
+  color: #9a8e7f;
+}
 /* 수정 아이콘: 이름 오른쪽에 붙여 두어 이름은 가운데 그대로 */
 .hm-name__edit {
   position: absolute;
