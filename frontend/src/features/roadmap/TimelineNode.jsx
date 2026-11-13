@@ -6,8 +6,9 @@ import { CANVAS_HEIGHT, TIMELINE_Y, periodLabel } from './layout.js'
 // 캔버스 배경: 가로 타임라인 + 학기 컬럼(기준 원·세로 구분선) + 학기 가지선.
 // 가지선은 카드보다 아래(배경)에 그려진다. 마우스 조작은 받지 않는다.
 // React Flow 노드로 넣어서 확대·이동할 때 노드와 함께 움직인다. (드래그·클릭 불가)
+// 예외: 학기 배지에 마우스를 올리면 나오는 작은 × (학기 삭제, onDeletePeriod가 있을 때만)만 누를 수 있다
 export default function TimelineNode({ data }) {
-  const { layout, width, timelineEnd } = data
+  const { layout, width, timelineEnd, onDeletePeriod } = data
   const dropPeriodId = useContext(DropTargetContext) // 드래그 중 놓일 학기
   const branches = useContext(BranchContext) // 학기 가지선 [{ id, d }]
   return (
@@ -27,6 +28,17 @@ export default function TimelineNode({ data }) {
             title={period.name}
           >
             {periodLabel(period)}
+            {onDeletePeriod && (
+              <button
+                type="button"
+                className="rm-column__delete nodrag nopan"
+                aria-label={`${period.name} 삭제`}
+                title={`${period.name} 삭제 (노드는 보관함으로)`}
+                onClick={() => onDeletePeriod(period.id)}
+              >
+                ×
+              </button>
+            )}
           </div>
         </div>
       ))}

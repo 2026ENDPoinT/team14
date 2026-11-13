@@ -243,7 +243,7 @@
 :root[data-ct-theme="dark"] .mp-row--link.is-danger :is(.mp-row__label,.mp-row__icon) { color: var(--ct-danger-fg); }
 :root[data-ct-theme="dark"] .mp-search input::placeholder { color: var(--ct-soft); }
 /* Roadmap: toolbars, node actions, dialogs, form inputs */
-:root[data-ct-theme="dark"] :is(.rm-modal__card,.rm-inbox__card,.rm-filter,.rm-toast) {
+:root[data-ct-theme="dark"] :is(.rm-modal__card,.rm-inbox__card,.rm-filter:not(.rm-tools),.rm-toast) {
   background-color: var(--ct-surface);
   color: var(--ct-text);
   border-color: var(--ct-border);
@@ -348,7 +348,7 @@
   color: #f2f0eb;
   box-shadow: 0 12px 30px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.045);
 }
-:root[data-ct-theme="dark"] .diary-page :is(.dp-title, .dp-cal-head__title, .dp-stat__prompt, .dp-modal__title, .dp-photo__title, .mm-month__label strong) {
+:root[data-ct-theme="dark"] .diary-page :is(.dp-title, .dp-cal-head__title, .dp-modal__title, .dp-photo__title, .mm-month__label strong) {
   color: #f4f0e9;
 }
 :root[data-ct-theme="dark"] .diary-page :is(.dp-lead, .dp-legend, .dp-weekday, .dp-stat__label, .dp-stat__hint, .dp-foot, .dp-modal__sub, .dp-photo__sub, .dp-photo__note, .dp-warmth__mark) {
@@ -775,14 +775,15 @@
   min-width: 0;
   white-space: nowrap;
   padding: 9px 12px;
-  border: 1px solid #53647a;
+  /* 라이트 모드처럼 글자만 (상자 배경·테두리·그림자 없음). 크기·여백은 그대로 두어 위치가 바뀌지 않게 */
+  border: 1px solid transparent;
   border-radius: 13px;
-  background: #303d4f;
+  background: transparent;
   color: #f4f0e8;
   font-size: 13px;
   font-weight: 750;
   line-height: 1.25;
-  box-shadow: 0 5px 14px rgba(0,0,0,.25);
+  box-shadow: none;
 }
 :root[data-ct-theme="dark"] .roadmap-page .rm-fab__icon {
   box-sizing: border-box;
@@ -800,8 +801,8 @@
 }
 :root[data-ct-theme="dark"] .roadmap-page .rm-fab__item:hover:not(:disabled) .rm-fab__label,
 :root[data-ct-theme="dark"] .roadmap-page .rm-fab__item:focus-visible .rm-fab__label {
-  background: #43536a;
-  border-color: #d8b46d;
+  background: transparent;
+  border-color: transparent;
   color: #fff;
 }
 :root[data-ct-theme="dark"] .roadmap-page .rm-fab__item:hover:not(:disabled) .rm-fab__icon,
@@ -830,6 +831,8 @@
   }
 }
 
+/* 추억보관소 '활동 마감·목표일' 깃발: 다크에선 원 배경이 밝아지므로 깃발 글자를 어둡게 (범례·달력 날짜 깃발 공통) */
+:root[data-ct-theme="dark"] :is(.dp-legend__flag, .dp-day__act) { color: var(--ct-bg); }
 
 /* ================================================================
    Campus Tree dark mode — diary modal & footprint polish (dark2 v8)
@@ -993,4 +996,116 @@
   :root[data-ct-theme="dark"] .diary-page .dm-card :is(.dm-photo-btn,.fp-chip,.fp-node) {
     transition: none;
   }
+}
+
+/* ================================================================
+   노을 모드 (Sunset) — html[data-ct-theme="sunset"]
+   해 지기 직전의 따뜻한 노을 하늘. 라이트 화면을 바탕으로 색만 바꾼 독립 테마 (다크 규칙은 쓰지 않음)
+   - 모든 화면 배경: 위 로즈 모브 → 더스티 핑크 → 피치 코랄 → 아래 살구빛 (같은 하늘을 HOME·로드맵·추억보관소·탐색·마이페이지·온보딩에)
+   - 카드·모달·메뉴: 반투명 웜 크림 표면, 글자는 어두운 로즈 모브 (밝은 하늘·표면 위에서 대비 확보)
+   - 펫 이미지·온기 노란색·'일기 쓴 날' 노란색은 그대로. 라이트·다크 화면 CSS는 건드리지 않는다
+   ================================================================ */
+:root[data-ct-theme="sunset"] {
+  color-scheme: light;
+  --sun-sky: linear-gradient(180deg, #BA9295 0%, #D4A19A 38%, #E5AB92 70%, #F3B58E 100%);
+  --sun-ink: #4E3440;        /* 기본 글자 */
+  --sun-ink-2: #674A58;      /* 어두운 포인트 (주요 버튼·성장 점·선) */
+  --sun-ink-soft: #7E5E68;   /* 보조 글자 */
+  --sun-card: rgba(255, 244, 236, 0.80);   /* 카드·모달 (반투명 웜 크림) */
+  --sun-card-2: rgba(248, 226, 214, 0.72); /* 카드 그라데이션 끝 */
+  --sun-field: rgba(255, 246, 240, 0.92);  /* 입력칸 */
+  --sun-line: rgba(103, 74, 88, 0.5);      /* 로드맵 선·테두리 (밝은 하늘 위에서 보이게) */
+  --sun-coral: #E5AB92;
+  --sun-apricot: #F3B58E;
+  --sun-shadow: 6px 10px 22px rgba(103, 74, 88, 0.16), -4px -4px 12px rgba(255, 244, 236, 0.35);
+  background: #D4A19A;
+  color: var(--sun-ink);
+}
+:root[data-ct-theme="sunset"] body,
+:root[data-ct-theme="sunset"] :is(.roadmap-page, .diary-page, .onboarding, .home-page) {
+  background: var(--sun-sky) fixed;
+  color: var(--sun-ink);
+}
+/* 화면별 색 변수 (라이트 값 대신) — 버튼·노드·선·글자가 이 변수를 따라 바뀐다 */
+:root[data-ct-theme="sunset"] :is(.roadmap-page, .diary-page) {
+  --rm-bg: #FBEDE4;
+  --rm-surface: #F8E6DC;
+  --rm-field: var(--sun-field);
+  --rm-text: var(--sun-ink);
+  --rm-muted: var(--sun-ink-soft);
+  --rm-line: var(--sun-line);
+  --rm-accent: var(--sun-apricot);   /* 학기 배지 */
+  --rm-dot: rgba(103, 74, 88, 0.3);
+  --rm-shadow: var(--sun-shadow);
+  --rm-shadow-strong: 0 24px 60px rgba(103, 74, 88, 0.22);
+  --dy-ink: var(--sun-ink);
+}
+:root[data-ct-theme="sunset"] .onboarding {
+  --ob-bg: transparent;
+  --ob-text: var(--sun-ink);
+  --ob-muted: var(--sun-ink-soft);
+  --ob-accent: var(--sun-coral);
+  --ob-surface: linear-gradient(135deg, var(--sun-card), var(--sun-card-2));
+  --ob-shadow: var(--sun-shadow);
+  --ob-shadow-soft: 4px 6px 14px rgba(103, 74, 88, 0.12), -3px -3px 10px rgba(255, 244, 236, 0.3);
+}
+/* 상단 메뉴: 반투명 웜 크림 유리 */
+:root[data-ct-theme="sunset"] .gnav-wrap {
+  --gnav-text: var(--sun-ink);
+  --gnav-muted: var(--sun-ink-2);
+  --gnav-accent: rgba(229, 171, 146, 0.45);
+  --gnav-line: rgba(103, 74, 88, 0.16);
+}
+:root[data-ct-theme="sunset"] :is(.gnav, .gnav-sub) {
+  background: linear-gradient(180deg, rgba(255, 244, 236, 0.72), rgba(248, 226, 214, 0.62));
+}
+/* 카드·모달·회색 표면 → 웜 크림 */
+:root[data-ct-theme="sunset"] :is(.rm-card, .dp-cal-card, .dp-stat, .dp-warmth, .mp-card, .ex-card, .hl-card) {
+  background: linear-gradient(135deg, var(--sun-card), var(--sun-card-2));
+  box-shadow: inset 0 0 0 1px rgba(255, 244, 236, 0.55), var(--sun-shadow);
+  color: var(--sun-ink);
+}
+:root[data-ct-theme="sunset"] :is(.rm-modal__card, .dp-modal__card, .dp-modal__card.dm-card) {
+  background: #FBEFE7;
+  color: var(--sun-ink);
+}
+:root[data-ct-theme="sunset"] .dy-input { background: var(--sun-field); color: var(--sun-ink); }
+:root[data-ct-theme="sunset"] .dp-day:not(.has-diary) { /* 일기 쓴 날의 노란 표시는 그대로 */
+  background: linear-gradient(145deg, #F8E6DC, #EFD2C6);
+  color: var(--sun-ink);
+}
+/* 로드맵 선: 밝은 하늘 위에서 묻히지 않게 (굵기·배치는 그대로) */
+:root[data-ct-theme="sunset"] :is(.rm-timeline, .rm-column__line) { background: rgba(103, 74, 88, 0.55); }
+:root[data-ct-theme="sunset"] .rm-branch { stroke: rgba(103, 74, 88, 0.6); }        /* 학기 가지선 (점선) */
+:root[data-ct-theme="sunset"] .rm-branch__root { fill: rgba(103, 74, 88, 0.7); }
+:root[data-ct-theme="sunset"] .rm-edge__line { stroke: var(--sun-ink-2); }          /* 관계선 (실선, 더 진하게) */
+:root[data-ct-theme="sunset"] .rm-column__badge { box-shadow: 0 0 0 1.5px rgba(103, 74, 88, 0.35), 0 6px 14px rgba(103, 74, 88, 0.18); }
+/* 펼침 메뉴 큰 + 버튼: 어두운 포인트 */
+:root[data-ct-theme="sunset"] .rm-fab__main { background: var(--sun-ink-2); }
+
+/* ── HOME: 펫 뒤 은은한 코랄 광원 + 밝은 하늘 위 글자 ── */
+:root[data-ct-theme="sunset"] .home-page {
+  background:
+    radial-gradient(42% 36% at 50% 54%, rgba(243, 181, 142, 0.55) 0%, rgba(229, 171, 146, 0.22) 55%, rgba(229, 171, 146, 0) 100%),
+    var(--sun-sky);
+  --hm-surface: linear-gradient(135deg, rgba(255, 244, 236, 0.72), rgba(248, 226, 214, 0.6));
+  --hm-shadow: 4px 6px 14px rgba(103, 74, 88, 0.16), -3px -3px 10px rgba(255, 244, 236, 0.35);
+}
+:root[data-ct-theme="sunset"] .home-page::before { background: radial-gradient(closest-side, rgba(255, 236, 222, 0.28), rgba(255, 236, 222, 0)); }
+:root[data-ct-theme="sunset"] .home-page::after { background: radial-gradient(closest-side, rgba(243, 181, 142, 0.3), rgba(243, 181, 142, 0)); }
+:root[data-ct-theme="sunset"] .home-page :is(.hm-name__text, .hm-name__job, .hm-logo) { color: var(--sun-ink-2); }
+:root[data-ct-theme="sunset"] .home-page :is(.hm-quote, .hm-name__edit) { color: var(--sun-ink-soft); }
+:root[data-ct-theme="sunset"] .home-page .hm-quote:hover { color: var(--sun-ink-2); }
+:root[data-ct-theme="sunset"] .home-page .hm-logo { text-shadow: 1px 1px 0 rgba(255, 241, 233, 0.6); }
+:root[data-ct-theme="sunset"] .hm-growth circle[fill="#000"],
+:root[data-ct-theme="sunset"] .hm-growth .is-on { fill: var(--sun-ink-2); }
+:root[data-ct-theme="sunset"] .hm-growth__goal { stroke: var(--sun-ink-2); }
+:root[data-ct-theme="sunset"] .home-page :is(.hm-warmth, .hm-help) { background: rgba(255, 244, 236, 0.62); }
+/* 하늘 위에 바로 놓인 설명 글자: 라이트의 회색(#888) 대신 진한 로즈 모브로 (읽기 쉽게) */
+:root[data-ct-theme="sunset"] :is(.rm-muted, .dp-lead, .dp-legend, .mp-panel__desc, .hl-chip) { color: var(--sun-ink-soft); }
+/* 완료 표시등·'일기 쓴 날' 표시: 노란색 대신 노을과 어울리는 더스티 코랄 (노을 모드에서만) */
+:root[data-ct-theme="sunset"] :is(.roadmap-page, .diary-page) { --rm-accent-dot: #CF7B6B; }
+:root[data-ct-theme="sunset"] .dp-day.has-diary {
+  background: linear-gradient(145deg, #EBAA96, #D4806F);
+  color: #FFF4EE;
 }

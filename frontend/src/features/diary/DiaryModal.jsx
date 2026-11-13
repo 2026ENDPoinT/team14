@@ -7,6 +7,8 @@ import PhotoField from '../photos/PhotoField.jsx'
 import usePhotoDraft from '../photos/usePhotoDraft.js'
 import WarmthEffect from './WarmthEffect.jsx'
 import FootprintField from './FootprintField.jsx'
+import { isFootprintReady } from '../../services/diary.js'
+import AiReflection from './AiReflection.jsx'
 import { PHOTO_MAX_COUNT } from '../../services/photos.js'
 import './DiaryModal.css'
 
@@ -275,6 +277,9 @@ export default function DiaryModal({ date, activities = [], onClose, onChanged }
             nodeId={linkedNodeId}
             onNodeChange={setLinkedNodeId}
             readOnly={readOnly}
+            // 회고 질문: 질문만 보여 주고, 답은 사용자가 발자취 칸에 바로 쓴다 (별도 답변 칸 없음)
+            // 비어 있으면 작성 질문 1개를 바로(AI 호출 없음), 글을 쓰면 그 내용에 맞춘 AI 질문. 발자취 칸이 서버에 있을 때만
+            extra={!readOnly && isFootprintReady() ? <AiReflection date={date} content={footprint} /> : null}
           />
         )}
 

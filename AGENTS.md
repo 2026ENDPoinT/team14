@@ -9,7 +9,7 @@
 2. 데이터를 주고받는 코드는 `docs/API.md`의 형식을 따른다.
 3. `TASKS.md`에서 이번 작업의 담당 파일 범위를 확인한다.
 4. 현재 브랜치를 확인한다. **`main`에서 직접 작업하지 않는다.**
-   - 브랜치: `feature/roadmap`, `feature/pet-diary`, `feature/backend`, `feature/onboarding`
+   - 브랜치: 담당별 `feature/roadmap`, `feature/pet-diary`, `feature/backend`, `feature/onboarding` 또는 작업별 `feature/<작업>`·`fix/<작업>` (예: `feature/landing`)
 
 ## 2. 수정 범위
 
@@ -25,10 +25,10 @@
 | --- | --- |
 | 1번 (프론트 총괄) | 디자인 시스템: `styles/`·공통 컴포넌트 / 가로형 로드맵: `RoadmapPage.jsx`, `features/roadmap/` / 프론트 라우팅·전체 UI 통합 |
 | 2번 (프론트 보조) | `HomePage.jsx`, `DiaryPage.jsx`, `MemoriesPage.jsx`, `features/pet/`, `features/diary/`, 일기·펫 Mock Data / (여유 시) `LoginPage.jsx` UI 지원 |
-| 3번 (백엔드 총괄) | `supabase/migrations/` (테이블·RLS·DB 함수), 인증 연동(`LoginPage.jsx` 인증 책임), 온보딩 저장·보상 RPC, `frontend/src/services/` 공통 서비스 함수, `docs/API.md` (기술 관리), `backend/` (MVP 미사용, 유지만) |
+| 3번 (백엔드 총괄) | `supabase/migrations/` (테이블·RLS·DB 함수), 인증 연동(`LoginPage.jsx` 인증 책임), 온보딩 저장·보상 RPC, `supabase/functions/` (Edge Function), `frontend/src/services/` 공통 서비스 함수, `docs/API.md` (기술 관리), `backend/` (MVP 미사용, 유지만) |
 | 4번 (교과과정·온보딩) | `frontend/src/data/` 교과과정·직무 관련도 데이터, `features/onboarding/` (과목 선정 함수·온보딩 UI), `OnboardingPage.jsx`, (여유 시) `ExplorePage.jsx` |
 
-- 온보딩 UI는 1번의 공통 디자인(`tokens.css`, 공통 컴포넌트)을 사용한다.
+- 온보딩 UI는 1번의 공통 디자인(공통 컴포넌트·같은 색 값)을 사용한다. (`tokens.css`는 아직 만들지 않음)
 - 작업별 담당·우선순위·선행 작업은 `TASKS.md`를 따른다.
 
 ### 공용 파일 (수정 전 반드시 협의)
@@ -38,7 +38,9 @@ frontend/src/App.jsx
 frontend/package.json
 frontend/src/services/api.js
 frontend/src/services/ 의 Supabase 연결 파일 (파일 이름 미확정)
-frontend/src/styles/tokens.css
+frontend/src/styles/tokens.css (아직 없음)
+frontend/src/styles/theme.css (다크 모드)
+supabase/functions/ (Edge Function: AI·수집·탈퇴)
 supabase/migrations/
 docs/API.md
 SPEC.md
@@ -50,7 +52,8 @@ AGENTS.md
 - 제거된 기능을 되살리지 않는다: **주간 계획표, 독립 아티클 페이지**
 - 홈 화면은 펫 중심이다.
 - 보상(출석·일기 등)은 서버 RPC에서 인증과 날짜별(KST) 중복 여부를 검증하고 원자적으로 지급한다. (`docs/API.md` 3장) 펫 에너지·보상 이력을 프론트에서 직접 수정하는 코드를 만들지 않는다.
-- MVP에서는 Node 서버를 사용하지 않는다. `backend/` 폴더는 삭제하지 않는다.
+- MVP에서는 Node 서버를 사용하지 않는다. `backend/` 폴더는 삭제하지 않는다. 서버 쪽 처리는 RPC 또는 Supabase Edge Function으로 한다.
+- AI(Gemini)는 Edge Function `recommend-career`에서만 호출한다. 사용자가 버튼을 눌렀을 때만 부르고, 보낼 기록 범위를 먼저 보여 준다. 기록에 없는 사실을 지어내지 않도록 서버에서 응답을 검증한다. '오늘의 이야기'(사적인 일기 본문)는 AI 회고에 보내지 않는다.
 - 학기 삭제 시 노드·문서는 지우지 않고 보관함으로 이동한다.
 - 일반 활동(동아리·해커톤·군 복무 등)은 자동 배치하지 않는다.
 - 사용자 간 비교·순위 기능을 만들지 않는다.
@@ -61,7 +64,8 @@ AGENTS.md
 - API는 하나씩 연결한다.
 - 컴포넌트는 Supabase를 직접 호출하지 않고 `frontend/src/services/`의 함수만 사용한다.
 - 이름 규칙: DB 컬럼은 snake_case, React 코드는 camelCase. 변환은 서비스 계층에서만 한다.
-- 스타일은 일반 CSS로 작성하고, 색상·폰트·간격은 `tokens.css`의 값을 사용한다.
+- 스타일은 일반 CSS로 작성하고, 색상·폰트·간격은 기존 화면의 CSS 변수(`--rm-*` 등)를 재사용한다. 다크 모드 규칙은 `styles/theme.css`에 둔다. (`tokens.css`는 아직 없음)
+- migration 파일 번호는 이미 있는 마지막 번호보다 크게 정한다. (앞 번호로 만들면 DB 반영에서 빠질 수 있음)
 - DB 변경(테이블·RLS·함수)은 `supabase/migrations/`에 **새 SQL 파일로 추가**한다. 이미 적용된 SQL 파일은 고치지 않는다.
 - 코드는 초급자가 읽을 수 있게 간결하게 작성하고, 필요한 곳에만 짧은 주석을 단다.
 - 새 패키지 설치가 필요하면 설치 전에 이유를 알리고 승인받는다.

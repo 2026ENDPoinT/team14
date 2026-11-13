@@ -2,7 +2,7 @@ import { markTutorialSeen } from '../../services/tutorial.js'
 
 // HOME·로드맵 튜토리얼을 '신규 가입 후 각 화면 첫 방문'에만 자동으로 띄우는 규칙 (두 화면 공용)
 // - 기준: 서버 프로필의 home_tutorial_seen / roadmap_tutorial_seen
-//   · 가입할 때만 false로 만들어지고(migration 20261114000100), 기존 가입자는 true
+//   · 가입할 때만 false로 만들어지고(migration 20261114003000), 기존 가입자는 true
 //   · 칸이 아직 없으면(서버 미적용) undefined → 자동으로 띄우지 않는다 (기존 사용자에게 갑자기 뜨지 않게)
 // - 자동으로 띄우는 순간 서버에 '봤음'을 저장한다 (건너뛰어도 완료). 저장에 성공했을 때만 프로필도 true로 바꾼다
 // - 저장에 실패해도 같은 접속에서는 다시 자동으로 띄우지 않는다 (아래 attempted)

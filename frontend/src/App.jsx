@@ -36,12 +36,14 @@ export default function App() {
       window.removeEventListener('storage', refresh)
     }
   }, [])
+  // 화면 모드: data-ct-theme = light | dark | sunset | ocean (노을·바다는 라이트 화면 바탕의 테마, styles/theme.css · styles/ocean.css)
   useEffect(() => {
-    document.documentElement.dataset.ctTheme = theme
-    document.documentElement.style.colorScheme = theme === 'dark' ? 'dark' : 'light' // 바다 테마는 밝은 화면
+    const root = document.documentElement
+    root.dataset.ctTheme = theme
+    root.style.colorScheme = theme === 'dark' ? 'dark' : 'light' // 노을·바다 테마는 밝은 화면
     return () => {
-      delete document.documentElement.dataset.ctTheme
-      document.documentElement.style.colorScheme = ''
+      delete root.dataset.ctTheme
+      root.style.colorScheme = ''
     }
   }, [theme])
   return (

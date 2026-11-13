@@ -66,6 +66,7 @@ export default function RoadmapCanvas({
   focusCenter = false, // true면(추억 보관소에서 활동 위치 보기) 화면 안에 보여도 항상 그 노드를 화면 가운데로
   getMemo = () => null, onMemoSave, onMemoResize, // 메모 노드 내용 { title, body, color, width, height, fontSize } · 자동 저장 · 크기 바꾸기
   goalJob = '', onGoalClick, // 프로필 희망 직무. 일반 학기/활동 노드와 분리된 고정형 종착점
+  onDeletePeriod, // 학기 배지의 × (학기 삭제). 없으면 버튼을 그리지 않는다
 }) {
   const width = layout.width + 330
 
@@ -132,7 +133,7 @@ export default function RoadmapCanvas({
       id: 'timeline',
       type: 'timeline',
       position: { x: 0, y: 0 },
-      data: { layout, width, timelineEnd: layout.periods.length ? layout.width + 10 : width },
+      data: { layout, width, timelineEnd: layout.periods.length ? layout.width + 10 : width, onDeletePeriod },
       draggable: false,
       selectable: false,
       focusable: false,
@@ -177,7 +178,7 @@ export default function RoadmapCanvas({
       zIndex: 3,
     }] : []
     return [background, ...cards, ...goal]
-  }, [nodes, layout, width, getSubtitle, handleCardClick, onToggleComplete, visibleIds, getMemo, onMemoSave, onNodeDelete, onMemoResize, goalJob, onGoalClick])
+  }, [nodes, layout, width, getSubtitle, handleCardClick, onToggleComplete, visibleIds, getMemo, onMemoSave, onNodeDelete, onMemoResize, goalJob, onGoalClick, onDeletePeriod])
 
   // React Flow가 드래그 위치·크기 측정값을 기록할 수 있도록 노드를 상태로 관리한다.
   // 데이터가 바뀌면 다시 만들되, 이미 측정한 크기(measured)는 이어서 쓴다.

@@ -69,23 +69,6 @@
   font-weight: 700;
   color: var(--rm-muted);
 }
-.dp-stat__top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: -6px -8px 0 0; /* 새로고침 버튼 여백만큼 당김 */
-}
-.dp-stat__refresh:hover {
-  transform: rotate(-60deg); /* 돌아가는 느낌 */
-}
-.dp-stat__prompt {
-  margin: 6px 0 12px;
-  font-size: 20px;
-  font-weight: 800;
-  line-height: 1.4;
-  color: var(--rm-text);
-  word-break: keep-all; /* 한국어 단어 중간에서 줄이 바뀌지 않게 */
-}
 .dp-stat__hint {
   margin: 0;
   font-size: 13px;

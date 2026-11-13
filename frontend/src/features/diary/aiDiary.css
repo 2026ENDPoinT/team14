@@ -1,0 +1,139 @@
+/* 일기 AI: 회고 인터뷰(일기 창) · 타임캡슐(추억보관소 왼쪽 카드)
+   색은 .diary-page의 --rm-* 변수만 쓴다 → 라이트·다크(styles/theme.css) 자동 대응 */
+.ai-diary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.ai-diary__btn {
+  align-self: flex-start;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--rm-field, #ebe9ea);
+  color: var(--rm-text, #111);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+.ai-diary__btn:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+.ai-diary__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.ai-diary__btn.is-primary {
+  background: var(--rm-accent-dot, #f2d68f);
+  color: #1d1a14;
+}
+.ai-diary__btn:focus-visible {
+  outline: 2px solid var(--rm-text, #111);
+  outline-offset: 2px;
+}
+.ai-diary__note {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--rm-muted, #888);
+}
+.ai-diary__note.is-done {
+  font-weight: 700;
+  color: var(--rm-text, #111);
+}
+.ai-diary__error {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #d93a3f;
+}
+.ai-diary__qa {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ai-diary__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ai-diary__q {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--rm-text, #111);
+  word-break: keep-all;
+}
+/* 빈 발자취 작성 질문의 주제 표시 (배운 점·어려웠던 순간 등) */
+.ai-diary__topic {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(220, 181, 107, 0.2);
+  color: #8a6400;
+  font-size: 11px;
+  font-weight: 800;
+}
+:root[data-ct-theme="dark"] .ai-diary__topic {
+  background: rgba(220, 181, 107, 0.25);
+  color: #f2d48f;
+}
+.ai-diary__basis {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--rm-muted, #888);
+}
+.ai-diary__answer {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 2px;
+  resize: vertical;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.ai-diary__actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 타임캡슐 카드 (.dp-stat 카드 모양 그대로) */
+.ai-capsule {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ai-capsule__title {
+  margin: -4px 0 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--rm-text, #111);
+}
+.ai-capsule__message {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--rm-text, #111);
+  word-break: keep-all;
+}
+.ai-capsule__changes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--rm-text, #111);
+}
+.ai-capsule__dates {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--rm-muted, #888);
+}

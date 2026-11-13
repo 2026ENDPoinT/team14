@@ -22,7 +22,7 @@ import RoadmapTutorial from '../features/roadmap/tutorial/RoadmapTutorial.jsx'
 import { recordAutoTutorial, shouldAutoStartTutorial } from '../features/tutorial/autoTutorial.js'
 import { useOptionalAuth } from '../features/auth/AuthProvider.jsx'
 import { linkProblem } from '../features/roadmap/edgeRules.js'
-import { AUTO_GAP, MEMO_KEY, MEMO_SIZE, MIN_NODE_Y, cardSize, computeLayout, memoSizeOf, nextPosition, nodesOverlap, placeNode, planNewNodeSpace, respaceCourses } from '../features/roadmap/layout.js'
+import { AUTO_GAP, MEMO_KEY, MEMO_MIN_Y, MEMO_SIZE, cardSize, computeLayout, memoSizeOf, nextPosition, nodesOverlap, placeNode, planNewNodeSpace, respaceCourses } from '../features/roadmap/layout.js'
 import {
   createEdge,
   createNode,
@@ -37,7 +37,7 @@ import {
   setNodeCompleted,
   updateEdge,
 } from '../services/api.js'
-import { insertPeriod } from '../services/periods.js'
+import { deletePeriod, insertPeriod } from '../services/periods.js'
 import { deleteWithPhotos } from '../services/photos.js'
 import { deleteWithAttachments } from '../services/attachments.js'
 import '../features/roadmap/roadmap.css'
@@ -124,6 +124,8 @@ export default function RoadmapPage() {
   nodesRef.current = nodes
   const edgesRef = useRef(edges)
   edgesRef.current = edges
+  const periodsRef = useRef(periods)
+  periodsRef.current = periods
   const isDb = mode === 'db'
   // 실행 취소를 기다리는 삭제: nodeId → { timer, undo }. 시간이 지나면 DB에서 지운다
   const pendingDeletes = useRef(new Map())
@@ -468,6 +470,29 @@ export default function RoadmapPage() {
     return null
   }
 
+  // 학기 삭제 (학기 배지의 ×): 확인 후 서버가 노드를 보관함으로 옮기고 학기를 지우고 순서를 정리한다 (한 트랜잭션)
+  // 노드·관계선·문서는 지우지 않는다. 남은 학기는 서버가 돌려준 순서대로 다시 그려져 자연스럽게 당겨진다
+  const deletingRef = useRef(false)
+  const handleDeletePeriod = useCallback(async (periodId) => {
+    if (deletingRef.current) return
+    if (!isDb) return setToast('로그인하면 학기를 삭제할 수 있어요.')
+    const period = periodsRef.current.find((p) => p.id === periodId)
+    if (!period) return
+    const count = nodesRef.current.filter((n) => n.status === 'placed' && n.periodId === periodId).length
+    const message = count > 0
+      ? `'${period.name}'을(를) 삭제할까요?\n이 학기의 노드 ${count}개는 지워지지 않고 노드 보관함으로 옮겨져요.`
+      : `'${period.name}'을(를) 삭제할까요?`
+    if (!window.confirm(message)) return
+    deletingRef.current = true
+    const result = await deletePeriod(periodId)
+    deletingRef.current = false
+    if (result.error) return setToast(`학기를 삭제하지 못했어요. ${result.error.message}`)
+    const moved = new Set(result.data.movedNodeIds)
+    setNodes((prev) => prev.map((n) => (moved.has(n.id) || n.periodId === periodId ? { ...n, status: 'stored', periodId: null } : n)))
+    setPeriods(result.data.periods)
+    setToast(moved.size > 0 ? `${period.name}을(를) 삭제했어요. 노드 ${moved.size}개는 보관함으로 옮겼어요.` : `${period.name}을(를) 삭제했어요.`)
+  }, [isDb])
+
   // categoryId·detailId·categoryLabel: ADD NODE에서 고른 카테고리·세부 활동 (상세 창 종류 수정과 같은 값)
   // courseKey: 전공·학업에서 연결한 교과목 키 — DB 컬럼이 아직 없어 세션 전용
   // 로그인 상태(DB)면 DB에 먼저 저장하고, 성공했을 때만 화면에 넣는다.
@@ -646,7 +671,7 @@ export default function RoadmapPage() {
   }, [isDb])
 
   // 메모 크기 바꾸기 (오른쪽 위 핸들). 왼쪽 아래 모서리를 고정하므로 높이가 바뀐 만큼 윗변(y)도 옮긴다.
-  // - 타임라인 위로 올라가거나 같은 학기의 다른 노드와 겹치면 바꾸지 않는다 (이전 크기 그대로)
+  // - 캔버스 위쪽 끝을 넘거나 같은 학기의 다른 노드와 겹치면 바꾸지 않는다 (이전 크기 그대로). 타임라인 선·학기 배지와는 겹쳐도 된다
   // - 너비가 커지면 학기 너비·뒤 학기 위치는 노드 크기로 다시 계산된다
   // - 저장: 크기는 node_documents.content.width·height, 위치는 기존 노드 이동 저장. 하나라도 실패하면 이전 값으로 되돌린다
   // - 관계선은 만들지 않는다 (겹침 판정만)
@@ -656,7 +681,7 @@ export default function RoadmapPage() {
     if (!node?.position) return { error: '메모를 찾을 수 없어요.' }
     const old = cardSize(node)
     const position = { x: node.position.x, y: node.position.y - (h - old.h) }
-    if (position.y < MIN_NODE_Y) return { error: '타임라인 위로는 키울 수 없어요.' }
+    if (position.y < MEMO_MIN_Y) return { error: '캔버스 위쪽 끝을 넘어서 키울 수 없어요.' } // 메모는 타임라인 선보다 위쪽에도 둘 수 있다
     const resized = { ...node, size: { w, h }, position }
     const hit = nodesRef.current.some(
       (n) => n.id !== nodeId && n.status === 'placed' && n.periodId === node.periodId && nodesOverlap(resized, n),
@@ -866,6 +891,7 @@ export default function RoadmapPage() {
           }}
           goalJob={goalJobLabel}
           onGoalClick={() => setGoalDetailOpen(true)}
+          onDeletePeriod={isDb ? handleDeletePeriod : undefined}
         />
         {goalDetailOpen && (
           <CareerGoalModal

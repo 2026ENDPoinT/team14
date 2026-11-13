@@ -1,16 +1,16 @@
 # team14
 ENDPoinT 해커톤 2026 Team 14
 
-## momentree
+## momentree (모멘트리)
 
 > 대학생활을 **계획**(로드맵)하고, **기록**(일기·추억)하며, **성장**(펫)을 확인하는 개인 성장 웹 서비스
+> 이름: Moment + Tree — 작은 순간들이 모여 나만의 길(나무)이 된다
 
 - 대상: 서울과학기술대학교 컴퓨터공학과 학생 
 - 개발 조건: 4명, 약 7일 해커톤, 목표는 **시연 가능한 MVP**
-- 서비스명은 아직 가칭입니다.
 
-> ⚠️ **현재 상태: 기획 완료, 개발 시작 전**
-> 아래 기능은 모두 **개발 예정**입니다. 지금 저장소에는 기획 문서와 빈 파일·폴더 구조만 있습니다.
+> **현재 상태: MVP 구현 진행 중** (2026-11-14 기준)
+> 아래 기능은 코드로 구현되어 있습니다. 일부 기능은 **DB migration 적용·Edge Function 배포가 끝나야** 실제 서버에서 동작합니다. → [6-1. DB·배포 상태](#6-1-db배포-상태)
 
 ---
 
@@ -46,21 +46,22 @@ ENDPoinT 해커톤 2026 Team 14
 - 펫 성장은 실력을 증명하는 점수가 아니라, 꾸준히 기록하고 출석하도록 돕는 장치다.
 
 ### 핵심 흐름
-학년·수강 과목·희망 직무 선택 → 교과과정 연계도 기반 로드맵 생성 → 대학생활 계획·수정 → 일기·활동 기록 → 성장 에너지 획득 → 펫 성장 → 추억 축적
+학년·경험·수강 과목·희망 직무(또는 미정) 선택 → 함께할 펫 만나기 → 교과과정 연계도 기반 로드맵 생성 → 대학생활 계획·수정 → 일기·활동 기록 → 온기 획득 → 펫 성장 → 추억 축적
 
 ---
 
-## 2. 주요 기능 (모두 개발 예정)
+## 2. 주요 기능
 
 | 기능 | 설명 | 페이지 |
 | --- | --- | --- |
-| 🗺️ **가로형 대학생활 로드맵** | 학기를 왼쪽→오른쪽으로 놓인 **세로 컨테이너(컬럼)** 로 보여주고, 그 안에 활동 노드(카드)를 자유롭게 배치. 드래그한 위치 저장, 관련 노드끼리 연결선, 휴학·군 복무·교환학생·초과학기 삽입 | `/roadmap` |
-| 🐣 **펫 육성** | 홈의 '출석하기' 버튼(하루 1회 +10)과 공백 제외 30자 이상 일기(하루 1회 +20)로 성장 에너지를 얻어, 누적 에너지 0/50/150/300에서 펫이 4단계로 성장. 로그인만으로는 보상 없음, 같은 날 중복 보상 없음, 미접속 페널티 없음 | `/` (홈) |
-| 📔 **일기** | 날짜별 일기 1개, 수정·삭제 | `/diary` |
-| 🗂️ **추억 보관소** | 캘린더·학기별로 과거 일기 열람 | `/memories` |
-| 🧭 **온보딩** | 학년(필수)·경험·수강 과목·희망 직무 선택. 2026 컴퓨터공학과 교과과정 연계도를 기준으로, 1~4학년 전체 과목 중 직접 고른 수강 과목은 권장 학기에 이수 완료로 배치하고, 현재 학년 이후의 미래 과목은 희망 직무 관련도에 맞춰(미선택 시 전공필수만) 선정해 권장 학기에 바로 배치(auto)하거나 보관함에 추가(inbox). 별도 추천 화면 없이 기본 로드맵으로 바로 제공 | `/onboarding` |
-| 📢 **공고 탐색** | 공모전·해커톤·인턴십 공고 카드 목록 (MVP는 샘플 데이터) | `/explore` |
-| 🔐 **로그인** | 이메일·비밀번호, Google 로그인. 내 데이터만 보임 | `/login` |
+| 🌱 **서비스 소개** | 비로그인 방문자의 첫 화면. 스크롤 스토리텔링 랜딩 | `/welcome` |
+| 🔐 **로그인** | 이메일·비밀번호, Google 로그인, 비밀번호 재설정. 내 데이터만 보임(RLS) | `/login`, `/reset-password` |
+| 🧭 **온보딩** | 프로필(닉네임·학년) → 경험 → 수강 과목 → (선택) AI 진로 추천 → 희망 직무 1개 또는 '아직 정하지 않음' → **함께할 펫**. 직무를 고르면 직무별 펫을 자동 배정, 미정이면 5종(펭귄·수달·검은 고양이·햄스터·토끼) 중 직접 선택. 완료 시 2026 교과과정 연계도 기반 기본 로드맵 생성 | `/onboarding` |
+| 🐣 **펫 홈** | 펫 중심 HOME. 자동 출석(하루 1회 +100 온기), 성장 점, 랜덤 한마디, 닉네임 변경, 펫 반응 애니메이션, 오래 못 본 펫(3일·7일) 연출, 처음 방문 튜토리얼 | `/` |
+| 🗺️ **가로형 로드맵** | 학기 타임라인 위 교과목·활동 노드, 드래그 이동·자리 교환, 끌어다 놓아 관계선 연결, 노드 상세(기록·마감일·링크·파일·사진), 노드 보관함, 학기·기간 추가·삭제(노드는 보관함으로), 학기 자동 확장, **메모 노드**(글래스 카드·크기·글씨 크기 조절), 진로 목표 노드, '수강 필요' 안내, **AI 진로 길잡이**, 튜토리얼 | `/roadmap` |
+| 🗂️ **추억보관소** | 일기 달력 + '오늘의 이야기'(사적인 기록)·'오늘의 발자취'(공부·활동 기록), 사진, **AI 회고 질문**(발자취 기준), **AI 타임캡슐**, 주요 활동 모음 | `/memories` (`/diary`도 같은 화면) |
+| 📢 **기회 탐색** | 대외활동(학교 게시판 자동 수집)·채용(고용24)·기술 뉴스(Hacker News). 공고를 고른 학기에 바로 노드로 추가 | `/explore` |
+| 👤 **마이페이지** | 프로필 편집(희망 직무), 화면 설정(다크 모드, 이 브라우저에 저장), 내 활동·기록 관리, 회원 탈퇴 | `/mypage` |
 
 자세한 기능 명세는 [SPEC.md](SPEC.md)를 보세요.
 
@@ -70,13 +71,16 @@ ENDPoinT 해커톤 2026 Team 14
 
 | 구분 | 사용 기술 |
 | --- | --- |
-| 프론트엔드 | React + Vite, React Router, React Flow |
-| 스타일 | 일반 CSS (공통 색상·폰트·간격은 `tokens.css`) |
+| 프론트엔드 | React + Vite, React Router, React Flow (`@xyflow/react`) |
+| 스타일 | 일반 CSS (화면별 CSS 파일 + 다크 모드 `styles/theme.css`). `tokens.css`는 아직 만들지 않음 |
 | DB | Supabase PostgreSQL |
 | 인증 | Supabase Auth (이메일, Google) |
-| 연결 방식 | 프론트엔드에서 Supabase SDK로 직접 연결 |
+| 연결 방식 | 프론트엔드에서 Supabase SDK로 직접 연결 (`frontend/src/services/`) |
 | 보안 | 모든 사용자 데이터에 RLS(행 수준 보안) 적용 |
 | 서버 로직 | 여러 데이터를 함께 바꾸는 작업·보상 지급은 PostgreSQL 함수(RPC) |
+| 서버 함수 | Supabase Edge Functions (Deno): AI(Gemini)·공고 수집·회원 탈퇴 |
+| 파일 | Supabase Storage (비공개 버킷 `photos`, `attachments`) |
+| AI | Google Gemini (Edge Function `recommend-career` 안에서만 호출, 키는 Supabase secrets) |
 
 - Node.js 서버(`backend/`)는 **MVP에서 사용하지 않습니다.** 폴더는 나중을 위해 유지합니다.
 
@@ -91,19 +95,26 @@ campus-roadmap/
 ├── TASKS.md             작업 분담·진행 현황
 ├── AGENTS.md            AI 코딩 도구·협업 규칙
 ├── docs/
-│   ├── API.md           데이터 형식, Supabase 테이블·RLS·RPC 규격
-│   └── references/      디자인 참고 자료 (roadmap-reference.png)
+│   ├── API.md           데이터 형식, Supabase 테이블·RLS·RPC·Edge Function 규격
+│   ├── ai-guide.md      AI 진로 길잡이 서버 요청·응답
+│   ├── backend-pet-home.md / backend-diary-reward.md  펫 HOME·일기 보상 서버 작업 기록
+│   └── references/      디자인 참고 자료
 ├── frontend/src/
-│   ├── pages/           페이지 화면 (HomePage.jsx 등, 현재 빈 파일)
-│   ├── features/        기능별 컴포넌트 (roadmap/, pet/, diary/, onboarding/ 예정)
+│   ├── pages/           페이지 화면 (Home, Roadmap, Memories, Explore, MyPage, Onboarding, Login, Landing …)
+│   ├── features/        기능별 컴포넌트 (roadmap/, home/, pet/, diary/, onboarding/, explore/, career/, landing/ …)
+│   ├── components/      공통 컴포넌트 (상단 메뉴 등)
 │   ├── services/        Supabase 연결·데이터 처리 (공통 서비스 계층)
-│   ├── data/            Mock Data, 교과과정·직무별 과목·공고 데이터
-│   └── styles/          공통 스타일 (tokens.css 예정)
+│   ├── data/            교과과정·직무 관련도 데이터, Mock Data
+│   ├── assets/pets/     펫 이미지 (투명 PNG)
+│   └── styles/          공통 스타일 (theme.css: 다크 모드)
+├── supabase/
+│   ├── migrations/      DB 변경 SQL (테이블·RLS·RPC)
+│   └── functions/       Edge Functions (recommend-career, delete-account, sync-*)
 └── backend/src/         Node 서버 (MVP 미사용, 구조만 유지)
 ```
 
 - 빈 폴더에 있는 `.gitkeep`은 폴더를 GitHub에 남기기 위한 빈 파일입니다. 지우지 마세요.
-- Supabase SQL 변경 이력은 `supabase/migrations/`에 저장할 예정입니다. (아직 폴더 없음)
+- Supabase SQL 변경 이력은 `supabase/migrations/`, Edge Function 코드는 `supabase/functions/`에 있습니다.
 
 ---
 
@@ -125,13 +136,33 @@ campus-roadmap/
 
 ## 6. 설치 및 실행
 
-> 🚧 **아직 실행 환경이 만들어지지 않았습니다.**
-> React + Vite 초기화(TASKS 0-3)와 Supabase 프로젝트 생성(TASKS 0-5)이 끝나면 이 부분에 실행 방법을 적습니다.
+```bash
+cd frontend
+npm install
+cp .env.example .env      # VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY 값을 채운다
+npm run dev               # http://localhost:5173
+npm run build             # 빌드 확인
+```
 
 미리 알아둘 점:
 - 비밀값은 `.env` 파일에 두고 **Git에 올리지 않습니다.** (`.gitignore`에 등록됨)
 - 프론트 `.env`에는 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`만 둡니다.
 - **`service_role` 키는 절대 프론트 코드나 Git에 넣지 않습니다.**
+
+### 6-1. DB·배포 상태
+
+코드에 있는 것과 실제 Supabase에 적용·배포된 것은 다를 수 있습니다. (2026-11-14, 공개 키로 읽기만 해서 확인)
+
+| 항목 | 코드 | 실제 서버 |
+| --- | --- | --- |
+| migration `20261109000100` ~ `20261114002600_diary_footprint` | 있음 | 적용됨 |
+| migration `20261114002700_choose_pet` + `20261114002800_choose_pet_during_onboarding` (온보딩 중 펫 저장) | 있음 | **미적용** → 적용 전에는 직무 미정 사용자가 온보딩 마지막 화면에서 넘어가지 못함 |
+| migration `20261114002900_footprint_reward` (발자취 온기 +100) | 있음 | **확인 못 함** (기존 함수와 이름·인자가 같아 외부에서 구분 불가) |
+| migration `20261114003000_tutorial_seen` (튜토리얼 첫 실행 기록) | 있음 | **미적용** → 적용 전에는 튜토리얼이 자동으로 뜨지 않음(? 버튼은 동작) |
+| migration `20261114003100_delete_timeline_period` (학기 삭제) | 있음 | **미적용** → 적용 전에는 학기 삭제가 '서버 준비 중' 안내만 함 |
+| Edge Function `recommend-career` (온보딩 추천·AI 길잡이) | 있음 | 배포됨 |
+| 같은 함수의 `reflect`·`timecapsule` 모드 (AI 회고·타임캡슐) | 있음 | **배포 여부 미확인** (재배포 필요, 배포 전에는 "서버에 배포되지 않았어요" 안내) |
+| Edge Function `delete-account` | 있음 | 배포됨 |
 
 ---
 
@@ -212,7 +243,10 @@ AGENTS.md
 | [SPEC.md](SPEC.md) | 기능 명세, 확정·미확정 사항 |
 | [TASKS.md](TASKS.md) | 작업 분담, 우선순위, 진행 현황 |
 | [AGENTS.md](AGENTS.md) | AI 코딩 도구 사용 규칙, 담당 영역, 보안 규칙 |
-| [docs/API.md](docs/API.md) | 데이터 형식, Supabase 테이블·RLS·RPC |
+| [docs/API.md](docs/API.md) | 데이터 형식, Supabase 테이블·RLS·RPC·Edge Function |
+| [docs/ai-guide.md](docs/ai-guide.md) | AI 진로 길잡이 서버 요청·응답 |
+| [docs/backend-pet-home.md](docs/backend-pet-home.md) | 펫 HOME·출석·닉네임 서버 작업 기록 |
+| [docs/backend-diary-reward.md](docs/backend-diary-reward.md) | 일기 온기 보상 서버 작업 기록 |
 | [roadmap-reference.png](docs/references/roadmap-reference.png) | 로드맵 UI 참고 이미지 |
 
 > 문서에서 `[미확정]`으로 표시된 내용은 아직 결정되지 않은 것입니다. 임의로 정하지 말고 팀에서 결정합니다.

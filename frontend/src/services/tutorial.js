@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient.js'
 
-// 튜토리얼 최초 자동 실행 기록 (RPC mark_tutorial_seen, migration 20261114000100)
+// 튜토리얼 최초 자동 실행 기록 (RPC mark_tutorial_seen, migration 20261114003000)
 // kind: 'home' | 'roadmap'. 성공하면 그 계정은 어느 기기에서도 다시 자동으로 뜨지 않는다.
 // 결과: { data: { seen: true } } 또는 { error: { code, message } } (RPC가 아직 없으면 NOT_READY)
 export async function markTutorialSeen(kind) {

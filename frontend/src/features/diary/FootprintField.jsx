@@ -11,7 +11,9 @@ import './Footprint.css'
 //   하나를 골라 이 일기에 연결할 수 있다 (diaries.linked_node_id)
 // - 노드는 로드맵 조회(getRoadmap)로 읽기만 한다. 노드를 바꾸지 않는다.
 // props: text·onTextChange(발자취 글), nodeId·onNodeChange(연결한 노드 id), readOnly(읽기 상태)
-export default function FootprintField({ text, onTextChange, nodeId, onNodeChange, readOnly }) {
+//        extra: 발자취 입력칸 아래에 붙일 내용 (일기 창의 AI 회고 질문)
+export const FOOTPRINT_MAX = 2000
+export default function FootprintField({ text, onTextChange, nodeId, onNodeChange, readOnly, extra = null }) {
   const roadmap = useMyNodes()
   const [categoryId, setCategoryId] = useState(null) // 펼친 종류
 
@@ -63,7 +65,7 @@ export default function FootprintField({ text, onTextChange, nodeId, onNodeChang
         <textarea
           className="dy-input dy-textarea fp-input"
           value={text}
-          maxLength={2000}
+          maxLength={FOOTPRINT_MAX}
           onChange={(e) => onTextChange(e.target.value)}
           placeholder="오늘 배운 것, 진행한 활동, 작은 성취를 기록해 보세요."
           aria-label="오늘의 발자취"
@@ -73,6 +75,7 @@ export default function FootprintField({ text, onTextChange, nodeId, onNodeChang
       {!isFootprintReady() && (
         <p className="rm-muted fp-note">발자취 글 저장은 서버 준비 중이에요. 지금은 연결한 활동만 저장돼요.</p>
       )}
+      {extra}
 
       {/* 연결한 활동 (× 로 연결 해제) */}
       {nodeId && (

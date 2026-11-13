@@ -41,7 +41,7 @@ function toUser(row) {
     onboardingCompleted: row.onboarding_completed,
     interests: row.interests,
     createdAt: row.created_at,
-    // 튜토리얼 최초 자동 실행 기록 (migration 20261114000100. 칸이 없으면 undefined → 자동 실행 안 함)
+    // 튜토리얼 최초 자동 실행 기록 (migration 20261114003000. 칸이 없으면 undefined → 자동 실행 안 함)
     homeTutorialSeen: row.home_tutorial_seen,
     roadmapTutorialSeen: row.roadmap_tutorial_seen,
   }

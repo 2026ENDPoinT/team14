@@ -36,3 +36,22 @@ export async function insertPeriod({ type, afterPeriodId = null, requestId, name
   }
   return { data: { period: toPeriod(data.period), created: data.created, periods: data.periods.map(toPeriod) } }
 }
+
+// 로드맵 학기(기간) 삭제 — RPC delete_timeline_period (migration 20261114003100)
+// - 그 학기에 배치된 노드(교과목·활동·메모)는 지우지 않고 보관함으로 옮긴다. 관계선·문서·사진·첨부는 그대로
+// - 노드 이동·학기 삭제·남은 학기 순서 정리를 서버가 한 번에 한다 (중간 실패 시 전부 취소)
+// - 이미 지워진 학기면 deleted: false (다시 불러도 안전)
+// 결과: { data: { deleted, movedNodeIds, periods } }
+export async function deletePeriod(periodId) {
+  if (!supabase) return { error: { code: 'SERVER_ERROR', message: 'Supabase 연결 설정(.env)이 없습니다.' } }
+  const { data: session } = await supabase.auth.getSession()
+  if (!session.session) return { error: { code: 'UNAUTHENTICATED', message: '로그인이 필요합니다.' } }
+
+  const { data, error } = await supabase.rpc('delete_timeline_period', { p_period_id: periodId })
+  if (error) {
+    if (error.code === 'PGRST202') return { error: { code: 'NOT_READY', message: '학기 삭제 기능이 아직 서버에 준비되지 않았어요.' } }
+    const code = CODES.includes(error.message) ? error.message : 'SERVER_ERROR'
+    return { error: { code, message: code === 'SERVER_ERROR' ? '학기를 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.' : error.details || error.message } }
+  }
+  return { data: { deleted: data.deleted, movedNodeIds: data.moved_node_ids ?? [], periods: data.periods.map(toPeriod) } }
+}
