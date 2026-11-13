@@ -1,9 +1,7 @@
-/* 로드맵 '수강 필요' 안내: 왼쪽 위 종류 필터(.rm-filter, top 24px) 바로 아래 */
+/* 로드맵 왼쪽 상단 버튼 행 내부의 '수강 필요' 버튼과 드롭다운 */
 .cg {
-  position: absolute;
-  top: 70px;
-  left: 32px;
-  z-index: 22;
+  position: relative;
+  flex: 0 0 auto;
   font-family: inherit;
 }
 .cg__toggle {
@@ -38,7 +36,10 @@
   font-size: 11px;
 }
 .cg__panel {
-  margin-top: 8px;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  margin-top: 0;
   width: 340px;
   max-height: calc(100vh - 200px);
   overflow-y: auto;
@@ -153,12 +154,7 @@
   font-weight: 700;
 }
 @media (max-width: 640px) {
-  /* 좁은 화면에서는 종류 필터가 top 84px로 내려간다 → 그 아래 */
-  .cg {
-    top: 130px;
-    left: 12px;
-  }
   .cg__panel {
-    width: calc(100vw - 32px);
+    width: min(340px, calc(100vw - 24px));
   }
 }
