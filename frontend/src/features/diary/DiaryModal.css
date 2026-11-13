@@ -1,0 +1,286 @@
+/* 일기 팝업 화면 구성 (DiaryModal.jsx)
+   목표: 스크롤 없이 '오늘의 이야기'와 '오늘의 발자취'를 한 화면에 최대한 다 보이게
+   - 간격·여백을 줄이고, 이날의 활동은 날짜 옆에 작게, 사진 추가는 이야기 칸 안 동그라미로 */
+.dp-modal__card.dm-card {
+  gap: 14px;
+  width: min(680px, 100%);
+  padding: 26px 32px 24px;
+}
+
+/* ── 위쪽: 날짜 + 이날의 활동 (작게) ── */
+.dm-head {
+  flex: 1; /* 오른쪽 버튼을 뺀 너비를 모두 쓴다 → 활동 이름이 덜 잘린다 */
+  min-width: 0;
+}
+.dm-head__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+.dp-modal__title.dm-title {
+  margin: 4px 0 0;
+  font-size: 24px;
+}
+.dm-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.dm-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%; /* 한 줄 너비까지 쓸 수 있다 */
+  box-sizing: border-box;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dy-ink);
+}
+.dm-act__dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--rm-dot);
+}
+.dm-act__dot.is-done {
+  background: var(--rm-accent-dot);
+}
+/* 이름은 남은 너비만큼 최대한 보여 주고, 그래도 길면 … (마우스를 올리면 전체 이름) */
+.dm-act__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dm-act__kind {
+  flex-shrink: 0;
+  color: var(--rm-muted);
+}
+
+/* ── 오늘의 이야기 ── */
+.dm-story {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 22px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.dm-story__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.dm-story__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--dy-ink);
+}
+.dm-count {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--rm-muted);
+}
+.dm-count.is-done {
+  color: #b8902f;
+}
+
+/* 입력칸: 원래 일기 칸 모양(dy-input) 그대로, 높이만 줄이고 아래에 사진 줄 자리를 둔다 */
+.dm-story .dm-story__input {
+  min-height: 150px;
+  padding: 20px 26px 64px;
+}
+/* 사진 줄: 입력칸 안 왼쪽 아래 (입력칸과 함께 떠오른다) */
+.dm-story__foot {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: transform 0.25s var(--rm-ease);
+}
+.dm-story__node:hover .dm-story__foot,
+.dm-story__node:focus-within .dm-story__foot {
+  transform: translateY(-3px);
+}
+.dm-photo-btn {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid #e6e3dc;
+  border-radius: 50%;
+  background: #fbfaf8;
+  color: var(--dy-ink);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.dm-photo-btn:hover {
+  background: var(--rm-accent);
+  transform: translateY(-1px);
+}
+.dm-story__hint {
+  font-size: 12px;
+  color: var(--rm-muted);
+}
+/* 칸 안의 사진은 작게 (공용 PhotoField 크기를 이 자리에서만 줄인다) */
+.dm-story__photos .ph-item,
+.dm-story__photos .ph-thumb {
+  width: 44px;
+  height: 44px;
+}
+.dm-story__photos .ph-thumb {
+  border-radius: 10px;
+}
+.dm-story__photos .ph-list {
+  gap: 6px;
+}
+.dm-story__photos .ph-badge {
+  font-size: 9px;
+}
+.dm-hint {
+  margin: 0;
+  font-size: 12px;
+}
+.dm-hint.is-error {
+  color: #c0392b;
+}
+
+@media (max-width: 640px) {
+  .dp-modal__card.dm-card {
+    padding: 22px 18px 20px;
+  }
+  .dm-story {
+    padding: 14px 14px;
+  }
+}
+
+/* ── 유리 느낌 (로그인 화면과 같은 스타일): 반투명 + 흐림 + 가는 흰 테두리 ── */
+.dp-modal__card.dm-card {
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
+}
+/* 오늘의 이야기 카드: 반투명 흰 유리 */
+.dm-story {
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.dm-photo-btn {
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.dm-act {
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: none;
+}
+/* 아래 버튼: 로그인 버튼처럼 평평한 반투명 / 저장은 노란 그라데이션 */
+.dm-card .dp-btn {
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.dm-card .dp-btn--accent {
+  border-color: rgba(255, 255, 255, 0.6);
+  background: linear-gradient(90deg, #fcefc6, #f2d68f);
+  box-shadow: 0 8px 20px rgba(170, 130, 40, 0.22);
+}
+
+/* 날짜·활동과 오른쪽 버튼(삭제·닫기) 사이 간격 */
+.dm-card .dp-modal__head {
+  gap: 12px;
+}
+.dm-card .rm-modal__actions {
+  flex-shrink: 0;
+}
+
+/* ── 20자 게이지 (오늘의 이야기 입력칸 안 오른쪽 아래) ── */
+.dm-goal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto; /* 사진 버튼 반대편(오른쪽)으로 */
+  flex-shrink: 0;
+}
+.dm-goal__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--rm-muted);
+  white-space: nowrap;
+  transition: color 0.25s;
+}
+.dm-goal.is-done .dm-goal__label {
+  color: #b8902f;
+}
+.dm-goal__ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+}
+.dm-goal__ring svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg); /* 12시 방향부터 차오른다 */
+}
+.dm-goal__track {
+  fill: none;
+  stroke: rgba(85, 85, 85, 0.12);
+  stroke-width: 3;
+}
+.dm-goal__fill {
+  fill: none;
+  stroke: var(--rm-accent-dot);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.3s var(--rm-ease);
+}
+.dm-goal__num {
+  position: relative;
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--dy-ink);
+}
+/* 다 채우면: 동그라미 안이 노랗게 차고 살짝 통 튄다 */
+.dm-goal.is-done .dm-goal__ring {
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fcefc6, #f2d68f);
+  animation: dm-goal-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.dm-goal.is-done .dm-goal__num {
+  font-size: 12px;
+  color: #8a6a1f;
+}
+@keyframes dm-goal-pop {
+  0% { transform: scale(0.8); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dm-goal.is-done .dm-goal__ring { animation: none; }
+}
