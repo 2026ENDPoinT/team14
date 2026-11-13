@@ -37,7 +37,7 @@ import {
   setNodeCompleted,
   updateEdge,
 } from '../services/api.js'
-import { insertPeriod } from '../services/periods.js'
+import { deletePeriod, insertPeriod } from '../services/periods.js'
 import { deleteWithPhotos } from '../services/photos.js'
 import { deleteWithAttachments } from '../services/attachments.js'
 import '../features/roadmap/roadmap.css'
@@ -124,6 +124,8 @@ export default function RoadmapPage() {
   nodesRef.current = nodes
   const edgesRef = useRef(edges)
   edgesRef.current = edges
+  const periodsRef = useRef(periods)
+  periodsRef.current = periods
   const isDb = mode === 'db'
   // 실행 취소를 기다리는 삭제: nodeId → { timer, undo }. 시간이 지나면 DB에서 지운다
   const pendingDeletes = useRef(new Map())
@@ -428,6 +430,29 @@ export default function RoadmapPage() {
     setToast(`${result.data.period.name}을(를) 타임라인에 추가했어요.`)
     return null
   }
+
+  // 학기 삭제 (학기 배지의 ×): 확인 후 서버가 노드를 보관함으로 옮기고 학기를 지우고 순서를 정리한다 (한 트랜잭션)
+  // 노드·관계선·문서는 지우지 않는다. 남은 학기는 서버가 돌려준 순서대로 다시 그려져 자연스럽게 당겨진다
+  const deletingRef = useRef(false)
+  const handleDeletePeriod = useCallback(async (periodId) => {
+    if (deletingRef.current) return
+    if (!isDb) return setToast('로그인하면 학기를 삭제할 수 있어요.')
+    const period = periodsRef.current.find((p) => p.id === periodId)
+    if (!period) return
+    const count = nodesRef.current.filter((n) => n.status === 'placed' && n.periodId === periodId).length
+    const message = count > 0
+      ? `'${period.name}'을(를) 삭제할까요?\n이 학기의 노드 ${count}개는 지워지지 않고 노드 보관함으로 옮겨져요.`
+      : `'${period.name}'을(를) 삭제할까요?`
+    if (!window.confirm(message)) return
+    deletingRef.current = true
+    const result = await deletePeriod(periodId)
+    deletingRef.current = false
+    if (result.error) return setToast(`학기를 삭제하지 못했어요. ${result.error.message}`)
+    const moved = new Set(result.data.movedNodeIds)
+    setNodes((prev) => prev.map((n) => (moved.has(n.id) || n.periodId === periodId ? { ...n, status: 'stored', periodId: null } : n)))
+    setPeriods(result.data.periods)
+    setToast(moved.size > 0 ? `${period.name}을(를) 삭제했어요. 노드 ${moved.size}개는 보관함으로 옮겼어요.` : `${period.name}을(를) 삭제했어요.`)
+  }, [isDb])
 
   // categoryId·detailId·categoryLabel: ADD NODE에서 고른 카테고리·세부 활동 (상세 창 종류 수정과 같은 값)
   // courseKey: 전공·학업에서 연결한 교과목 키 — DB 컬럼이 아직 없어 세션 전용
@@ -823,6 +848,7 @@ export default function RoadmapPage() {
           onFocusDone={() => setScrollToNodeId(null)}
           goalJob={goalJobLabel}
           onGoalClick={() => setGoalDetailOpen(true)}
+          onDeletePeriod={isDb ? handleDeletePeriod : undefined}
         />
         {goalDetailOpen && (
           <CareerGoalModal

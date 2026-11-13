@@ -340,7 +340,7 @@ Supabase SDK는 `{ data, error }`를 돌려준다. 서비스 계층은 오류를
 | --- | --- | --- |
 | 로드맵 조회 | 테이블 `timeline_periods`, `nodes`(+`contests` 공고 정보), `edges`, `node_documents` 조회 | `getRoadmap()` → periods + nodes + edges + documents 한 번에 반환. 탐색에서 추가한 공모전 노드에는 `contest`(출처·마감일·원문 링크)가 붙는다 |
 | 학기/기간 삽입 | RPC `insert_timeline_period` | `insertPeriod({ type, afterPeriodId, requestId, name })`. 뒤 기간 order 재계산, `requestId`로 중복 호출 안전, 사용자 이름 '기타' 기간 가능 (migration `20261113002100`, `20261114002300`) |
-| 학기/기간 삭제 | (미구현) | 규칙: 소속 노드를 보관함으로 이동 후 삭제 |
+| 학기/기간 삭제 | RPC `delete_timeline_period(p_period_id)` | `deletePeriod(periodId)`. 소속 노드(교과목·활동·메모)를 보관함(`stored`, `periodId: null`)으로 옮기고 학기 삭제, 남은 학기 order를 0부터 다시 매김 — 한 트랜잭션. 이미 없는 학기면 `deleted: false`. 결과 `{ deleted, moved_node_ids, periods }` (migration `20261114002900`, **실제 DB 미적용**) |
 | 학기 순서 변경 | (미구현) | |
 | 학기 이름·타입 수정 | (미구현) | |
 | 메모 노드 생성·저장 | 테이블 `nodes` 추가 + `node_documents` 저장 | `createMemoNode()`, `saveMemo()` (`services/memo.js`). 크기·글씨 크기도 문서에 저장 |
@@ -667,5 +667,6 @@ selectCourses({
 | migration `20261109000100` ~ `20261114002600_diary_footprint` | 적용됨 |
 | migration `20261114002700_choose_pet` | **미적용** |
 | migration `20261114002800_tutorial_seen` | **미적용** (번호를 `000100`에서 바꿈. 같은 내용이 예전 번호로 적용된 적 없음) |
+| migration `20261114002900_delete_timeline_period` (학기 삭제) | **미적용** → 적용 전에는 × 를 누르면 '서버에 준비되지 않았어요' 안내, 아무것도 바뀌지 않음 |
 | Edge Function `recommend-career`, `delete-account` | 배포됨 |
 | `recommend-career`의 `reflect`·`timecapsule` 모드 | **재배포 필요** (배포 여부 미확인) |
