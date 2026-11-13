@@ -32,7 +32,11 @@ import {
   updateEdge,
 } from '../services/api.js'
 import { insertPeriod } from '../services/periods.js'
+import { deleteWithPhotos } from '../services/photos.js'
 import '../features/roadmap/roadmap.css'
+
+// 노드 삭제 + 그 노드의 첨부 사진 파일 정리 (사진 연결 행은 DB에서 함께 지워진다)
+const deleteNodeAndPhotos = (nodeId) => deleteWithPhotos({ nodeId }, () => deleteNode(nodeId))
 
 const UNDO_MS = 5000 // 실행 취소 안내가 보이는 시간. 이 시간이 지나면 삭제를 DB에 저장한다
 
@@ -531,7 +535,7 @@ export default function RoadmapPage() {
   // DB면 DB에서 지운 뒤에만 화면에서 없애고 상세 창을 닫는다 (노드 문서·연결선은 DB에서 함께 삭제)
   const handleDeleteNode = async (nodeId) => {
     if (isDb) {
-      const result = await deleteNode(nodeId)
+      const result = await deleteNodeAndPhotos(nodeId)
       if (result.error) return setToast(`삭제하지 못했어요. ${result.error.message}`)
     }
     removeNode(nodeId)
@@ -558,7 +562,7 @@ export default function RoadmapPage() {
   // 실행 취소 시간이 지난 삭제를 DB에 저장한다. 실패하면 지우기 전 상태로 되돌린다.
   const commitDelete = useCallback(async (undo) => {
     pendingDeletes.current.delete(undo.node.id)
-    const result = await deleteNode(undo.node.id)
+    const result = await deleteNodeAndPhotos(undo.node.id)
     if (result.error) {
       restoreDeleted(undo)
       setToast(`삭제하지 못해 되돌렸어요. ${result.error.message}`)
@@ -571,7 +575,7 @@ export default function RoadmapPage() {
   useEffect(() => () => {
     for (const [nodeId, { timer }] of pendingDeletes.current) {
       clearTimeout(timer)
-      deleteNode(nodeId)
+      deleteNodeAndPhotos(nodeId)
     }
     pendingDeletes.current.clear()
   }, [])
@@ -748,6 +752,7 @@ export default function RoadmapPage() {
           onOpenNode={openDetail}
           customCategories={customCategories}
           onAddCustomCategory={addCustomCategory}
+          photosEnabled={isDb}
         />
 
         {guideOpen && (
