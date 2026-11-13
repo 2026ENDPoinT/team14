@@ -60,6 +60,12 @@ export function petAssetUrl(character, stage) {
   return name ? ASSETS[name] ?? null : null
 }
 
+// 시무룩한 표정 그림 (선택): <그림 이름>-sad.png 예) sprout-sad.png, rabbit-2-sad.png
+// 파일을 넣으면 3일 이상 못 본 펫이 그 그림으로 바뀐다. 없으면 null → 화면은 원래 그림 + 시무룩한 눈썹(SadBrows)
+export function petSadAssetUrl(character, stage) {
+  return ASSETS[`${petAssetName(character, stage)}-sad`] ?? null
+}
+
 // 필요한 파일 목록 (누락 보고·테스트용)
 export const REQUIRED_PET_ASSETS = [
   'sprout',
